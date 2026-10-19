@@ -1,0 +1,31 @@
+'use strict';
+
+const $=s=>document.querySelector(s);
+const te=new TextEncoder(), td=new TextDecoder();
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+const HP_LOG_LINES=[], HP_LOG_MAX=3000;
+function log(m){const el=$('#log');const t=new Date().toLocaleTimeString('ja-JP');HP_LOG_LINES.push(`[${t}] ${m}\n`);if(HP_LOG_LINES.length>HP_LOG_MAX)HP_LOG_LINES.shift();const stick=!(el.clientHeight>0)||el.scrollHeight-el.scrollTop-el.clientHeight<40;el.textContent=HP_LOG_LINES.join('');if(stick)el.scrollTop=el.scrollHeight;}
+function hpLogText(){return HP_LOG_LINES.join('');}
+function hpLogClear(){HP_LOG_LINES.length=0;$('#log').textContent='';}
+function bytesToHex(u){return [...u].map(b=>b.toString(16).padStart(2,'0')).join('');}
+function hexToBytes(h){const u=new Uint8Array(h.length/2);for(let i=0;i<u.length;i++)u[i]=parseInt(h.substr(i*2,2),16);return u;}
+function bytesToB64(u){let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s);}
+function b64ToBytes(b){const s=atob(b);const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u;}
+function cat(a,b){const u=new Uint8Array(a.length+b.length);u.set(a);u.set(b,a.length);return u;}
+function pemToBytes(p){return b64ToBytes(p.replace(/-----[^-]+-----/g,'').replace(/\s+/g,''));}
+function bytesToPem(u){const b=bytesToB64(u);return '-----BEGIN PRIVATE KEY-----\n'+(b.match(/.{1,64}/g)||[]).join('\n')+'\n-----END PRIVATE KEY-----\n';}
+
+function hpIdFmt(a){ return typeof a==='string' && /^hp1[0-9a-f]{64}$/.test(a); }
+function hpIdShort(a){ return hpIdFmt(a) ? a.slice(0,11)+'\u2026' : String(a==null?'':a); }
+async function hpIdOf(masterPubHex){ if(!/^[0-9a-f]{64}$/.test(masterPubHex||'')) throw new Error('bad master key'); return 'hp1'+bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256',hexToBytes(masterPubHex)))); }
+async function sha256hex(str){return bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256',te.encode(str))));}
+
+const HP_ERR_ODD=['TypeError','ReferenceError','SyntaxError','RangeError'];
+function hpErrShow(e){
+  const msg=(e&&e.message!=null)?String(e.message):String(e==null?'':e);
+  if(!(e&&typeof e==='object'&&HP_ERR_ODD.includes(e.name))) return msg;
+  try{ const s='思わぬ誤り（'+e.name+': '+msg+'）'+(e.stack?' '+String(e.stack).split('\n').slice(1,3).map(x=>x.trim()).join(' | '):''); if(typeof hpLog==='function') hpLog(s); else if(typeof log==='function') log(s); }catch(_){}
+  return (typeof T==='function')?T('e_odd'):'Unexpected error';
+}
+
