@@ -2196,3 +2196,43 @@ function hpRelUi(){ try{ if(typeof document==='undefined'||!document.getElementB
 try{ if(typeof hpSend==='function'&&!hpSend.__rel){ const f=hpSend; hpSend=function(){ if(HP_REL.st==='badsig') return Promise.reject(new Error(T('rel_bad_short'))); return f.apply(this,arguments); }; hpSend.__rel=1; } }catch(e){}
 try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpRelUi(); hpRelCheck().catch(()=>{}); }catch(e){} },3000); setInterval(()=>{ try{ hpRelUi(); if(Date.now()-HP_REL.at>HP_REL_EVERY) hpRelCheck().catch(()=>{}); }catch(e){} },5000); } }catch(e){}
 
+async function hpVaultSwitch(kind,pwNew,pwCur){
+  const m=hpVaultMeta(); if(!m||!VAULT||!VAULT_DK) throw hpVErr('swlocked','鍵が開いていない');
+  const cur=m.wraps.find(w=>w.k==='prf')||m.wraps.find(w=>w.k==='pw'); if(!cur) throw hpVErr('other','いまの守り方が無い');
+  const s=hp5S(); let sec=null;
+  if(cur.k==='pw'){ if(pwCur==null) throw hpVErr('wrong','いまのパスフレーズが要る'); sec=await hpPwBits(pwCur,hpBytes(cur.salt),cur.it); } else sec=await hpPkGet(cur.cred,hpBytes(cur.salt));
+  let dk; try{ dk=hpVDec(hpVWK(cur.k,sec),cur.box,'handpost-vault-wrap:v1:'+cur.k); }catch(e){ throw hpVErr('wrong','鍵が合わない'); }
+  if(hpHex(dk)!==hpHex(VAULT_DK)) throw hpVErr('wrong','鍵が合わない');
+  const w=await hpVaultWrapNew(kind,pwNew,VAULT_DK);
+  let back; try{ const sec2=kind==='prf'?await hpPkGet(w.cred,hpBytes(w.salt)):await hpPwBits(pwNew,hpBytes(w.salt),w.it); back=hpVDec(hpVWK(kind,sec2),w.box,'handpost-vault-wrap:v1:'+kind); }catch(e){ throw hpVErr('other','新しい包みを開き直せない'); }
+  if(hpHex(back)!==hpHex(VAULT_DK)) throw hpVErr('other','新しい包みを開き直せない');
+  const m2=hpVaultMeta(); if(!m2) throw hpVErr('other','封が無い');
+  m2.wraps=m2.wraps.filter(x=>x&&x.k!=='prf'&&x.k!=='pw').concat([w]); m2.at=Date.now(); localStorage.setItem(HP_VAULT_KEY,JSON.stringify(m2));
+  try{ hpLog('守り方を替えた（'+(cur.k==='prf'?'パスキー':'パスフレーズ')+' → '+(kind==='prf'?'パスキー':'パスフレーズ')+'）'); }catch(e){}
+  return cur.k; }
+function hpVsUi(){ try{ const E=id=>document.getElementById(id), card=E('vault-card'); if(!card) return false; const on=hpVaultOn(), k=hpVaultKinds(), pk=k.indexOf('prf')>=0;
+  let row=E('vault-sw'); if(!row){ row=document.createElement('div'); row.id='vault-sw'; row.className='row'; row.style.cssText='margin-top:8px;flex-wrap:wrap';
+    const mk=(id,cls)=>{ const b=document.createElement('button'); b.type='button'; b.className=cls; b.id=id; row.appendChild(b); return b; };
+    mk('btn-vt-sw-pk','b pri'); mk('btn-vt-sw-pw','b'); mk('btn-vt-sw-topw','b pri');
+    const f=document.createElement('form'); f.id='vault-sw-wrap'; f.setAttribute('autocomplete','off'); f.style.cssText='display:none;margin-top:8px'; f.addEventListener('submit',e=>e.preventDefault());
+    const nt=document.createElement('div'); nt.className='note'; nt.id='vault-sw-note'; f.appendChild(nt);
+    const cur=hpSecretInput(document.createElement('input')); cur.id='vault-sw-cur'; cur.style.cssText='width:100%;margin-top:6px'; f.appendChild(cur);
+    const n1=hpSecretInput(document.createElement('input')); n1.id='vault-sw-new1'; n1.style.cssText='width:100%;margin-top:6px'; f.appendChild(n1);
+    const n2=hpSecretInput(document.createElement('input')); n2.id='vault-sw-new2'; n2.style.cssText='width:100%;margin-top:6px'; f.appendChild(n2);
+    const r2=document.createElement('div'); r2.className='row'; r2.style.marginTop='6px'; const go=document.createElement('button'); go.type='button'; go.className='b pri'; go.id='btn-vt-sw-go'; r2.appendChild(go); const cn=document.createElement('button'); cn.type='button'; cn.className='b'; cn.id='btn-vt-sw-cancel'; r2.appendChild(cn); f.appendChild(r2);
+    const ms=E('vault-msg'); card.insertBefore(row,ms); card.insertBefore(f,ms);
+    let mode=''; const open=m=>{ mode=m; f.style.display='block'; E('vault-msg').textContent=''; const toPw=m!=='prf'; cur.style.display=pk?'none':'block'; n1.style.display=toPw?'block':'none'; n2.style.display=toPw?'block':'none'; nt.textContent=(pk?T('vt_sw_cur_pk')+' ':'')+T('vt_sw_note'); cur.value=''; n1.value=''; n2.value=''; (pk?(toPw?n1:go):cur).focus(); };
+    E('btn-vt-sw-pk').onclick=()=>open('prf'); E('btn-vt-sw-pw').onclick=()=>open('pw'); E('btn-vt-sw-topw').onclick=()=>open('pw'); cn.onclick=()=>{ f.style.display='none'; mode=''; };
+    let busy=false; go.onclick=()=>{ if(busy||!mode) return; const toPw=mode!=='prf', a=n1.value, b=n2.value, msg=t=>{ E('vault-msg').textContent=t||''; };
+      if(toPw){ if(a.length<HP_PW_MIN){ msg(T('vt_e_pwshort')); return; } if(a!==b){ msg(T('vt_e_pwdiff')); return; } }
+      busy=true; go.disabled=true; msg('');
+      hpVaultSwitch(mode,toPw?a:undefined,pk?undefined:cur.value).then(was=>{ cur.value=''; n1.value=''; n2.value=''; f.style.display='none'; mode='';
+        msg(T(!toPw?'vt_sw_ok_pk':(was==='pw'?'vt_sw_ok_pw2':'vt_sw_ok_pw'))+(was==='prf'?' '+T('vt_sw_oldpk'):'')+(toPw?' '+T('vt_pw_nosave'):'')); try{ hpVaultUi(); }catch(e){} })
+        .catch(e=>{ try{ hpLog('守り方を替えられない '+(e&&e.name||'')+' '+(e&&e.message||'')); }catch(x){} msg(e&&e.hpv==='swlocked'?T('vt_e_sw_locked'):T(hpVaultWhy(e))); }).then(()=>{ busy=false; go.disabled=false; }); };
+    E('btn-vt-sw-go').textContent=T('btn_vt_sw_go'); E('btn-vt-sw-cancel').textContent=T('btn_vt_sw_cancel'); }
+  row.style.display=on?'':'none'; if(!on) E('vault-sw-wrap').style.display='none';
+  E('btn-vt-sw-pk').style.display=on&&!pk?'':'none'; E('btn-vt-sw-pw').style.display=on&&!pk?'':'none'; E('btn-vt-sw-topw').style.display=on&&pk?'':'none';
+  E('btn-vt-sw-pk').textContent=T('vt_sw_to_pk'); E('btn-vt-sw-pw').textContent=T('vt_sw_pw'); E('btn-vt-sw-topw').textContent=T('vt_sw_to_pw'); E('vault-sw-cur').placeholder=T('vt_sw_cur_pw'); E('vault-sw-new1').placeholder=T('ph_vault_pw1'); E('vault-sw-new2').placeholder=T('ph_vault_pw2'); return true; }catch(e){ return false; } }
+try{ if(typeof hpVaultUi==='function'&&!hpVaultUi.__sw){ const f=hpVaultUi; hpVaultUi=function(){ const r=f.apply(this,arguments); try{ hpVsUi(); }catch(e){} return r; }; hpVaultUi.__sw=1; } }catch(e){}
+try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpVsUi(); }catch(e){} },2500); setInterval(()=>{ try{ hpVsUi(); }catch(e){} },5000); } }catch(e){}
+
