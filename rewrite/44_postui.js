@@ -2159,14 +2159,17 @@ try{ if(typeof hpNfFlip==='function'&&!hpNfFlip.__nj){ const f=hpNfFlip; hpNfFli
 try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpNjTick(); }catch(e){} },4000); setInterval(()=>{ try{ hpNjTick(); }catch(e){} },20000); } }catch(e){}
 
 const HP_REL_PUB='654e0e5c037303baf5b74e81ee249276a904f1909e91abc58aac456c7e21b3bd', HP_REL_EVERY=30*60e3;
-let HP_REL={st:'',fp:'',at:0,why:''}, HP_REL_BUSY=false;
+let HP_REL={st:'',fp:'',at:0,why:'',ext:[]}, HP_REL_BUSY=false, HP_REL_HOLD=0;
 function hpRelHere(){ try{ if(typeof location==='undefined') return false; const h=String(location.hostname||''); return h==='handpost.page'||h==='www.handpost.page'; }catch(e){ return false; } }
-function hpRelSrcs(){ const out=[]; try{ for(const s of document.querySelectorAll('script[src]')){ const src=String(s.getAttribute('src')||''); if(!src||/^https?:/i.test(src)) continue; out.push({src:src,path:src.split('?')[0].replace(/^\.?\//,'')}); } }catch(e){} return out; }
+function hpRelSrcs(ext){ const out=[]; let base='', org=''; try{ base=String(location.href||('https://'+location.hostname+'/')); org=new URL(base).origin; }catch(e){ return out; }
+  try{ for(const s of document.querySelectorAll('script[src]')){ const src=String(s.getAttribute('src')||''); if(!src) continue; let u=null; try{ u=new URL(src,base); }catch(e){ continue; }
+    if(u.origin!==org||!/^https?:$/.test(u.protocol)){ if(ext&&ext.length<8) ext.push(String(u.protocol+'//'+u.host+u.pathname).slice(0,120)); continue; }
+    let p=u.pathname; try{ p=decodeURIComponent(p); }catch(e){} out.push({src:u.pathname+u.search,path:p.replace(/^\//,'')}); } }catch(e){} return out; }
 async function hpRelBytes(url,opt){ const r=await fetch(url,opt||{cache:'force-cache'}); if(!r.ok) throw new Error(url.split('?')[0]+' '+r.status); return new Uint8Array(await r.arrayBuffer()); }
 async function hpRelSha(u8){ return bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256',u8))); }
 function hpRelSums(txt){ const m={}; for(const l of String(txt).split('\n')){ const x=/^([0-9a-f]{64})  (.+)$/.exec(l); if(x) m[x[2]]=x[1]; } return m; }
 async function hpRelCheck(){
-  if(HP_REL_BUSY) return HP_REL.st; HP_REL_BUSY=true; const now=Date.now(); let st='err', fp='', why='';
+  if(HP_REL_BUSY) return HP_REL.st; HP_REL_BUSY=true; const now=Date.now(); let st='err', fp='', why='', ext=[];
   try{
     if(!hpRelHere()) st='skip';
     else {
@@ -2176,23 +2179,31 @@ async function hpRelCheck(){
       if(!/^[0-9a-f]{128}$/.test(sig)) st='nosig';
       else { const s=hp5S(); const good=s.crypto_sign_verify_detached(hexToBytes(sig),s.from_string('handpost-release:v1:'+(await hpRelSha(sums))),hexToBytes(HP_REL_PUB));
         if(!good) st='badsig';
-        else { const want=hpRelSums(new TextDecoder().decode(sums)); const list=[{src:'/index.html',path:'index.html'},{src:'/sw.js',path:'sw.js'}].concat(hpRelSrcs()); let diff=0;
-          for(const f of list){ const h=await hpRelSha(await hpRelBytes(f.src)); if(!want[f.path]||want[f.path]!==h){ diff++; why=why||f.path; } }
+        else { const want=hpRelSums(new TextDecoder().decode(sums)), fresh={cache:'no-cache'}; const list=[{src:'/index.html',path:'index.html',o:fresh},{src:'/sw.js',path:'sw.js',o:fresh}].concat(hpRelSrcs(ext)); let diff=0;
+          for(const f of list){ const h=await hpRelSha(await hpRelBytes(f.src,f.o)); if(!want[f.path]||want[f.path]!==h){ diff++; why=why||f.path; } }
           st=diff?'changed':'ok'; } }
     }
   }catch(e){ st='err'; why=String((e&&e.message)||e).slice(0,80); }
-  HP_REL={st:st,fp:fp,at:now,why:why}; HP_REL_BUSY=false;
-  try{ hpLog('本物の印：'+st+(fp?'（指紋 '+fp.slice(0,8)+'）':'')+(why?' '+why:'')); }catch(e){}
+  HP_REL={st:st,fp:fp,at:now,why:why,ext:ext}; HP_REL_BUSY=false;
+  try{ hpLog('本物の印：'+st+(fp?'（指紋 '+fp.slice(0,8)+'）':'')+(why?' '+why:'')+(ext.length?'・照らさない script（拡張機能など）'+ext.length+' つ：'+ext.join(' '):'')); }catch(e){}
   try{ if(st==='badsig') hpBanner(T('rel_bad')); }catch(e){}
   try{ hpRelUi(); }catch(e){} return st; }
-function hpRelText(){ const R=HP_REL, t=R.at?new Date(R.at).toTimeString().slice(0,5):''; if(HP_REL_BUSY&&!R.st) return T('rel_wait');
-  return R.st==='ok'?TF('rel_ok',{fp:R.fp.slice(0,8),t:t}):R.st==='changed'?T('rel_changed'):R.st==='badsig'?T('rel_bad'):R.st==='nosig'?T('rel_nosig'):R.st==='skip'?T('rel_skip'):R.st==='err'?TF('rel_err',{e:R.why}):T('rel_wait'); }
+function hpRelText(){ const R=HP_REL, t=R.at?new Date(R.at).toTimeString().slice(0,8):''; if(HP_REL_BUSY||Date.now()<HP_REL_HOLD||!R.st) return T('rel_wait');
+  const at=(!t||R.st==='ok'||R.st==='skip')?'':(R.st==='changed'&&R.why)?TF('rel_at_f',{t:t,f:R.why}):TF('rel_at',{t:t});
+  return (R.st==='ok'?TF('rel_ok',{fp:R.fp.slice(0,8),t:t}):R.st==='changed'?T('rel_changed'):R.st==='badsig'?T('rel_bad'):R.st==='nosig'?T('rel_nosig'):R.st==='skip'?T('rel_skip'):R.st==='err'?TF('rel_err',{e:R.why}):T('rel_wait'))+at; }
 function hpRelUi(){ try{ if(typeof document==='undefined'||!document.getElementById) return false; const sec=document.getElementById('p-id'); if(!sec) return false;
   let c=document.getElementById('rel-card'); if(!c){ c=document.createElement('div'); c.className='card'; c.id='rel-card'; const h=document.createElement('h2'); h.id='rel-title'; c.appendChild(h); const st=document.createElement('div'); st.id='rel-state'; st.style.cssText='margin:6px 0;line-height:1.6'; c.appendChild(st);
-    const nt=document.createElement('div'); nt.id='rel-note'; nt.className='note'; nt.style.cssText='white-space:pre-line'; c.appendChild(nt); const row=document.createElement('div'); row.className='row'; row.style.cssText='margin-top:8px'; const b=document.createElement('button'); b.className='b'; b.id='btn-rel-again'; b.type='button'; b.onclick=()=>{ hpRelCheck().catch(()=>{}); hpRelUi(); }; row.appendChild(b); c.appendChild(row); const dm=document.getElementById('danger-more'); if(dm&&dm.parentNode===sec) sec.insertBefore(c,dm); else sec.appendChild(c); }
-  const tt=T('rel_title'), tx=hpRelText(), nt=T('rel_note'), bt=T('btn_rel_again'); const E=id=>document.getElementById(id);
+    const nt=document.createElement('div'); nt.id='rel-note'; nt.className='note'; nt.style.cssText='white-space:pre-line'; c.appendChild(nt); const row=document.createElement('div'); row.className='row'; row.style.cssText='margin-top:8px'; const b=document.createElement('button'); b.className='b'; b.id='btn-rel-again'; b.type='button'; b.onclick=()=>{ hpRelAgain().catch(()=>{}); }; row.appendChild(b); c.appendChild(row); const dm=document.getElementById('danger-more'); if(dm&&dm.parentNode===sec) sec.insertBefore(c,dm); else sec.appendChild(c); }
+  const E=id=>document.getElementById(id);
+  if(!E('rel-ext')&&E('rel-note')&&E('rel-note').parentNode){ const x=document.createElement('div'); x.id='rel-ext'; x.className='note'; x.style.cssText='white-space:pre-line;margin:4px 0 8px;overflow-wrap:anywhere'; E('rel-note').parentNode.insertBefore(x,E('rel-note')); }
+  if(!E('btn-rel-reload')&&E('btn-rel-again')&&E('btn-rel-again').parentNode){ const rb=document.createElement('button'); rb.className='b'; rb.id='btn-rel-reload'; rb.type='button'; rb.style.cssText='margin-left:8px'; rb.onclick=()=>{ try{ location.reload(); }catch(e){} }; E('btn-rel-again').parentNode.appendChild(rb); }
+  const busy=HP_REL_BUSY||Date.now()<HP_REL_HOLD, ex=HP_REL.ext||[], tt=T('rel_title'), tx=hpRelText(), nt=T('rel_note'), bt=T('btn_rel_again'), rt=T('btn_rel_reload'), xs=ex.length?TF('rel_ext',{n:ex.length,list:ex.join('\n')}):'';
   if(E('rel-title').textContent!==tt) E('rel-title').textContent=tt; if(E('rel-state').textContent!==tx) E('rel-state').textContent=tx; if(E('rel-note').textContent!==nt) E('rel-note').textContent=nt; if(E('btn-rel-again').textContent!==bt) E('btn-rel-again').textContent=bt;
-  E('rel-state').style.color=HP_REL.st==='badsig'?'var(--red)':HP_REL.st==='changed'||HP_REL.st==='nosig'?'var(--amber)':HP_REL.st==='ok'?'var(--teal)':''; return true; }catch(e){ return false; } }
+  const ba=E('btn-rel-again'), rb=E('btn-rel-reload'), xe=E('rel-ext'); ba.disabled=busy; ba.style.opacity=busy?'.5':'';
+  if(rb){ if(rb.textContent!==rt) rb.textContent=rt; rb.style.display=(!busy&&HP_REL.st==='changed')?'':'none'; } if(xe){ if(xe.textContent!==xs) xe.textContent=xs; xe.style.display=xs?'':'none'; }
+  E('rel-state').style.color=busy?'':HP_REL.st==='badsig'?'var(--red)':HP_REL.st==='changed'||HP_REL.st==='nosig'?'var(--amber)':HP_REL.st==='ok'?'var(--teal)':''; return true; }catch(e){ return false; } }
+function hpRelAgain(){ HP_REL_HOLD=Date.now()+800; try{ hpRelUi(); }catch(e){}
+  return Promise.all([hpRelCheck().catch(()=>''),new Promise(r=>setTimeout(r,800))]).then(()=>{ HP_REL_HOLD=0; try{ hpRelUi(); }catch(e){} return HP_REL.st; }); }
 try{ if(typeof hpSend==='function'&&!hpSend.__rel){ const f=hpSend; hpSend=function(){ if(HP_REL.st==='badsig') return Promise.reject(new Error(T('rel_bad_short'))); return f.apply(this,arguments); }; hpSend.__rel=1; } }catch(e){}
 try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpRelUi(); hpRelCheck().catch(()=>{}); }catch(e){} },3000); setInterval(()=>{ try{ hpRelUi(); if(Date.now()-HP_REL.at>HP_REL_EVERY) hpRelCheck().catch(()=>{}); }catch(e){} },5000); } }catch(e){}
 
