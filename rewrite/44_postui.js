@@ -2159,6 +2159,8 @@ try{ if(typeof hpNfFlip==='function'&&!hpNfFlip.__nj){ const f=hpNfFlip; hpNfFli
 try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpNjTick(); }catch(e){} },4000); setInterval(()=>{ try{ hpNjTick(); }catch(e){} },20000); } }catch(e){}
 
 const HP_REL_PUB='654e0e5c037303baf5b74e81ee249276a904f1909e91abc58aac456c7e21b3bd', HP_REL_EVERY=30*60e3;
+let HP_REL_SUS=0, HP_REL_NEXT=0; const HP_REL_SUS_N=3, HP_REL_SUS_GAP=20e3, HP_REL_EVERY_BAD=2*60e3;
+const HP_REL_RL_KEY='hp_rel_rl', HP_REL_IDLE=20*60e3, HP_REL_AWAY=30*60e3, HP_REL_RL_GAP=15*60e3; let HP_REL_BOOT=Date.now(), HP_REL_INPUT=Date.now(), HP_REL_HID_AT=0, HP_REL_BACK=0;
 let HP_REL={st:'',fp:'',at:0,why:'',ext:[]}, HP_REL_BUSY=false, HP_REL_HOLD=0;
 function hpRelHere(){ try{ if(typeof location==='undefined') return false; const h=String(location.hostname||''); return h==='handpost.page'||h==='www.handpost.page'; }catch(e){ return false; } }
 function hpRelSrcs(ext){ const out=[]; let base='', org=''; try{ base=String(location.href||('https://'+location.hostname+'/')); org=new URL(base).origin; }catch(e){ return out; }
@@ -2168,8 +2170,17 @@ function hpRelSrcs(ext){ const out=[]; let base='', org=''; try{ base=String(loc
 async function hpRelBytes(url,opt){ const r=await fetch(url,opt||{cache:'force-cache'}); if(!r.ok) throw new Error(url.split('?')[0]+' '+r.status); return new Uint8Array(await r.arrayBuffer()); }
 async function hpRelSha(u8){ return bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256',u8))); }
 function hpRelSums(txt){ const m={}; for(const l of String(txt).split('\n')){ const x=/^([0-9a-f]{64})  (.+)$/.exec(l); if(x) m[x[2]]=x[1]; } return m; }
+const HP_REL_HIST_MAX=20;
+function hpRelRed(st){ return st==='badsig'||st==='served'||st==='unknown'; }
+async function hpRelJson(p,want){ const b=await hpRelBytes('/'+p,{cache:'no-store'}); if(!want[p]||want[p]!==(await hpRelSha(b))) throw new Error(p+' が印と合わない'); return JSON.parse(new TextDecoder().decode(b)); }
+async function hpRelFindOld(scr,hs,want){
+  let L=[]; try{ const j=await hpRelJson('releases/index.json',want); L=Array.isArray(j&&j.list)?j.list:[]; }catch(e){ return 0; }
+  for(const x of L.slice(0,HP_REL_HIST_MAX)){ try{ if(!x||!Number.isInteger(x.n)||x.n<1||!/^[0-9a-f]{64}$/.test(String(x.fp||''))) continue;
+      const s=await hpRelBytes('/releases/'+x.n+'.sums',{cache:'force-cache'}); if((await hpRelSha(s))!==x.fp) continue;
+      const w=hpRelSums(new TextDecoder().decode(s)); if(scr.every(f=>w[f.path]&&w[f.path]===hs[f.path])) return x.n; }catch(e){} }
+  return 0; }
 async function hpRelCheck(){
-  if(HP_REL_BUSY) return HP_REL.st; HP_REL_BUSY=true; const now=Date.now(); let st='err', fp='', why='', ext=[];
+  if(HP_REL_BUSY) return HP_REL.st; HP_REL_BUSY=true; const now=Date.now(); let st='err', fp='', why='', ext=[], n=0, o=0;
   try{
     if(!hpRelHere()) st='skip';
     else {
@@ -2179,33 +2190,81 @@ async function hpRelCheck(){
       if(!/^[0-9a-f]{128}$/.test(sig)) st='nosig';
       else { const s=hp5S(); const good=s.crypto_sign_verify_detached(hexToBytes(sig),s.from_string('handpost-release:v1:'+(await hpRelSha(sums))),hexToBytes(HP_REL_PUB));
         if(!good) st='badsig';
-        else { const want=hpRelSums(new TextDecoder().decode(sums)), fresh={cache:'no-cache'}; const list=[{src:'/index.html',path:'index.html',o:fresh},{src:'/sw.js',path:'sw.js',o:fresh}].concat(hpRelSrcs(ext)); let diff=0;
-          for(const f of list){ const h=await hpRelSha(await hpRelBytes(f.src,f.o)); if(!want[f.path]||want[f.path]!==h){ diff++; why=why||f.path; } }
-          st=diff?'changed':'ok'; } }
+        else { const want=hpRelSums(new TextDecoder().decode(sums)), fresh={cache:'no-cache'};
+          try{ const r=await hpRelJson('RELEASE',want); n=(r&&Number.isInteger(r.n)&&r.n>0)?r.n:0; }catch(e){ n=0; }
+          for(const f of [{src:'/index.html',path:'index.html'},{src:'/sw.js',path:'sw.js'}]){ const h=await hpRelSha(await hpRelBytes(f.src,fresh)); if(!want[f.path]||want[f.path]!==h) why=why||f.path; }
+          if(why) st='served';
+          else { const scr=hpRelSrcs(ext), hs={}; for(const f of scr) hs[f.path]=await hpRelSha(await hpRelBytes(f.src));
+            const bad=scr.filter(f=>!want[f.path]||want[f.path]!==hs[f.path]);
+            if(!bad.length) st='ok'; else { o=await hpRelFindOld(scr,hs,want); if(o) st='old'; else { st='unknown'; why=bad[0].path; } } } } }
     }
   }catch(e){ st='err'; why=String((e&&e.message)||e).slice(0,80); }
-  HP_REL={st:st,fp:fp,at:now,why:why,ext:ext}; HP_REL_BUSY=false;
-  try{ hpLog('本物の印：'+st+(fp?'（指紋 '+fp.slice(0,8)+'）':'')+(why?' '+why:'')+(ext.length?'・照らさない script（拡張機能など）'+ext.length+' つ：'+ext.join(' '):'')); }catch(e){}
-  try{ if(st==='badsig') hpBanner(T('rel_bad')); }catch(e){}
+  const was=HP_REL.st;
+  if(hpRelRed(st)&&!hpRelRed(was)){ HP_REL_SUS++; if(HP_REL_SUS<HP_REL_SUS_N){ HP_REL_BUSY=false; HP_REL_NEXT=Date.now()+HP_REL_SUS_GAP; try{ hpLog('本物の印：'+st+'（'+HP_REL_SUS+' 回目）'+(why?' '+why:'')+'。'+Math.round(HP_REL_SUS_GAP/1000)+' 秒後に確かめ直す（配り替えの最中かもしれない）'); }catch(e){} try{ hpRelUi(); }catch(e){} return was; } }
+  HP_REL_SUS=0; HP_REL_NEXT=0;
+  HP_REL={st:st,fp:fp,at:now,why:why,ext:ext,n:n,o:o}; HP_REL_BUSY=false;
+  try{ hpLog('本物の印：'+st+(n?'（第 '+n+' 版'+(o?'・開いているのは第 '+o+' 版':'')+'）':'')+(fp?'（照合番号 '+fp.slice(0,8)+'）':'')+(why?' '+why:'')+(ext.length?'・照らさない script（拡張機能など）'+ext.length+' つ：'+ext.join(' '):'')); }catch(e){}
+  try{ if(hpRelRed(st)) hpBanner(hpRelMsg()); }catch(e){}
+  try{ if(hpRelRed(was)&&!hpRelRed(st)) hpRelResume(); }catch(e){}
+  try{ if(st==='old'||st==='unknown') hpRelMaybeReload(); }catch(e){}
   try{ hpRelUi(); }catch(e){} return st; }
-function hpRelText(){ const R=HP_REL, t=R.at?new Date(R.at).toTimeString().slice(0,8):''; if(HP_REL_BUSY||Date.now()<HP_REL_HOLD||!R.st) return T('rel_wait');
-  const at=(!t||R.st==='ok'||R.st==='skip')?'':(R.st==='changed'&&R.why)?TF('rel_at_f',{t:t,f:R.why}):TF('rel_at',{t:t});
-  return (R.st==='ok'?TF('rel_ok',{fp:R.fp.slice(0,8),t:t}):R.st==='changed'?T('rel_changed'):R.st==='badsig'?T('rel_bad'):R.st==='nosig'?T('rel_nosig'):R.st==='skip'?T('rel_skip'):R.st==='err'?TF('rel_err',{e:R.why}):T('rel_wait'))+at; }
+function hpRelT(){ return HP_REL.at?new Date(HP_REL.at).toTimeString().slice(0,8):''; }
+function hpRelMsg(){ const R=HP_REL;
+  return R.st==='ok'?(R.n?TF('rel_ok',{n:R.n,t:hpRelT()}):TF('rel_ok0',{t:hpRelT()})):R.st==='old'?TF('rel_old',{o:R.o,n:R.n||'?'}):R.st==='unknown'?TF('rel_unknown',{f:R.why||'?'}):R.st==='served'?TF('rel_served',{f:R.why||'?'})
+    :R.st==='badsig'?T('rel_bad'):R.st==='nosig'?T('rel_nosig'):R.st==='skip'?T('rel_skip'):R.st==='err'?TF('rel_err',{e:R.why}):T('rel_wait'); }
+function hpRelText(){ const R=HP_REL, t=hpRelT(); if(HP_REL_BUSY||Date.now()<HP_REL_HOLD||!R.st) return T('rel_wait');
+  return hpRelMsg()+((!t||R.st==='ok'||R.st==='skip')?'':TF('rel_at',{t:t})); }
 function hpRelUi(){ try{ if(typeof document==='undefined'||!document.getElementById) return false; const sec=document.getElementById('p-id'); if(!sec) return false;
   let c=document.getElementById('rel-card'); if(!c){ c=document.createElement('div'); c.className='card'; c.id='rel-card'; const h=document.createElement('h2'); h.id='rel-title'; c.appendChild(h); const st=document.createElement('div'); st.id='rel-state'; st.className='note'; st.style.cssText='margin:6px 0;line-height:1.6'; c.appendChild(st);
     const nt=document.createElement('div'); nt.id='rel-note'; nt.className='note'; nt.style.cssText='white-space:pre-line'; c.appendChild(nt); const row=document.createElement('div'); row.className='row'; row.style.cssText='margin-top:8px'; const b=document.createElement('button'); b.className='b'; b.id='btn-rel-again'; b.type='button'; b.onclick=()=>{ hpRelAgain().catch(()=>{}); }; row.appendChild(b); c.appendChild(row); const dm=document.getElementById('danger-more'); if(dm&&dm.parentNode===sec) sec.insertBefore(c,dm); else sec.appendChild(c); }
   const E=id=>document.getElementById(id);
   if(!E('rel-ext')&&E('rel-note')&&E('rel-note').parentNode){ const x=document.createElement('div'); x.id='rel-ext'; x.className='note'; x.style.cssText='white-space:pre-line;margin:4px 0 8px;overflow-wrap:anywhere'; E('rel-note').parentNode.insertBefore(x,E('rel-note')); }
   if(!E('btn-rel-reload')&&E('btn-rel-again')&&E('btn-rel-again').parentNode){ const rb=document.createElement('button'); rb.className='b'; rb.id='btn-rel-reload'; rb.type='button'; rb.style.cssText='margin-left:8px'; rb.onclick=()=>{ try{ location.reload(); }catch(e){} }; E('btn-rel-again').parentNode.appendChild(rb); }
-  const busy=HP_REL_BUSY||Date.now()<HP_REL_HOLD, ex=HP_REL.ext||[], tt=T('rel_title'), tx=hpRelText(), nt=T('rel_note'), bt=T('btn_rel_again'), rt=T('btn_rel_reload'), xs=ex.length?TF('rel_ext',{n:ex.length,list:ex.join('\n')}):'';
+  const busy=HP_REL_BUSY||Date.now()<HP_REL_HOLD, ex=HP_REL.ext||[], tt=T('rel_title'), tx=hpRelText(), nt=TF('rel_note',{fp:String(HP_REL.fp||'').slice(0,8)||'—'}), bt=T('btn_rel_again'), rt=T('btn_rel_reload'), xs=ex.length?TF('rel_ext',{n:ex.length,list:ex.join('\n')}):'';
   if(E('rel-title').textContent!==tt) E('rel-title').textContent=tt; if(E('rel-state').textContent!==tx) E('rel-state').textContent=tx; if(E('rel-note').textContent!==nt) E('rel-note').textContent=nt; if(E('btn-rel-again').textContent!==bt) E('btn-rel-again').textContent=bt;
   const ba=E('btn-rel-again'), rb=E('btn-rel-reload'), xe=E('rel-ext'); ba.disabled=busy; ba.style.opacity=busy?'.5':'';
-  if(rb){ if(rb.textContent!==rt) rb.textContent=rt; rb.style.display=(!busy&&HP_REL.st==='changed')?'':'none'; } if(xe){ if(xe.textContent!==xs) xe.textContent=xs; xe.style.display=xs?'':'none'; }
-  E('rel-state').style.color=busy?'':HP_REL.st==='badsig'?'var(--red)':HP_REL.st==='changed'||HP_REL.st==='nosig'?'var(--amber)':HP_REL.st==='ok'?'var(--teal)':''; return true; }catch(e){ return false; } }
+  if(rb){ if(rb.textContent!==rt) rb.textContent=rt; rb.style.display=(!busy&&(HP_REL.st==='old'||HP_REL.st==='unknown'))?'':'none'; } if(xe){ if(xe.textContent!==xs) xe.textContent=xs; xe.style.display=xs?'':'none'; }
+  E('rel-state').style.color=busy?'':hpRelRed(HP_REL.st)?'var(--red)':(HP_REL.st==='old'||HP_REL.st==='nosig')?'var(--amber)':HP_REL.st==='ok'?'var(--teal)':''; return true; }catch(e){ return false; } }
 function hpRelAgain(){ HP_REL_HOLD=Date.now()+800; try{ hpRelUi(); }catch(e){}
   return Promise.all([hpRelCheck().catch(()=>''),new Promise(r=>setTimeout(r,800))]).then(()=>{ HP_REL_HOLD=0; try{ hpRelUi(); }catch(e){} return HP_REL.st; }); }
-try{ if(typeof hpSend==='function'&&!hpSend.__rel){ const f=hpSend; hpSend=function(){ if(HP_REL.st==='badsig') return Promise.reject(new Error(T('rel_bad_short'))); return f.apply(this,arguments); }; hpSend.__rel=1; } }catch(e){}
-try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpRelUi(); hpRelCheck().catch(()=>{}); }catch(e){} },3000); setInterval(()=>{ try{ hpRelUi(); if(Date.now()-HP_REL.at>HP_REL_EVERY) hpRelCheck().catch(()=>{}); }catch(e){} },5000); } }catch(e){}
+function hpRelResume(){
+  try{ hpLog('本物の印が合ったので、郵便受けとのやり取りを再開する'); }catch(e){}
+  try{ hpBanner(null); }catch(e){}
+  try{ if(typeof POST!=='undefined'&&POST&&POST.up&&typeof hpReclaim==='function'){ POST.claimedId=null; Promise.resolve(hpReclaim()).catch(()=>{}); } else if(typeof startBg==='function') startBg(); }catch(e){}
+  try{ if(typeof hpResendKick==='function') Promise.resolve(hpResendKick()).catch(()=>{}); }catch(e){} }
+function hpRelSafe(){
+  try{ const m=document.getElementById('msg'); if(m&&String(m.value||'').trim()) return false; }catch(e){}
+  try{ const a=document.activeElement; if(a&&/^(INPUT|TEXTAREA)$/.test(String(a.tagName||''))&&String(a.value||'').trim()) return false; }catch(e){}
+  try{ if(typeof DRAFTS!=='undefined'&&DRAFTS&&DRAFTS.length) return false; }catch(e){}
+  try{ if(typeof HP_SENDING!=='undefined'&&HP_SENDING&&HP_SENDING.size) return false; }catch(e){}
+  return true; }
+function hpRelMaybeReload(){
+  try{ if(typeof window==='undefined'||typeof location==='undefined'||typeof location.reload!=='function') return false;
+    if((HP_REL.st!=='old'&&HP_REL.st!=='unknown')||!HP_REL.fp) return false;
+    if(typeof document!=='undefined'&&document&&document.visibilityState==='hidden') return false;
+    const now=Date.now(), boot=now-HP_REL_BOOT<60e3, back=!!HP_REL_BACK&&now-HP_REL_BACK<60e3, idle=now-HP_REL_INPUT>=HP_REL_IDLE;
+    if(!(boot||back||idle)) return false;
+    let last=null; try{ last=JSON.parse(localStorage.getItem(HP_REL_RL_KEY)||'null'); }catch(e){ last=null; }
+    if(last&&last.fp===HP_REL.fp&&now-Number(last.at||0)<HP_REL_RL_GAP) return false;
+    if(!hpRelSafe()) return false;
+    try{ localStorage.setItem(HP_REL_RL_KEY,JSON.stringify({fp:HP_REL.fp,at:now})); }catch(e){}
+    try{ hpLog((HP_REL.st==='old'?'新しい版（第 '+HP_REL.n+' 版）が出ているので開き直す（':'正式な版と合わないので開き直す（')+(boot?'開いた直後':back?'しばらく離れて戻った':'しばらく操作が無い')+'・配られている版の照合番号 '+HP_REL.fp.slice(0,8)+'）'); }catch(e){}
+    location.reload(); return true; }catch(e){ return false; } }
+function hpRelTick(){
+  try{ hpRelUi(); }catch(e){}
+  const now=Date.now();
+  if(HP_REL_NEXT){ if(now>=HP_REL_NEXT){ HP_REL_NEXT=0; hpRelCheck().catch(()=>{}); } return; }
+  if(now-HP_REL.at>(hpRelRed(HP_REL.st)?HP_REL_EVERY_BAD:HP_REL_EVERY)){ hpRelCheck().catch(()=>{}); return; }
+  if(HP_REL.st==='old'||HP_REL.st==='unknown') hpRelMaybeReload(); }
+function hpRelOnVis(){
+  try{ if(document.visibilityState==='hidden'){ HP_REL_HID_AT=Date.now(); return; }
+    if(HP_REL_HID_AT&&Date.now()-HP_REL_HID_AT>=HP_REL_AWAY){ HP_REL_BACK=Date.now(); HP_REL_NEXT=0; hpRelCheck().catch(()=>{}); }
+    HP_REL_HID_AT=0; }catch(e){} }
+try{ if(typeof hpSend==='function'&&!hpSend.__rel){ const f=hpSend; hpSend=function(){ if(hpRelRed(HP_REL.st)) return Promise.reject(new Error(T('rel_bad_short'))); return f.apply(this,arguments); }; hpSend.__rel=1; } }catch(e){}
+try{ if(typeof hpPut==='function'&&!hpPut.__rel){ const f=hpPut; hpPut=async function(){ if(hpRelRed(HP_REL.st)){ const e=new Error(T('rel_bad_short')); e.hpk='wait'; e.hpWhy=T('rel_bad_short'); throw e; } return f.apply(this,arguments); }; hpPut.__rel=1; } }catch(e){}
+try{ if(typeof hpFailText==='function'&&!hpFailText.__rel){ const f=hpFailText; hpFailText=function(peer){ const s=f.apply(this,arguments); try{ const x=HP_FAIL_LAST.get(peer); if(hpRelRed(HP_REL.st)&&x&&x.k==='wait') return TF('sys_fail_rel',{name:nickOf(peer)})+TF('sys_fail_n',{n:hpPendList(peer).length,t:x.t}); }catch(e){} return s; }; hpFailText.__rel=1; } }catch(e){}
+try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpRelUi(); hpRelCheck().catch(()=>{}); }catch(e){} },3000); setInterval(()=>{ try{ hpRelTick(); }catch(e){} },5000);
+  document.addEventListener('visibilitychange',hpRelOnVis); for(const k of ['keydown','pointerdown','touchstart','input']) document.addEventListener(k,()=>{ HP_REL_INPUT=Date.now(); },{capture:true,passive:true}); } }catch(e){}
 
 async function hpVaultSwitch(kind,pwNew,pwCur){
   const m=hpVaultMeta(); if(!m||!VAULT||!VAULT_DK) throw hpVErr('swlocked','鍵が開いていない');
