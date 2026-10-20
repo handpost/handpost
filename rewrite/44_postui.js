@@ -698,7 +698,7 @@ async function hpD2Tick(){ if(HP_D2_BUSY||!ID) return 0; HP_D2_BUSY=true; let n=
 async function hpD2Adopt(){
   if(!ID||!hpIsMain()||typeof EDPRIV==='undefined'||!EDPRIV) return 0; const c=await hpD2Chain(); if(!c) return 0;
   const my=hpHex((await hpDevKey()).publicKey); let n=0; if(!Array.isArray(ID.devs)) ID.devs=[];
-  for(const d of c.cur.devs){ if(d.dev===my||ID.devs.some(x=>x&&x.dev===d.dev)) continue;
+  for(const d of c.cur.devs){ if(d.dev===my||ID.devs.some(x=>x&&x.dev===d.dev)) continue; if(typeof hpD2GoneDev==='function'&&hpD2GoneDev(d.dev)) continue;
     const devSig=await edSign(hp5DevMsg(ID.address,d.dev)), lb=(ID.rsLbl&&ID.rsLbl[d.dev])||{};
     ID.devs.push({dev:d.dev,devSig:devSig,label:lb.label||'',at:Date.now(),pre:null}); n++;
     if(lb.post&&!(typeof hpMcBoxRec==='function'&&hpMcBoxRec(d.dev))){ if(!ID.box6||typeof ID.box6!=='object'||Array.isArray(ID.box6)) ID.box6={}; ID.box6[d.dev]={url:lb.post,at:1}; }
@@ -2137,4 +2137,7 @@ function hpOgShow(){ try{ if(typeof document==='undefined'||!document.body) retu
     const bn=document.getElementById('banner'); if(bn&&bn.parentNode) bn.parentNode.insertBefore(n,bn.nextSibling); else document.body.insertBefore(n,document.body.firstChild); }
   const t=document.getElementById('oldpg-text'), b=document.getElementById('btn-og-open'); if(t&&t.textContent!==T('og_text')) t.textContent=T('og_text'); if(b&&b.textContent!==T('btn_og_open')) b.textContent=T('btn_og_open'); return 'on'; }catch(e){ return ''; } }
 try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpOgShow(); }catch(e){} },1500); setInterval(()=>{ try{ hpOgShow(); }catch(e){} },30000); } }catch(e){}
+
+let HP_D2_GONELOG={};
+function hpD2GoneDev(dev){ try{ const g=(ID&&Array.isArray(ID.gone))?ID.gone.find(x=>x&&x.dev===dev):null; if(!g) return false; if(!HP_D2_GONELOG[dev]){ HP_D2_GONELOG[dev]=1; hpLog('外した端末は、名簿に残っていても一覧へ戻さない（端末 '+String(dev).slice(0,10)+'…）'); } return true; }catch(e){ return false; } }
 
