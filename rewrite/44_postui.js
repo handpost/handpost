@@ -2236,3 +2236,11 @@ function hpVsUi(){ try{ const E=id=>document.getElementById(id), card=E('vault-c
 try{ if(typeof hpVaultUi==='function'&&!hpVaultUi.__sw){ const f=hpVaultUi; hpVaultUi=function(){ const r=f.apply(this,arguments); try{ hpVsUi(); }catch(e){} return r; }; hpVaultUi.__sw=1; } }catch(e){}
 try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpVsUi(); }catch(e){} },2500); setInterval(()=>{ try{ hpVsUi(); }catch(e){} },5000); } }catch(e){}
 
+function hpPerfNote(){ try{ if(typeof document==='undefined'||!document.getElementById) return false; const row=document.getElementById('hs-up-row'); if(!row) return false;
+  let nt=document.getElementById('hs-perf-nt'); if(!nt){ nt=document.createElement('div'); nt.id='hs-perf-nt'; nt.className='hint'; nt.style.cssText='font-size:12px;opacity:.75;margin-top:3px'; row.appendChild(nt); }
+  const t=T('hs_perf_nt'); if(nt.textContent!==t) nt.textContent=t;
+  const box=document.getElementById('hs-list'), tb=box&&box.querySelector('table.hstb'), hd=tb&&tb.rows[0]; if(hd){ const want=T('hs_h_perf'), tip=T('hs_perf_tip')+'\n'+T('hs_h_tip'); for(const th of hd.querySelectorAll('th')){ if(String(th.textContent||'').replace(/ [▲▼]$/,'')===want&&th.title!==tip) th.title=tip; } }
+  return true; }catch(e){ return false; } }
+function hpPerfWrap(){ try{ if(typeof hpHsUpCol!=='function'||hpHsUpCol.__pf) return !!(typeof hpHsUpCol==='function'&&hpHsUpCol.__pf); const f=hpHsUpCol; hpHsUpCol=function(){ const r=f.apply(this,arguments); try{ hpPerfNote(); }catch(e){} return r; }; hpHsUpCol.__pf=1; return true; }catch(e){ return false; } }
+try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ const t=setInterval(()=>{ try{ if(hpPerfWrap()) clearInterval(t); }catch(e){} },500); setInterval(()=>{ try{ hpPerfNote(); }catch(e){} },5000); } }catch(e){}
+
