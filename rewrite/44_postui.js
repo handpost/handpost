@@ -2141,3 +2141,20 @@ try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&ty
 let HP_D2_GONELOG={};
 function hpD2GoneDev(dev){ try{ const g=(ID&&Array.isArray(ID.gone))?ID.gone.find(x=>x&&x.dev===dev):null; if(!g) return false; if(!HP_D2_GONELOG[dev]){ HP_D2_GONELOG[dev]=1; hpLog('外した端末は、名簿に残っていても一覧へ戻さない（端末 '+String(dev).slice(0,10)+'…）'); } return true; }catch(e){ return false; } }
 
+const HP_NJ_RETRY=600e3; let HP_NJ_ARM=false;
+function hpNjSave(patch){ try{ const s=hpNfGet(); if(s.on) return false; localStorage.setItem(HP_NF_KEY,JSON.stringify(Object.assign({},s,patch))); return true; }catch(e){ return false; } }
+function hpNjWant(){ try{
+  if(typeof ID==='undefined'||!ID) return ''; if(typeof hpOgOld==='function'&&hpOgOld()) return ''; if(typeof hpBlOff==='function'&&hpBlOff()) return '';
+  const s=hpNfGet(); if(s.on||s.off) return ''; if(HP_NF_BUSY||hpNfWhy()||!hpNfUp()) return '';
+  const p=(typeof Notification!=='undefined')?String(Notification.permission||''):'';
+  if(p==='granted') return (Date.now()-(Number(s.try)||0)>HP_NJ_RETRY)?'go':'';
+  return (p==='default'&&!s.ask)?'ask':''; }catch(e){ return ''; } }
+function hpNjArm(){ if(HP_NJ_ARM||typeof document==='undefined'||!document||typeof document.addEventListener!=='function') return false; HP_NJ_ARM=true;
+  const fn=()=>{ try{ if(hpNjWant()!=='ask') return; document.removeEventListener('click',fn,true); HP_NJ_ARM=false; hpNjSave({ask:Date.now()}); hpLog('通知：閉じている間の通知を最初から入れるため、ブラウザに許可を聞いた（自動で聞くのは 1 回だけ）'); hpNfFlip(true).catch(()=>{}); }catch(e){} };
+  document.addEventListener('click',fn,true); return true; }
+function hpNjTick(){ const w=hpNjWant();
+  if(w==='go'){ hpNjSave({try:Date.now()}); hpLog('通知：ブラウザの許可がもうあるので、閉じている間の通知を入れる（最初から入れる）'); hpNfFlip(true).catch(()=>{}); return 'go'; }
+  if(w==='ask') return hpNjArm()?'arm':'armed'; return ''; }
+try{ if(typeof hpNfFlip==='function'&&!hpNfFlip.__nj){ const f=hpNfFlip; hpNfFlip=async function(on){ const r=await f.apply(this,arguments); try{ if(!on&&!hpNfGet().on){ hpNjSave({off:Date.now()}); hpLog('通知：設定のスイッチで切った（自動では入れ直さない）'); } }catch(e){} return r; }; hpNfFlip.__nj=1; } }catch(e){}
+try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpNjTick(); }catch(e){} },4000); setInterval(()=>{ try{ hpNjTick(); }catch(e){} },20000); } }catch(e){}
+
