@@ -2076,24 +2076,24 @@ async function hpShSend(dev,why){
   HP_SH_BUSY=dev; let n=0, nl=0, sel=null;
   try{
     sel=hpShSelect(dev); const ls=hpShLetters(sel);
-    try{ if(typeof sibHistSet==='function') sibHistSet(dev,false); }catch(e){}
     hpShTx(dev,'send',0);
     for(const x of ls){ const k=await hpSibPut(x.b,[dev]); if(!k) throw new Error('宛先の端末に封をできない（受け取り用の鍵が無い）'); n+=x.b.items.length; nl++; hpShTx(dev,'send',n);
       try{ if(x.last){ sel.pg[x.b.peer]=x.last; sel.P[dev]={p:sel.pg,at:Date.now()}; if(typeof hpSpSave==='function') hpSpSave(sel.P); } }catch(e){} }
     const k2=await hpSibPut({v:1,type:'sibhd',n:n,c:sel.np,seen:sel.seen},[dev]); if(!k2) throw new Error('宛先の端末に封をできない（受け取り用の鍵が無い）'); nl++;
     try{ const P2=(typeof hpSpLoad==='function')?hpSpLoad():{}; delete P2[dev]; if(typeof hpSpSave==='function') hpSpSave(P2); if(typeof HP_SP_HAVE!=='undefined') delete HP_SP_HAVE[dev]; }catch(e){}
+    try{ if(typeof sibHistSet==='function') sibHistSet(dev,false); }catch(e){}
     delete HP_SH_TRY[dev];
     hpLog('過去の手紙を自分の端末（'+((typeof sibLabel==='function')?sibLabel(dev):String(dev).slice(0,10)+'…')+'）へ郵便受け経由で写した（'+sel.np+' 人・'+n+' 通・封 '+nl+' 通'+(sel.skip?'・相手が持っている '+sel.skip+' 通は送らない':'')+(sel.big?'・大きすぎる '+sel.big+' 通は送らない':'')+'。'+(why||'')+'）');
     hpShTx(dev,'done',n); try{ setTimeout(()=>{ try{ if(typeof hpHistTxUi==='function') hpHistTxUi(); }catch(e){} },(typeof HP_HIST_DONE_MS!=='undefined'?HP_HIST_DONE_MS:60000)+500); }catch(e){}
     return true;
   }catch(e){ HP_SH_TRY[dev]={at:Date.now(),n:((HP_SH_TRY[dev]||{}).n||0)+1}; hpShTx(dev,'',0);
-    try{ if(sel&&typeof sibHistSet==='function') sibHistSet(dev,true); }catch(e2){}
     hpLog('過去の手紙を郵便受け経由で写せなかった（'+((e&&e.message)||e)+'。'+Math.round(HP_SH_RETRY/60000)+' 分あけてもう一度。線が開けば直結で）');
     try{ const s=(typeof SIB!=='undefined'&&SIB)?SIB[dev]:null; if(s&&s.state==='open'&&typeof sibSendHistory==='function') Promise.resolve(sibSendHistory(dev)).catch(()=>{}); }catch(e3){}
     return false; }
   finally{ HP_SH_BUSY=''; } }
 function hpShDue(now){
-  now=now||Date.now(); const out=[]; if(!ID) return out; const m=hpShMap();
+  now=now||Date.now(); const out=[]; if(!ID) return out; const m=Object.assign({},hpShMap());
+  try{ const P=(typeof hpSpLoad==='function')?hpSpLoad():{}; for(const dev of Object.keys(P)){ if(!m[dev]&&P[dev]&&P[dev].p&&typeof P[dev].p==='object'&&Object.keys(P[dev].p).length) m[dev]=Number(P[dev].at)||1; } }catch(e){}
   for(const dev of Object.keys(m)){ const at=Number(m[dev])||0; if(!at) continue;
     try{ if(typeof SIB!=='undefined'&&SIB&&SIB[dev]) continue; if(typeof SIB_HIST_BUSY!=='undefined'&&SIB_HIST_BUSY&&SIB_HIST_BUSY.has(dev)) continue; if(typeof sibIsMine==='function'&&!sibIsMine(dev)) continue; }catch(e){ continue; }
     const t=HP_SH_TRY[dev]; if(t&&now-t.at<HP_SH_RETRY) continue;
@@ -2111,5 +2111,30 @@ try{ if(typeof hpSibLetter==='function'&&!hpSibLetter.__sh){ const f=hpSibLetter
     else sibOnMessage(r.fromDev,{t:'histdone',n:Number(o.n)||0,c:Number(o.c)||0,seen:(o.seen&&typeof o.seen==='object'&&!Array.isArray(o.seen))?o.seen:{}});
     return true; }
   return f.apply(this,arguments); },f,{__sh:1}); } }catch(e){}
+try{ if(typeof sibSendHistory==='function'&&!sibSendHistory.__sh){ const f=sibSendHistory; sibSendHistory=Object.assign(async function(id){ if(HP_SH_BUSY&&HP_SH_BUSY===id) return false;   return await f.apply(this,arguments); },f,{__sh:1}); } }catch(e){}
 try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function') setInterval(()=>{ try{ Promise.resolve(hpShTick()).catch(()=>{}); }catch(e){} },15000); }catch(e){}
+
+const HP_DT_GAP=60e3; let HP_DT_T=0, HP_DT_BUSY=false;
+function hpDtVer(){ try{ return Number(ID&&ID.devNameAt)||1; }catch(e){ return 1; } }
+function hpDtTold(){ if(!ID.dnTold||typeof ID.dnTold!=='object'||Array.isArray(ID.dnTold)) ID.dnTold={}; return ID.dnTold; }
+function hpDtMark(devs,v){ try{ const t=hpDtTold(); for(const d of devs) if(d) t[d]=v; saveID(); }catch(e){} }
+function hpDtNeed(){ try{ if(!ID||typeof hpSibs!=='function') return []; const v=hpDtVer(), t=hpDtTold(), now=Date.now(); return hpSibs().filter(d=>d&&d.dev&&hpPreValid(d.pre,d.dev,now)&&!(Number(t[d.dev])>=v)).map(d=>d.dev); }catch(e){ return []; } }
+async function hpDnTellNew(why){
+  if(HP_DT_BUSY||!ID||ID.devNameDue||typeof POST==='undefined'||!POST||!POST.up||POST.notOwner||typeof hpSibPut!=='function') return 0; const need=hpDtNeed(); if(!need.length) return 0; HP_DT_BUSY=true; let n=0;
+  try{ const kp=await hpDevKey(), dev=hpHex(kp.publicKey); let kind='other'; try{ kind=hpDevKindOf(hpDnAuto()); }catch(e){} let br=''; try{ const m=/^(.+?) · (.+)$/.exec(String(hpDnAuto()||'')); br=m?m[1]:''; }catch(e){}
+    const v=hpDtVer(), body={v:1,type:'devname',dev:dev,label:(typeof hpDnMine==='function')?hpDnMine():'',kind:kind,br:br,ts:v};
+    for(const d of need){ const k=await hpSibPut(body,[d]); hpDtMark([d],v); if(k>0) n++; }
+    if(n) hpLog('この端末の名前とブラウザを、まだ知らせていなかった端末 '+n+' 台に知らせた'+(why?'（'+why+'）':'')); return n; }
+  catch(e){ try{ hpLog('この端末の名前を知らせられない（'+((e&&e.message)||e)+'。1 分後にもう一度）'); }catch(x){} return -1; } finally{ HP_DT_BUSY=false; } }
+try{ if(typeof hpDnTell==='function'&&!hpDnTell.__dt){ const f=hpDnTell; hpDnTell=Object.assign(async function(){ const n=await f.apply(this,arguments); try{ if(n>0&&ID&&!ID.devNameDue&&typeof hpSibs==='function') hpDtMark(hpSibs().map(d=>d&&d.dev),hpDtVer()); }catch(e){} return n; },f,{__dt:1}); } }catch(e){}
+try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function') setInterval(()=>{ try{ if(Date.now()-HP_DT_T<HP_DT_GAP-5e3) return; HP_DT_T=Date.now(); Promise.resolve(hpDnTellNew('見回り')).catch(()=>{}); }catch(e){} },HP_DT_GAP); }catch(e){}
+
+const HP_OG_URL='https://handpost.page/';
+function hpOgOld(){ try{ if(typeof location==='undefined') return false; const h=String(location.hostname||''); if(!h||h==='handpost.page'||h==='www.handpost.page') return false; if(/^(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(h)) return false; return true; }catch(e){ return false; } }
+function hpOgShow(){ try{ if(typeof document==='undefined'||!document.body) return ''; let n=document.getElementById('oldpg-note'); if(!hpOgOld()){ if(n&&n.remove) n.remove(); return 'no'; }
+  if(!n){ n=document.createElement('div'); n.id='oldpg-note'; n.style.cssText='margin:8px 14px 0;padding:10px 12px;border:1px solid var(--amber);border-radius:10px;background:#1a1300;color:var(--amber);font-size:13px;line-height:1.6';
+    const t=document.createElement('div'); t.id='oldpg-text'; n.appendChild(t); const b=document.createElement('button'); b.className='b pri'; b.id='btn-og-open'; b.type='button'; b.style.cssText='margin-top:8px'; b.onclick=()=>{ try{ window.open(HP_OG_URL,'_blank','noopener'); }catch(e){} }; n.appendChild(b);
+    const bn=document.getElementById('banner'); if(bn&&bn.parentNode) bn.parentNode.insertBefore(n,bn.nextSibling); else document.body.insertBefore(n,document.body.firstChild); }
+  const t=document.getElementById('oldpg-text'), b=document.getElementById('btn-og-open'); if(t&&t.textContent!==T('og_text')) t.textContent=T('og_text'); if(b&&b.textContent!==T('btn_og_open')) b.textContent=T('btn_og_open'); return 'on'; }catch(e){ return ''; } }
+try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpOgShow(); }catch(e){} },1500); setInterval(()=>{ try{ hpOgShow(); }catch(e){} },30000); } }catch(e){}
 
