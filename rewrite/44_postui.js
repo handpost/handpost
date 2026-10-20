@@ -2169,6 +2169,8 @@ function hpRelSrcs(ext){ const out=[]; let base='', org=''; try{ base=String(loc
     let p=u.pathname; try{ p=decodeURIComponent(p); }catch(e){} out.push({src:u.pathname+u.search,path:p.replace(/^\//,'')}); } }catch(e){} return out; }
 async function hpRelBytes(url,opt){ const r=await fetch(url,opt||{cache:'force-cache'}); if(!r.ok) throw new Error(url.split('?')[0]+' '+r.status); return new Uint8Array(await r.arrayBuffer()); }
 async function hpRelSha(u8){ return bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256',u8))); }
+const HP_REL_MINE=new Map();
+async function hpRelMine(scr,strict){ const hs={}; for(const f of scr){ let h=HP_REL_MINE.get(f.src); if(!h){ try{ h=await hpRelSha(await hpRelBytes(f.src)); HP_REL_MINE.set(f.src,h); }catch(e){ if(strict) throw e; continue; } } hs[f.path]=h; } return hs; }
 function hpRelSums(txt){ const m={}; for(const l of String(txt).split('\n')){ const x=/^([0-9a-f]{64})  (.+)$/.exec(l); if(x) m[x[2]]=x[1]; } return m; }
 const HP_REL_HIST_MAX=20;
 function hpRelRed(st){ return st==='badsig'||st==='served'||st==='unknown'; }
@@ -2184,6 +2186,7 @@ async function hpRelCheck(){
   try{
     if(!hpRelHere()) st='skip';
     else {
+      await hpRelMine(hpRelSrcs([]),false);
       let sums=null, sig=''; try{ sums=await hpRelBytes('/SHA256SUMS',{cache:'no-store'}); }catch(e){ throw e; }
       try{ sig=String(new TextDecoder().decode(await hpRelBytes('/SHA256SUMS.sig',{cache:'no-store'}))).trim(); }catch(e){ sig=''; }
       fp=(await hpRelSha(sums)).slice(0,16);
@@ -2194,7 +2197,7 @@ async function hpRelCheck(){
           try{ const r=await hpRelJson('RELEASE',want); n=(r&&Number.isInteger(r.n)&&r.n>0)?r.n:0; }catch(e){ n=0; }
           for(const f of [{src:'/index.html',path:'index.html'},{src:'/sw.js',path:'sw.js'}]){ const h=await hpRelSha(await hpRelBytes(f.src,fresh)); if(!want[f.path]||want[f.path]!==h) why=why||f.path; }
           if(why) st='served';
-          else { const scr=hpRelSrcs(ext), hs={}; for(const f of scr) hs[f.path]=await hpRelSha(await hpRelBytes(f.src));
+          else { const scr=hpRelSrcs(ext), hs=await hpRelMine(scr,true);
             const bad=scr.filter(f=>!want[f.path]||want[f.path]!==hs[f.path]);
             if(!bad.length) st='ok'; else { o=await hpRelFindOld(scr,hs,want); if(o) st='old'; else { st='unknown'; why=bad[0].path; } } } } }
     }
