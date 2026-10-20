@@ -2048,3 +2048,68 @@ try{ if(typeof hpBmGo==='function'&&!hpBmGo.__dl){ const f=hpBmGo; hpBmGo=Object
 try{ if(typeof hpBmUi==='function'&&!hpBmUi.__dl){ const f=hpBmUi; hpBmUi=Object.assign(function(){ const v=f.apply(this,arguments); try{ hpBmNoteShow(); }catch(e){} try{ hpHdBoxes(); }catch(e){} return v; },f,{__dl:1}); } }catch(e){}
 try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ hpHdBoxes(); }catch(e){} },4000); setInterval(()=>{ try{ hpHdBoxes(); }catch(e){} },15000); } }catch(e){}
 
+const HP_SH_WAIT=120e3, HP_SH_RETRY=300e3, HP_SH_LEN=40000, HP_SH_PER=200, HP_SH_TRY={}; let HP_SH_BUSY='', HP_SH_UP=0;
+function hpShLen(o){ const s=JSON.stringify(JSON.stringify(o)); let n=0; for(let i=0;i<s.length;i++){ const c=s.charCodeAt(i); n+=(c<0x80)?1:(c<0x800)?2:(c>=0xd800&&c<0xdc00)?4:(c>=0xdc00&&c<0xe000)?0:3; } return n; }
+function hpShMap(){ try{ return (typeof sibHistMap==='function')?sibHistMap():{}; }catch(e){ return {}; } }
+function hpShTx(dev,st,n){ try{ if(typeof HP_HIST_TX!=='undefined'&&HP_HIST_TX){ if(st) HP_HIST_TX[dev]={st:st,n:n||0,at:Date.now()}; else delete HP_HIST_TX[dev]; } if(typeof hpHistTxUi==='function') hpHistTxUi(); }catch(e){} }
+function hpShSelect(dev){
+  const out=[], lo=(typeof lastOpenLoad==='function')?lastOpenLoad():{}, seen={}; let np=0, skip=0, big=0;
+  const hv=(typeof HP_SP_HAVE!=='undefined'&&HP_SP_HAVE[dev]&&HP_SP_HAVE[dev].m)||{}, P=(typeof hpSpLoad==='function')?hpSpLoad():{}, pg=(P[dev]&&P[dev].p&&typeof P[dev].p==='object')?P[dev].p:{};
+  for(const c of contacts()){
+    const all0=histLoad(c.address).filter(x=>x&&typeof x.ts==='number'&&(x.d==='s'||x.d==='p')&&x.t!=='[object ArrayBuffer]'&&x.t!=='[object Blob]').sort((x,y)=>x.ts-y.ts);
+    const h=Number(hv[c.address])||0, done=Number(pg[c.address])||0;
+    let all=all0.filter(x=>x.ts>=h&&!(done>0&&x.ts<done)); skip+=all0.length-all.length;
+    all=all.map(x=>(typeof sibHistItem==='function')?sibHistItem(x):x).filter(x=>{ if(hpShLen(x)<=HP_SH_LEN) return true; big++; return false; });
+    if(!all.length) continue; np++; if(lo[c.address]) seen[c.address]=lo[c.address];
+    let c1=(typeof sibHistCard==='function')?sibHistCard(c):null; if(c1&&hpShLen(c1)>HP_SH_LEN/2) c1=Object.assign({},c1,{card:null,cardAt:0});
+    out.push({peer:c.address,items:all,c:c1}); }
+  return {peers:out,np:np,seen:seen,skip:skip,big:big,pg:pg,P:P}; }
+function hpShLetters(sel){
+  const out=[];
+  for(const p of sel.peers){ let cur=[], len=0, c1=p.c; const base=hpShLen({v:1,type:'sibh',peer:p.peer,items:[]});
+    const flush=()=>{ const b={v:1,type:'sibh',peer:p.peer,items:cur}; if(c1){ b.c=c1; c1=null; } out.push({b:b,last:cur.length?cur[cur.length-1].ts:0}); cur=[]; len=0; };
+    for(const it of p.items){ const l=hpShLen(it)+1; let room=HP_SH_LEN-base-(c1?hpShLen(c1)+6:0); if(!cur.length&&c1&&l>room){ flush(); room=HP_SH_LEN-base; } if(cur.length&&(cur.length>=HP_SH_PER||len+l>room)) flush(); cur.push(it); len+=l; }
+    if(cur.length) flush(); }
+  return out; }
+async function hpShSend(dev,why){
+  if(HP_SH_BUSY||!ID||typeof POST==='undefined'||!POST||!POST.up||POST.notOwner||typeof hpSibPut!=='function') return false;
+  HP_SH_BUSY=dev; let n=0, nl=0, sel=null;
+  try{
+    sel=hpShSelect(dev); const ls=hpShLetters(sel);
+    try{ if(typeof sibHistSet==='function') sibHistSet(dev,false); }catch(e){}
+    hpShTx(dev,'send',0);
+    for(const x of ls){ const k=await hpSibPut(x.b,[dev]); if(!k) throw new Error('宛先の端末に封をできない（受け取り用の鍵が無い）'); n+=x.b.items.length; nl++; hpShTx(dev,'send',n);
+      try{ if(x.last){ sel.pg[x.b.peer]=x.last; sel.P[dev]={p:sel.pg,at:Date.now()}; if(typeof hpSpSave==='function') hpSpSave(sel.P); } }catch(e){} }
+    const k2=await hpSibPut({v:1,type:'sibhd',n:n,c:sel.np,seen:sel.seen},[dev]); if(!k2) throw new Error('宛先の端末に封をできない（受け取り用の鍵が無い）'); nl++;
+    try{ const P2=(typeof hpSpLoad==='function')?hpSpLoad():{}; delete P2[dev]; if(typeof hpSpSave==='function') hpSpSave(P2); if(typeof HP_SP_HAVE!=='undefined') delete HP_SP_HAVE[dev]; }catch(e){}
+    delete HP_SH_TRY[dev];
+    hpLog('過去の手紙を自分の端末（'+((typeof sibLabel==='function')?sibLabel(dev):String(dev).slice(0,10)+'…')+'）へ郵便受け経由で写した（'+sel.np+' 人・'+n+' 通・封 '+nl+' 通'+(sel.skip?'・相手が持っている '+sel.skip+' 通は送らない':'')+(sel.big?'・大きすぎる '+sel.big+' 通は送らない':'')+'。'+(why||'')+'）');
+    hpShTx(dev,'done',n); try{ setTimeout(()=>{ try{ if(typeof hpHistTxUi==='function') hpHistTxUi(); }catch(e){} },(typeof HP_HIST_DONE_MS!=='undefined'?HP_HIST_DONE_MS:60000)+500); }catch(e){}
+    return true;
+  }catch(e){ HP_SH_TRY[dev]={at:Date.now(),n:((HP_SH_TRY[dev]||{}).n||0)+1}; hpShTx(dev,'',0);
+    try{ if(sel&&typeof sibHistSet==='function') sibHistSet(dev,true); }catch(e2){}
+    hpLog('過去の手紙を郵便受け経由で写せなかった（'+((e&&e.message)||e)+'。'+Math.round(HP_SH_RETRY/60000)+' 分あけてもう一度。線が開けば直結で）');
+    try{ const s=(typeof SIB!=='undefined'&&SIB)?SIB[dev]:null; if(s&&s.state==='open'&&typeof sibSendHistory==='function') Promise.resolve(sibSendHistory(dev)).catch(()=>{}); }catch(e3){}
+    return false; }
+  finally{ HP_SH_BUSY=''; } }
+function hpShDue(now){
+  now=now||Date.now(); const out=[]; if(!ID) return out; const m=hpShMap();
+  for(const dev of Object.keys(m)){ const at=Number(m[dev])||0; if(!at) continue;
+    try{ if(typeof SIB!=='undefined'&&SIB&&SIB[dev]) continue; if(typeof SIB_HIST_BUSY!=='undefined'&&SIB_HIST_BUSY&&SIB_HIST_BUSY.has(dev)) continue; if(typeof sibIsMine==='function'&&!sibIsMine(dev)) continue; }catch(e){ continue; }
+    const t=HP_SH_TRY[dev]; if(t&&now-t.at<HP_SH_RETRY) continue;
+    if(now-Math.max(at,HP_SH_UP)<HP_SH_WAIT) continue; out.push(dev); }
+  return out; }
+async function hpShTick(now){
+  now=now||Date.now(); try{ if(typeof POST==='undefined'||!POST||!POST.up||POST.notOwner){ HP_SH_UP=0; return ''; } if(!HP_SH_UP) HP_SH_UP=now; }catch(e){ return ''; }
+  if(HP_SH_BUSY) return 'busy'; const d=hpShDue(now); if(!d.length) return '';
+  const ok=await hpShSend(d[0],'直結が '+Math.round(HP_SH_WAIT/60000)+' 分開かない'); return (ok?'sent ':'fail ')+d[0]; }
+try{ if(typeof hpSibLetter==='function'&&!hpSibLetter.__sh){ const f=hpSibLetter; hpSibLetter=Object.assign(async function(r){ let o=null; try{ o=JSON.parse(r&&r.body); }catch(e){}
+  if(o&&o.v===1&&(o.type==='sibh'||o.type==='sibhd')){ if(!ID||r.from!==ID.address||r.fromMaster!==ID.publicKey){ hpLog('自分の機械でない相手からの '+o.type+'（捨てた）'); return true; }
+    try{ if(typeof hpSeenMark==='function') hpSeenMark(r.fromDev, r.sentAt); }catch(e){}
+    if(typeof sibOnMessage!=='function') return true;
+    if(o.type==='sibh'){ if(typeof o.peer!=='string'||!Array.isArray(o.items)) return true; const m={t:'hist',peer:o.peer,items:o.items.slice(0,HP_SH_PER)}; if(o.c&&typeof o.c==='object') m.c=o.c; sibOnMessage(r.fromDev,m); hpLog('自分の端末（'+String(r.fromDev||'').slice(0,10)+'…）から過去の手紙の写し '+m.items.length+' 通を郵便受け経由で受け取った'); }
+    else sibOnMessage(r.fromDev,{t:'histdone',n:Number(o.n)||0,c:Number(o.c)||0,seen:(o.seen&&typeof o.seen==='object'&&!Array.isArray(o.seen))?o.seen:{}});
+    return true; }
+  return f.apply(this,arguments); },f,{__sh:1}); } }catch(e){}
+try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function') setInterval(()=>{ try{ Promise.resolve(hpShTick()).catch(()=>{}); }catch(e){} },15000); }catch(e){}
+
