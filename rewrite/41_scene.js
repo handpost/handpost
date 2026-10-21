@@ -250,8 +250,15 @@ function hpPxMap(cur){
   try{ if(cur==='usd'){ const old=hpPxLoad(); for(const d of Object.keys(old)) for(const k of ['evr','xah']) put(d,k,old[d]&&old[d][k]); }
     const o=hpPcLoad()[cur]||{}; for(const k of ['evr','xah']){ const t=(o[k]&&typeof o[k]==='object')?o[k]:{}; for(const d of Object.keys(t)) put(d,k,t[d]); } }catch(e){}
   return m; }
-function hpPayLoc(){ try{ return (typeof curLang==='function'&&curLang()==='en')?'en-US':'ja-JP'; }catch(e){ return 'ja-JP'; } }
-function hpPayCur(){ try{ const c=(typeof ID!=='undefined'&&ID)?String(ID.payCur||''):''; if(HP_PAY_CURS.indexOf(c)>=0) return c; }catch(e){} return hpPayLoc()==='ja-JP'?'jpy':'usd'; }
+function hpPayLoc(){ try{ if(typeof hpLocale==='function') return hpLocale(); return (typeof curLang==='function'&&curLang()==='en')?'en-US':'ja-JP'; }catch(e){ return 'ja-JP'; } }
+
+const HP_EUR_CC='ATBECYDEEEESFIFRGRHRIEITLTLULVMTNLPTSISKADMCSMVAMEXK'.match(/../g);
+const HP_CC_CUR={US:'usd',JP:'jpy',GB:'gbp',KR:'krw',CN:'cny',TW:'twd',HK:'hkd',SG:'sgd',AU:'aud',CA:'cad',CH:'chf',LI:'chf',IN:'inr',AE:'aed',AR:'ars',BD:'bdt',BH:'bhd',BM:'bmd',BR:'brl',CL:'clp',CZ:'czk',DK:'dkk',GE:'gel',HU:'huf',ID:'idr',IL:'ils',KW:'kwd',LK:'lkr',MM:'mmk',MX:'mxn',MY:'myr',NG:'ngn',NO:'nok',NZ:'nzd',PH:'php',PK:'pkr',PL:'pln',RU:'rub',SA:'sar',SE:'sek',TH:'thb',TR:'try',UA:'uah',VN:'vnd',ZA:'zar'};
+const HP_LANG_CUR={ja:'jpy',en:'usd',fr:'eur',de:'eur',pl:'pln',it:'eur',es:'eur',nl:'eur',fi:'eur',el:'eur',sk:'eur',sl:'eur',et:'eur',lv:'eur',lt:'eur',ko:'krw',zh:'cny',sv:'sek',da:'dkk',nb:'nok',no:'nok',cs:'czk',hu:'huf',tr:'try',ru:'rub',uk:'uah',th:'thb',vi:'vnd',id:'idr',ms:'myr',he:'ils'};
+function hpCurDef(){ try{ const n=(typeof navigator!=='undefined'&&navigator)?[].concat(navigator.languages||[],navigator.language||[]):[], m=/^([a-z]{2,3})(?:[-_](?:[a-z]{4}[-_])?([a-z]{2}))?\b/i.exec(String(n[0]||''));
+    if(m&&m[2]){ const cc=m[2].toUpperCase(), c=HP_EUR_CC.indexOf(cc)>=0?'eur':HP_CC_CUR[cc]; return (c&&HP_PAY_CURS.indexOf(c)>=0)?c:'usd'; }
+    const l=m?m[1].toLowerCase():((typeof curLang==='function')?curLang():'en'), c=HP_LANG_CUR[l]; return (c&&HP_PAY_CURS.indexOf(c)>=0)?c:'usd'; }catch(e){ return 'usd'; } }
+function hpPayCur(){ try{ const c=(typeof ID!=='undefined'&&ID)?String(ID.payCur||''):''; if(HP_PAY_CURS.indexOf(c)>=0) return c; }catch(e){} return (typeof hpCurDef==='function')?hpCurDef():(hpPayLoc()==='ja-JP'?'jpy':'usd'); }
 function hpCurTxt(v,cur,sign){
   if(v===null||v===undefined||!isFinite(v)) return '\u2014'; const a=Math.abs(Number(v)), C=String(cur||'usd').toUpperCase(); let s='';
   try{ const dig=new Intl.NumberFormat('en-US',{style:'currency',currency:C}).resolvedOptions().maximumFractionDigits;
