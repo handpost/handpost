@@ -73,7 +73,7 @@ body.nobot .scn .sv,body.nobot .scn .sv2{display:none} body.nobot .scn .sym{disp
 
 .scn .vis{display:none} .scn .dhit{cursor:pointer;pointer-events:all}  #path{position:relative} #path .scn svg{cursor:pointer;touch-action:pan-y} .botfx{position:absolute;pointer-events:none;z-index:5;white-space:nowrap} .botfx.bsay{font-size:12px;line-height:1.3;padding:3px 8px;border-radius:10px;background:#f5f1e6;color:#1b2333;box-shadow:0 2px 6px rgba(0,0,0,.45);animation:hp-say 2.4s ease-out 1 forwards} .botfx.bheart{font-size:15px;animation:hp-heart 1.4s ease-out 1 forwards} .scn.shake .rj{animation:hp-shake .5s linear 1;transform-box:fill-box;transform-origin:center bottom} @keyframes hp-say{0%{opacity:0;transform:scale(.7)}10%{opacity:1;transform:scale(1.05)}18%{transform:scale(1)}85%{opacity:1}100%{opacity:0}} @keyframes hp-heart{0%{opacity:0;transform:translateY(0) scale(.5)}20%{opacity:1;transform:translateY(-8px) scale(1.15)}100%{opacity:0;transform:translateY(-34px) scale(.9)}} @keyframes hp-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-2px) rotate(-8deg)}40%{transform:translateX(2px) rotate(8deg)}60%{transform:translateX(-2px) rotate(-5deg)}80%{transform:translateX(1px) rotate(2deg)}} body.nobot .botfx{display:none}  #hp-way{position:absolute;z-index:4;cursor:pointer;overflow:hidden;border-radius:4px;transition:opacity .7s} #hp-way.fade{opacity:0} body.nobot #hp-way{display:none} #hp-way .wsky,#hp-way .wmoonc{animation:hp-wsky var(--wms,16s) linear forwards} #hp-way .wnight,#hp-way .wlit{opacity:0;animation:hp-wnight var(--wms,16s) linear forwards} #hp-way .wlit{fill:#f6d77a} #hp-way .wgnd{stroke:var(--line);stroke-width:1} #hp-way .wnote{fill:#f3e9b5;animation:hp-wnote 1.1s ease-out infinite} #hp-way .wbird{transition:transform 1.2s ease-in,opacity 1.2s} #hp-way .way.flyoff .wbird{transform:translate(-30px,-24px);opacity:0} #hp-way .wrb .rbA{animation:hp-wstep .5s steps(1) infinite} #hp-way .wrb .rbB{animation:hp-wstep .5s steps(1) infinite;animation-delay:-.25s} #hp-way .way.arrive .wrb{opacity:0;transition:opacity .6s} #hp-way .way.arrive .wrb use{animation:none} #hp-way .wdoor{transform-box:fill-box;transform-origin:left center;transform:scaleX(0);transition:transform .5s} #hp-way .way.shut .wdoor{transform:scaleX(1)} #hp-way .wwin{fill:#243653;transition:fill .4s} #hp-way .way.lit .wwin{fill:#f6d77a} #hp-way .wsal{fill:#f3e9b5;opacity:0;transition:opacity .2s} #hp-way .way.salute .wsal{opacity:1} #hp-way .way.salute .wrb use{transform:translateY(-2px)}
  .hstb tr.pick td{background:#1b2740} .hstb tr:hover td{background:rgba(255,255,255,.04)}
- .paytb{border-collapse:collapse;font-size:12px;width:100%} .paytb th,.paytb td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap} .paytb th:nth-child(-n+2),.paytb td:nth-child(-n+2){text-align:left} .paytb th{color:var(--dim);font-weight:600} .paytb tr.in td{color:var(--teal)} .paytb tr.grp td{font-weight:600} .paytb tr.grp:hover td{background:rgba(53,209,183,.08)} .paytb tr.det td{color:var(--dim);font-size:11px}
+ .paytb{border-collapse:collapse;font-size:12px;width:100%} .paytb th,.paytb td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap} .paytb th:nth-child(-n+2),.paytb td:nth-child(-n+2){text-align:left} .paytb th{color:var(--dim);font-weight:600} .paytb tr.in td{color:var(--teal)} .paytb tr.grp td{font-weight:600} .paytb tr.grp:hover td{background:rgba(53,209,183,.08)} .paytb tr.det td{color:var(--dim);font-size:11px}  #pay-mon-tb th:nth-child(2),#pay-mon-tb td:nth-child(2){text-align:right}
  #hp-way .wani{opacity:0} #hp-way .wani text{transform-box:fill-box} #hp-way .way.a-rab .wrab{animation:hp-whop 1.8s ease-in-out forwards} #hp-way .way.a-fish .wfish{animation:hp-wfish 1.3s ease-in-out 2} #hp-way .way.a-deer .wdeer,#hp-way .way.a-fox .wfox{animation:hp-wpeek .9s ease-out forwards} #hp-way .way.a-owl .wowl{opacity:1;transition:opacity .8s} #hp-way .wowlv{fill:#f3e9b5;animation:hp-wnote 1.4s ease-out infinite}
 @keyframes hp-whop{0%{opacity:0;transform:translate(0,2px)}15%{opacity:1;transform:translate(0,0)}30%{transform:translate(-4px,-4px)}45%{transform:translate(-8px,0)}60%{transform:translate(-12px,-4px)}75%{transform:translate(-16px,0)}100%{opacity:1;transform:translate(-26px,0)}} @keyframes hp-wfish{0%{opacity:0;transform:translate(0,2px) rotate(20deg)}25%{opacity:1}50%{transform:translate(-4px,-7px) rotate(-25deg)}85%{opacity:1}100%{opacity:0;transform:translate(-8px,2px) rotate(30deg)}} @keyframes hp-wpeek{0%{opacity:0;transform:translate(0,3px)}100%{opacity:1;transform:translate(0,0)}}  .scn .rb.sit .rj{transform:translateY(3px);transform-box:fill-box} .botfx.btea{font-size:11px;margin:16px 0 0 12px} .botfx.btea::after{content:"～";position:absolute;left:2px;top:-9px;font-size:9px;color:#cfd6cf;animation:hp-steam 1.6s ease-out infinite} .botfx.bball{font-size:10px;margin:18px 0 0 -26px;animation:hp-ball .55s ease-in-out 7 alternate} .botfx.bflower{font-size:11px;margin:18px 0 0 -22px} .botfx.bdrop{font-size:8px;margin:6px 0 0 -18px;animation:hp-heart 1.4s ease-in 1 reverse} @keyframes hp-steam{0%{opacity:0;transform:translateY(2px)}40%{opacity:.9}100%{opacity:0;transform:translateY(-6px)}} @keyframes hp-ball{0%{transform:translateY(0)}100%{transform:translateY(-12px)}} @keyframes hp-wsky{0%{fill:#243653}30%{fill:#7a4a44}55%{fill:#3b2b4d}75%,100%{fill:#0b1224}} @keyframes hp-wnight{0%,60%{opacity:0}80%,100%{opacity:1}} @keyframes hp-wnote{0%{opacity:0;transform:translateY(2px)}30%{opacity:1}100%{opacity:0;transform:translateY(-4px)}} @keyframes hp-wstep{0%{opacity:1}50%{opacity:0}}  .scn .rb.nap{opacity:0;pointer-events:none} .scn .rb.doze .rj{animation:hp-doze 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center bottom;filter:brightness(.7)} .scn .rb.angry .rj{animation:hp-shake .5s linear 3;transform-box:fill-box;transform-origin:center bottom;filter:drop-shadow(0 0 2px #ff6b7a)} .botfx.bzz{font-size:12px;animation:hp-zz 2.6s ease-out 1 forwards} .botfx.bangry{font-size:14px;animation:hp-heart 1.6s ease-out 1 forwards} @keyframes hp-doze{0%,100%{transform:rotate(0)}50%{transform:rotate(6deg) translateY(1px)}} @keyframes hp-zz{0%{opacity:0;transform:translate(0,0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translate(14px,-30px) scale(1.1)}} .scn.visit .vis{display:inline}
 .scn .vis use{filter:hue-rotate(150deg) saturate(1.3)} .scn.visit .vis-m{animation:hp-vis-m 3.2s ease-in-out 1} .scn.visit .vis-f{transform-box:fill-box;transform-origin:center;animation:hp-vis-f 3.2s steps(1) 1}
@@ -495,11 +495,16 @@ a{color:var(--teal)}
   </div>
   <div class="card" id="post-pay" style="display:none">
     <h2 data-i18n="pay_title">リース代の支払い記録</h2>
-    <div class="row"><button class="b" id="btn-pay-load" data-i18n="btn_pay_load">台帳から読む</button><button class="b" id="btn-pay-usd" data-i18n="btn_pay_usd">ドルに換算する</button></div>
+    <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-start"><label class="note" for="pay-cur" data-i18n="pay_cur_l" style="margin:0">通貨</label><select id="pay-cur" style="background:#1b2740;border:none;border-radius:6px;color:var(--ink);padding:4px 6px;font-size:13px"></select><button class="b" id="btn-pay-px" data-i18n="btn_pay_px">値段を取り寄せる</button><button class="b" id="btn-pay-load" data-i18n="btn_pay_load">台帳から読み直す</button></div>
+    <div class="note" id="pay-px-nt"></div>
     <div class="note" id="pay-st"></div>
     <div class="note" id="pay-sum" style="color:var(--ink)"></div>
-    <div id="pay-list" style="overflow-x:auto;margin-top:6px"></div>
-    <div class="note" data-i18n="nt_pay">借りた口座の取引を Xahau の台帳から読みます。</div>
+    <div id="pay-mon" style="overflow-x:auto;margin-top:6px"></div>
+    <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:6px;justify-content:flex-start"><button class="b" id="btn-pay-csv-m" data-i18n="btn_pay_csv_m">月ごとを CSV で保存</button><button class="b" id="btn-pay-csv-d" data-i18n="btn_pay_csv_d">明細を CSV で保存</button></div>
+    <div class="note" data-i18n="pay_kind_t" style="margin-top:8px">費目ごと（押すと明細）</div>
+    <div id="pay-list" style="overflow-x:auto;margin-top:4px"></div>
+    <label class="note" id="pay-auto-row" style="display:none;margin-top:6px"><input type="checkbox" id="pay-px-auto"> <span data-i18n="pay_px_auto">1 日 1 回、時刻をずらして値段を取り寄せる</span></label>
+    <div class="note" data-i18n="nt_pay">借りた口座の取引を Xahau の台帳から自動で読み、リース代に関わるものを月ごとにまとめます。</div>
   </div>
   <div class="card" id="post-rent" style="display:none">
     <h2 data-i18n="pt_rent">郵便受けを借りる</h2>
@@ -631,7 +636,7 @@ a{color:var(--teal)}
 <script src="rewrite/17_rtc.js?v=770303c6677a"></script>
 <script src="rewrite/18_bgloop.js?v=06d52ded3f7b"></script>
 <script src="keep/19_draft.js?v=f6f94869ca05"></script>
-<script src="keep/22_i18n.js?v=9b7cf1e13f23"></script>
+<script src="keep/22_i18n.js?v=7931c2ca628c"></script>
 <script src="keep/23_ui.js?v=862618ff7e38"></script>
 <script src="keep/24_qr.js?v=60fba8abce21"></script>
 <script src="rewrite/27_vault.js?v=93dbc2b8170c"></script>
@@ -648,7 +653,7 @@ a{color:var(--teal)}
 <script src="rewrite/38_notes.js?v=b463a68c6366"></script>
 <script src="rewrite/39_onetab.js?v=619c7639d696"></script>
 <script src="rewrite/40_linkqr.js?v=bf82c09e8fd9"></script>
-<script src="rewrite/41_scene.js?v=3706b1d85528"></script>
+<script src="rewrite/41_scene.js?v=847195a5e303"></script>
 <script src="rewrite/43_postmove.js?v=379eea801bfa"></script>
 <script src="rewrite/42_rent.js?v=e12a5221d227"></script>
 <script src="rewrite/51_flow.js?v=76571ddff1c2"></script>
@@ -658,7 +663,7 @@ a{color:var(--teal)}
 <script src="rewrite/47_rootkey.js?v=ce5d9843d373"></script>
 <script src="rewrite/46_roster.js?v=7fcf862c11f5"></script>
 <script src="rewrite/45_invface.js?v=daef1738f436"></script>
-<script src="rewrite/44_postui.js?v=be83266483f4"></script>
+<script src="rewrite/44_postui.js?v=a1f25f082b49"></script>
 <script src="rewrite/25_wiring.js?v=15c1af5b2b99"></script>
 <script src="keep/26_sound.js?v=dd1c7e5d5ba6"></script>
 </body>

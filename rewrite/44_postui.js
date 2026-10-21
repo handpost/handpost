@@ -1932,12 +1932,15 @@ function hpDnFor(dev,nm,kind,br){ try{ if(typeof ID==='undefined'||!ID||!/^ed[0-
     if(typeof hpDnIn==='function') hpDnIn({dev:dev,label:nm,kind:k,br:b,ts:ts},{fromDev:dev});
     if(!ID.dnFor||typeof ID.dnFor!=='object'||Array.isArray(ID.dnFor)) ID.dnFor={}; ID.dnFor[dev]={label:nm,kind:k,br:b,ts:ts}; saveID();
     setTimeout(()=>{ try{ hpDsTell().catch(()=>{}); }catch(e){} },700); return true; }catch(e){ return false; } }
-async function hpDsTell(){ try{ if(typeof ID==='undefined'||!ID||!ID.dnFor||typeof ID.dnFor!=='object') return 0; if(!Object.keys(ID.dnFor).length){ delete ID.dnFor; saveID(); return 0; }
+var HP_DS_BUSY=false, HP_DS_AGAIN=false;
+async function hpDsTell(){ if(HP_DS_BUSY){ HP_DS_AGAIN=true; return 0; } HP_DS_BUSY=true; HP_DS_AGAIN=false; let r=0; try{ r=await hpDsTell1(); } finally{ HP_DS_BUSY=false; }
+  if(HP_DS_AGAIN){ HP_DS_AGAIN=false; setTimeout(()=>{ try{ hpDsTell().catch(()=>{}); }catch(e){} },700); } return r; }
+async function hpDsTell1(){ try{ if(typeof ID==='undefined'||!ID||!ID.dnFor||typeof ID.dnFor!=='object') return 0; if(!Object.keys(ID.dnFor).length){ delete ID.dnFor; saveID(); return 0; }
     if(typeof POST==='undefined'||!POST||!POST.up||POST.notOwner) return 0; const m=(typeof hpSibs==='function')?hpSibs().length:0, me=await hpDsMeA(); if(!me) return 0; let sent=0;
-    for(const dev of Object.keys(ID.dnFor)){ const x=ID.dnFor[dev]; if(!x||!m||Date.now()-Number(x.ts)>35*864e5){ delete ID.dnFor[dev]; continue; }
-      const n=await hpSibPut({v:1,type:'devname',dev:dev,label:String(x.label||''),kind:x.kind,br:x.br,ts:Number(x.ts),by:me}); if(n>=m) delete ID.dnFor[dev]; sent++;
+    for(const dev of Object.keys(ID.dnFor||{})){ const D=(ID.dnFor&&typeof ID.dnFor==='object')?ID.dnFor:null, x=D&&D[dev]; if(!x) continue; if(!m||Date.now()-Number(x.ts)>35*864e5){ delete D[dev]; continue; }
+      const n=await hpSibPut({v:1,type:'devname',dev:dev,label:String(x.label||''),kind:x.kind,br:x.br,ts:Number(x.ts),by:me}); const D2=(ID&&ID.dnFor&&typeof ID.dnFor==='object')?ID.dnFor:null; if(n>=m&&D2&&D2[dev]&&Number(D2[dev].ts)===Number(x.ts)) delete D2[dev]; sent++;
       hpLog('自分のほかの端末（'+dev.slice(0,10)+'…）に付けた名前を、自分のほかの端末 '+n+' 台に知らせた'+(n<m?'（まだ '+(m-n)+' 台。あとで出し直す）':'')); }
-    if(!Object.keys(ID.dnFor).length) delete ID.dnFor; saveID(); return sent; }catch(e){ try{ hpLog('ほかの端末に付けた名前を知らせられない（'+((e&&e.message)||e)+'）'); }catch(x){} return -1; } }
+    if(ID.dnFor&&!Object.keys(ID.dnFor).length) delete ID.dnFor; saveID(); return sent; }catch(e){ try{ hpLog('ほかの端末に付けた名前を知らせられない（'+((e&&e.message)||e)+'）'); }catch(x){} return -1; } }
 async function hpDsIn(o,r){
   const dev=String((o&&o.dev)||''), by=String((o&&o.by)||''), ts=Number(o&&o.ts);
   if(!/^ed[0-9a-f]{64}$/.test(dev)||!/^ed[0-9a-f]{64}$/.test(by)||!(r&&r.fromDev===by)||by===dev||!(ts>0)||ts>Date.now()+600e3){ hpLog('自分の端末が付けた名前の知らせの形が違う（捨てた）'); return false; }

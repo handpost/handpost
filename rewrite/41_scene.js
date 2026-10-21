@@ -196,44 +196,176 @@ function hpPaySum(rows){ const s={evr:0,xah:0,n:0}; for(const r of rows){ if(r.k
 function hpPxDay(ts){ const d=new Date(Number(ts)), p=n=>String(n).padStart(2,'0'); return p(d.getUTCDate())+'-'+p(d.getUTCMonth()+1)+'-'+d.getUTCFullYear(); }
 function hpPxLoad(){ try{ const s=(typeof hpHGet==='function')?hpHGet('p2p_pxd'):null, o=s?JSON.parse(s):{}; return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; } }
 function hpPxSave(o){ try{ if(typeof hpHSet==='function') hpHSet('p2p_pxd',JSON.stringify(o)); }catch(e){} }
-async function hpPxOne(id,day){ const r=await HP_PX_FETCH(HP_PX_HOST+'/api/v3/coins/'+id+'/history?date='+day+'&localization=false'); if(r.status===429){ const e=new Error('429'); e.rate=1; throw e; } if(r.status===401||r.status===404) return 0;   if(!r.ok) throw new Error('http '+r.status); const j=await r.json(); const v=Number(j&&j.market_data&&j.market_data.current_price&&j.market_data.current_price.usd); return v>0?v:0; }
-async function hpPxFill(rows,onStep,sleep){ sleep=sleep||(ms=>new Promise(ok=>setTimeout(ok,ms))); const px=hpPxLoad(), need=[];
-  for(const r of rows){ const d=hpPxDay(r.at), c=(r.kind==='in')?{evr:r.evr,xah:r.xah}:hpPayCost(r); for(const k of ['evr','xah']){ if(!c[k]&&!r[k]) continue; if(px[d]&&typeof px[d][k]==='number') continue; if(!need.some(n=>n.d===d&&n.k===k)) need.push({d:d,k:k}); } }
-  let i=0, err='';
-  for(const n of need){ let v; try{ v=await hpPxOne(HP_PX_IDS[n.k],n.d); }catch(e){ if(e&&e.rate){ await sleep(65000); try{ v=await hpPxOne(HP_PX_IDS[n.k],n.d); }catch(e2){ err=String((e2&&e2.message)||e2); break; } } else { err=String((e&&e.message)||e); break; } }
-    px[n.d]=Object.assign({},px[n.d],{[n.k]:v}); hpPxSave(px); i++; if(onStep) try{ onStep(i,need.length); }catch(_){} if(i<need.length) await sleep(HP_PX_GAP); }
-  return {px:px,err:err,done:i,need:need.length}; }
+async function hpPxRangeOne(id,cur){
+  const r=await HP_PX_FETCH(HP_PX_HOST+'/api/v3/coins/'+id+'/market_chart?vs_currency='+cur+'&days=365&interval=daily&precision=full');
+  if(r.status===429){ const e=new Error('429'); e.rate=1; throw e; } if(!r.ok) throw new Error('http '+r.status);
+  const j=await r.json(), out={}; for(const p of ((j&&Array.isArray(j.prices))?j.prices:[])){ const t=Number(p&&p[0]), v=Number(p&&p[1]); if(!(t>0)||!(v>0)) continue; const d0=Math.round(t/864e5)*864e5; if(Math.abs(t-d0)>15*60e3) continue; out[hpPxDay(d0)]=v; }
+  return out; }
+async function hpPxRange(cur,sleep){
+  sleep=sleep||(ms=>new Promise(ok=>setTimeout(ok,ms))); const got={};
+  for(const k of ['evr','xah']){ if(k==='xah') await sleep(3000+Math.floor(Math.random()*17000)); got[k]=await hpPxRangeOne(HP_PX_IDS[k],cur); }
+  const o=hpPcLoad(), c=Object.assign({evr:{},xah:{}},o[cur]||{}); c.evr=Object.assign({},c.evr,got.evr); c.xah=Object.assign({},c.xah,got.xah); c.at=Date.now(); o[cur]=c; hpPcSave(o);
+  return {n:Math.max(Object.keys(got.evr).length,Object.keys(got.xah).length)}; }
 function hpPayUsd(c,at,px){ const p=px[hpPxDay(at)]||{}; let u=0; for(const k of ['evr','xah']){ if(!c[k]) continue; if(!(p[k]>0)) return null; u+=c[k]*p[k]; } return u; }
 function hpNum(v,dp){ return Math.abs(Number(v)||0).toFixed(dp).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,''); }
 function hpSigned(v,dp){ return (v>0?'+':'\u2212')+hpNum(v,dp); }
 function hpUsdTxt(u,sign){ if(u===null||u===undefined) return '\u2014'; const a=Math.abs(u), s=sign?(u>0?'+':u<0?'\u2212':''):''; return s+'$'+(a>0&&a<0.01?(a<1e-6?'<0.000001':String(Number(a.toPrecision(2)))):a.toFixed(2)); }
 function hpPxNum(v){ v=Number(v)||0; return v>=1?v.toFixed(2):String(Number(v.toPrecision(3))); }
-function hpPxTxt(c,at,px){ const p=px[hpPxDay(at)]||{}, a=[]; for(const k of ['evr','xah']){ if(!c[k]) continue; a.push((k==='evr'?'EVR':'XAH')+' '+(p[k]>0?'$'+hpPxNum(p[k]):'\u2014')); } return a.join('\u30FB'); }
+function hpPxTxt(c,at,px,cur){ const p=px[hpPxDay(at)]||{}, a=[], sym=(cur&&typeof hpCurSym==='function')?hpCurSym(cur):'$'; for(const k of ['evr','xah']){ if(!c[k]) continue; a.push((k==='evr'?'EVR':'XAH')+' '+(p[k]>0?sym+hpPxNum(p[k]):'\u2014')); } return a.join('\u30FB'); }
 function hpPxDays(rows,px){ const s=new Set(); for(const r of (rows||[])){ const d=hpPxDay(r.at), p=px[d]; if(p&&((p.evr>0&&r.evr)||(p.xah>0&&r.xah))) s.add(d); } return [...s].map(d=>d.split('-')).sort((a,b)=>(a[2]+a[1]+a[0]).localeCompare(b[2]+b[1]+b[0])).map(x=>x[1]+'/'+x[0]).join('\u30FB'); }
 function hpPaySt(t,err){ try{ const el=document.getElementById('pay-st'); if(el){ el.textContent=t||''; el.style.color=err?'var(--red)':''; } }catch(e){} }
 const HP_PAY_K={buy:'pay_k_buy',ext:'pay_k_ext',refund:'pay_k_refund',in:'pay_k_in',out:'pay_k_out',fail:'pay_k_fail'};
 function hpPayKind(r){ if(r.key&&r.kind!=='fail') return T('pay_k_key');   return r.kind==='other'?TF('pay_k_other',{t:r.tt}):T(HP_PAY_K[r.kind]||'pay_k_fail'); }
 function hpPayDraw(){ if(typeof document==='undefined'||!document.getElementById) return -1; const box=document.getElementById('pay-list'), sm=document.getElementById('pay-sum'); if(!box||!HP_PAY) return -1;
-  const px=hpPxLoad(), rows=HP_PAY.rows; box.textContent=''; let usd=0, got=0, miss=0;
-  const tb=document.createElement('table'); tb.className='paytb'; const hd=document.createElement('tr'); for(const k of ['pay_h_at','pay_h_kind','pay_h_evr','pay_h_xah','pay_h_px','pay_h_usd'])  { const th=document.createElement('th'); th.textContent=T(k); hd.appendChild(th); } tb.appendChild(hd);
+  const cur=(typeof hpPayCur==='function')?hpPayCur():'usd', px=(typeof hpPxMap==='function')?hpPxMap(cur):hpPxLoad(), rows=HP_PAY.rows, fm=(v,sg)=>(typeof hpCurTxt==='function')?hpCurTxt(v,cur,sg):hpUsdTxt(v,sg); box.textContent=''; let usd=0, got=0, miss=0;
+  const tb=document.createElement('table'); tb.className='paytb'; const hd=document.createElement('tr'); for(const k of ['pay_h_at','pay_h_kind','pay_h_evr','pay_h_xah','pay_h_px','pay_h_cur'])  { const th=document.createElement('th'); th.textContent=k==='pay_h_cur'?TF(k,{c:cur.toUpperCase()}):T(k); hd.appendChild(th); } tb.appendChild(hd);
   const G={}; for(const r of rows){ const k=(r.key&&r.kind!=='fail')?'key':r.kind; (G[k]=G[k]||[]).push(r); }
   const cell=(tr,v)=>{ const td=document.createElement('td'); td.textContent=v; tr.appendChild(td); return td; }, when=t=>(typeof fmtTS==='function')?fmtTS(t):new Date(t).toLocaleString();
   for(const k of ['buy','ext','refund','key','fail','other','out','in']){ const a=G[k]; if(!a) continue; let ge=0, gx=0, gu=0, gm=0;
     for(const r of a){ ge+=r.evr; gx+=r.xah; const cu=hpPayUsd(hpPayCost(r),r.at,px); if(cu===null){ gm++; miss++; } else { gu+=cu; usd+=cu; got++; } }
     const gr=document.createElement('tr'); gr.className='grp'+(k==='refund'?' in':''); gr.dataset.k=k; gr.style.cursor='pointer'; gr.title=T('pay_open');
-    cell(gr,when(a[0].at)); const lab=cell(gr,'\u25B8 '+hpPayKind(a[0])+TF('pay_n',{n:a.length})); cell(gr,ge?hpSigned(ge,4):''); cell(gr,gx?hpSigned(gx,6):''); cell(gr,'');   cell(gr,gm===a.length?hpUsdTxt(null):hpUsdTxt(gu,true)); tb.appendChild(gr);
+    cell(gr,when(a[0].at)); const lab=cell(gr,'\u25B8 '+hpPayKind(a[0])+TF('pay_n',{n:a.length})); cell(gr,ge?hpSigned(ge,4):''); cell(gr,gx?hpSigned(gx,6):''); cell(gr,'');   cell(gr,gm===a.length?fm(null):fm(gu,true)); tb.appendChild(gr);
     const det=[]; for(const r of a){ const tr=document.createElement('tr'); tr.className='det'+(k==='refund'?' in':''); tr.style.display='none'; const u=hpPayUsd({evr:r.evr,xah:r.xah},r.at,px);
-      for(const v of [when(r.at),'\u3000'+hpPayKind(r),r.evr?hpSigned(r.evr,4):'',r.xah?hpSigned(r.xah,6):'',(typeof hpPxTxt==='function')?hpPxTxt({evr:r.evr,xah:r.xah},r.at,px):'',hpUsdTxt(u,true)]) cell(tr,v);   det.push(tr); tb.appendChild(tr); }
+      for(const v of [when(r.at),'\u3000'+hpPayKind(r),r.evr?hpSigned(r.evr,4):'',r.xah?hpSigned(r.xah,6):'',(typeof hpPxTxt==='function')?hpPxTxt({evr:r.evr,xah:r.xah},r.at,px,cur):'',fm(u,true)]) cell(tr,v);   det.push(tr); tb.appendChild(tr); }
     gr.addEventListener('click',()=>{ const open=det[0]&&det[0].style.display==='none'; for(const d of det) d.style.display=open?'':'none'; lab.textContent=(open?'\u25BE ':'\u25B8 ')+hpPayKind(a[0])+TF('pay_n',{n:a.length}); }); }
   if(rows.length) box.appendChild(tb); else box.textContent=T('pay_none');
-  if(sm){ const s=hpPaySum(rows); sm.textContent=(!rows.length?'':TF('pay_sum',{evr:hpNum(s.evr,4),xah:hpNum(s.xah,6),n:s.n})+(got?TF(miss?'pay_sum_usd_part':'pay_sum_usd',{usd:hpUsdTxt(usd,false),m:miss}):'')+((got&&typeof hpPxDays==='function')?'\n'+TF('pay_px_used',{d:hpPxDays(rows,px)}):'')  )+((HP_PAY&&HP_PAY.other)?(rows.length?'\n':'')+TF('pay_other',{n:HP_PAY.other}):''); try{ sm.style.whiteSpace='pre-line'; }catch(e){} }
+  if(sm){ const s=hpPaySum(rows); sm.textContent=(!rows.length?'':TF('pay_sum',{evr:hpNum(s.evr,4),xah:hpNum(s.xah,6),n:s.n})+(got?TF(miss?'pay_sum_usd_part':'pay_sum_usd',{usd:fm(usd,false),m:miss}):'')+((got&&typeof hpPxDays==='function')?'\n'+TF('pay_px_used',{d:hpPxDays(rows,px)}):'')  )+((HP_PAY&&HP_PAY.other)?(rows.length?'\n':'')+TF('pay_other',{n:HP_PAY.other}):'')+((rows.length&&!got&&typeof hpPxSt==='function'&&hpPxSt().on)?'\n'+T('pay_px_nocur'):''); try{ sm.style.whiteSpace='pre-line'; }catch(e){} }
   return rows.length; }
-async function hpPayRead(){ const a=hpLeaseAcct(); if(!a||HP_PAY_BUSY) return false; HP_PAY_BUSY=true; hpPaySt(T('pay_busy'));
+async function hpPayRead(quiet){ const a=hpLeaseAcct(); if(!a||HP_PAY_BUSY) return false; HP_PAY_BUSY=true; if(!quiet) hpPaySt(T('pay_busy'));
   try{ const got=await hpXahauSess(async q=>{ const all=[]; let marker=null, pages=0; do{ const r=await q(Object.assign({command:'account_tx',account:a,limit:200},marker?{marker:marker}:{})); pages++; for(const e of ((r&&r.transactions)||[])) all.push(e); marker=(r&&r.marker)||null; } while(marker&&pages<HP_LG_PAGES); return {all:all,more:!!marker}; },60000);
-    const pr=hpPayParse(got.all,a); HP_PAY={acct:a,rows:pr.filter(r=>r.lease),other:pr.filter(r=>!r.lease).length,more:got.more,at:Date.now()};   hpPayDraw(); hpPaySt(got.more?TF('pay_more',{n:got.all.length}):''); return true;
-  }catch(e){ hpPaySt(TF('pay_fail',{why:String((e&&e.message)||e)}),true); return false; } finally{ HP_PAY_BUSY=false; } }
-async function hpPayUsdRun(){ if(HP_PX_BUSY) return false; if(!HP_PAY){ if(!(await hpPayRead())) return false; } if(!HP_PX_FETCH){ hpPaySt(T('pay_px_none'),true); return false; } HP_PX_BUSY=true;
-  try{ const r=await hpPxFill(HP_PAY.rows,(i,n)=>hpPaySt(TF('pay_px_step',{i:i,n:n}))); hpPayDraw(); hpPaySt(r.err?TF('pay_px_fail',{why:r.err}):TF('pay_px_done',{n:hpPxDays(HP_PAY.rows,r.px).split('\u30FB').filter(Boolean).length,g:r.done}),!!r.err);   return !r.err; } finally{ HP_PX_BUSY=false; } }
+    const pr=hpPayParse(got.all,a); HP_PAY={acct:a,rows:pr.filter(r=>r.lease),other:pr.filter(r=>!r.lease).length,more:got.more,at:Date.now()};
+    try{ let ev=0; for(const e of got.all){ const x=(e&&(e.tx||e.tx_json))||{}, t=(Number(x.date)+HP_LG_EPOCH)*1000; if(t>ev) ev=t; } const P=(typeof hpPxSt==='function')?hpPxSt():null; if(P&&ev>(Number(P.evAt)||0)){ P.evAt=ev; saveID(); } }catch(e){}
+    HP_PAY_FAIL=0; if(typeof hpPayDrawAll==='function') hpPayDrawAll(); else hpPayDraw(); if(!quiet||got.more) hpPaySt(got.more?TF('pay_more',{n:got.all.length}):''); return true;
+  }catch(e){ HP_PAY_FAIL=Date.now(); if(!quiet) hpPaySt(TF('pay_fail',{why:String((e&&e.message)||e)}),true); return false; } finally{ HP_PAY_BUSY=false; } }
+
+const HP_PAY_CURS=['jpy','usd','eur','gbp','krw','cny','twd','hkd','sgd','aud','cad','chf','inr'];
+const HP_PAY_STALE=30*60e3, HP_PAY_RETRY=5*60e3, HP_PX_QUIET=6*3600e3, HP_PX_MINGAP=20*3600e3, HP_PX_W0=5*60e3, HP_PX_W1=60*60e3, HP_PC_KEY='p2p_pxc';
+let HP_PAY_FAIL=0;
+function hpPcLoad(){ try{ const s=(typeof hpHGet==='function')?hpHGet(HP_PC_KEY):null, o=s?JSON.parse(s):{}; return (o&&typeof o==='object'&&!Array.isArray(o))?o:{}; }catch(e){ return {}; } }
+function hpPcSave(o){ try{ if(typeof hpHSet==='function') hpHSet(HP_PC_KEY,JSON.stringify(o)); }catch(e){} }
+function hpPxMap(cur){
+  const m={}, put=(d,k,v)=>{ if(Number(v)>0) (m[d]=m[d]||{})[k]=Number(v); };
+  try{ if(cur==='usd'){ const old=hpPxLoad(); for(const d of Object.keys(old)) for(const k of ['evr','xah']) put(d,k,old[d]&&old[d][k]); }
+    const o=hpPcLoad()[cur]||{}; for(const k of ['evr','xah']){ const t=(o[k]&&typeof o[k]==='object')?o[k]:{}; for(const d of Object.keys(t)) put(d,k,t[d]); } }catch(e){}
+  return m; }
+function hpPayLoc(){ try{ return (typeof curLang==='function'&&curLang()==='en')?'en-US':'ja-JP'; }catch(e){ return 'ja-JP'; } }
+function hpPayCur(){ try{ const c=(typeof ID!=='undefined'&&ID)?String(ID.payCur||''):''; if(HP_PAY_CURS.indexOf(c)>=0) return c; }catch(e){} return hpPayLoc()==='ja-JP'?'jpy':'usd'; }
+function hpCurTxt(v,cur,sign){
+  if(v===null||v===undefined||!isFinite(v)) return '\u2014'; const a=Math.abs(Number(v)), C=String(cur||'usd').toUpperCase(); let s='';
+  try{ const dig=new Intl.NumberFormat('en-US',{style:'currency',currency:C}).resolvedOptions().maximumFractionDigits;
+    s=(a>0&&a<Math.pow(10,-dig))?new Intl.NumberFormat(hpPayLoc(),{style:'currency',currency:C,maximumSignificantDigits:2}).format(a):new Intl.NumberFormat(hpPayLoc(),{style:'currency',currency:C,minimumFractionDigits:dig,maximumFractionDigits:dig}).format(a); }
+  catch(e){ s=C+' '+(a<0.01&&a>0?String(Number(a.toPrecision(2))):a.toFixed(2)); }
+  return (sign?(v>0?'+':v<0?'\u2212':''):'')+s; }
+function hpCurSym(cur){ try{ const p=new Intl.NumberFormat(hpPayLoc(),{style:'currency',currency:String(cur).toUpperCase()}).formatToParts(1).find(x=>x.type==='currency'); return p?p.value:String(cur).toUpperCase()+' '; }catch(e){ return String(cur).toUpperCase()+' '; } }
+function hpCurDp(cur){ try{ return new Intl.NumberFormat('en-US',{style:'currency',currency:String(cur).toUpperCase()}).resolvedOptions().maximumFractionDigits+2; }catch(e){ return 4; } }
+function hpPayCurName(c){ try{ const n=new Intl.DisplayNames([hpPayLoc()],{type:'currency'}).of(c.toUpperCase()); return n?n+'（'+c.toUpperCase()+'）':c.toUpperCase(); }catch(e){ return c.toUpperCase(); } }
+function hpPayCurUi(){ try{ if(typeof document==='undefined'||!document.getElementById) return false; const sel=document.getElementById('pay-cur'); if(!sel) return false; const cur=hpPayCur();
+    if(!sel.options||!sel.options.length||sel.dataset.loc!==hpPayLoc()){ sel.textContent=''; for(const c of HP_PAY_CURS){ const o=document.createElement('option'); o.value=c; o.textContent=hpPayCurName(c); sel.appendChild(o); } sel.dataset.loc=hpPayLoc(); }
+    sel.value=cur; return true; }catch(e){ return false; } }
+function hpPayCurSet(c){ c=String(c||'').toLowerCase(); if(HP_PAY_CURS.indexOf(c)<0||typeof ID==='undefined'||!ID) return false; ID.payCur=c; try{ saveID(); }catch(e){} hpLog('支払い記録の通貨を '+c.toUpperCase()+' にした'); hpPaySt(''); hpPayDrawAll(); return true; }
+
+function hpPxSt(){ if(typeof ID==='undefined'||!ID) return {}; if(!ID.px||typeof ID.px!=='object'||Array.isArray(ID.px)) ID.px={}; return ID.px; }
+function hpPxAcctWatch(now){
+  try{ if(typeof ID==='undefined'||!ID) return false; const a=((typeof hpLeaseAcct==='function')&&hpLeaseAcct())||'', x=((typeof hpXmAcct==='function')&&hpXmAcct())||'', k=a+'|'+x, P=hpPxSt();
+    if(P.acct===undefined){ P.acct=k; saveID(); return false; }
+    if(P.acct!==k){ P.acct=k; if(a||x){ P.regAt=now||Date.now(); hpLog('借りた口座・支払う口座が替わった。値段は 6 時間取り寄せない'); } saveID(); return true; } return false; }catch(e){ return false; } }
+function hpPxQuietUntil(now){ now=now||Date.now(); const P=hpPxSt(), ev=Math.max(Number(P.evAt)||0,Number(P.regAt)||0); return (ev&&now<ev+HP_PX_QUIET)?ev+HP_PX_QUIET:0; }
+function hpPxOps(){ try{ return !!((typeof HP_RENT_BUSY!=='undefined'&&HP_RENT_BUSY)||(typeof HP_RENT_J!=='undefined'&&HP_RENT_J)||(typeof HP_OB_RE!=='undefined'&&HP_OB_RE)||(typeof HP_MOVE!=='undefined'&&HP_MOVE)||(typeof ID!=='undefined'&&ID&&(ID.rentJob||ID.moveJob))); }catch(e){ return false; } }
+function hpPayWhen(t){ const d=new Date(Number(t)), p=n=>String(n).padStart(2,'0'); return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+async function hpPxGet(why){
+  if(HP_PX_BUSY) return false; if(!HP_PX_FETCH){ hpPaySt(T('pay_px_none'),true); return false; } const cur=hpPayCur(); HP_PX_BUSY=true; hpPayBtns(); hpPaySt(TF('pay_px_busy',{c:cur.toUpperCase()}));
+  try{ const r=await hpPxRange(cur); const P=hpPxSt(); P.last=Date.now(); P.fail=0; try{ saveID(); }catch(e){}
+    hpLog('値段を取り寄せた（'+(why==='auto'?'毎日の取り寄せ':'押した')+'・'+cur.toUpperCase()+'・'+r.n+' 日分）'); hpPayDrawAll(); hpPaySt(TF('pay_px_got',{c:cur.toUpperCase(),n:r.n})); return true; }
+  catch(e){ const w=String((e&&e.message)||e); hpLog('値段を取り寄せられない（'+w+'）'); hpPaySt(TF('pay_px_err',{why:w}),true); return false; }
+  finally{ HP_PX_BUSY=false; hpPayBtns(); } }
+async function hpPxPress(){
+  if(HP_PX_BUSY) return false; const now=Date.now(); hpPxAcctWatch(now);
+  if(!HP_PAY||now-(Number(HP_PAY.at)||0)>10*60e3){ try{ await hpPayRead(true); }catch(e){} }
+  const u=hpPxQuietUntil(Date.now()); if(u){ hpPaySt(TF('pay_px_wait',{t:hpPayWhen(u)})); hpPayBtns(); return false; }
+  if(hpPxOps()){ hpPaySt(T('pay_px_ops')); return false; }
+  const P=hpPxSt(); if(!P.on){ P.on=1; P.auto=1; P.onAt=now; try{ saveID(); }catch(e){} hpLog('値段の取り寄せを始めた（押した。このあとは 1 日 1 回、毎日ずらした時刻に取る）'); }
+  return hpPxGet('button'); }
+function hpPxAutoSet(on){ const P=hpPxSt(); if(!P.on) return false; P.auto=on?1:0; try{ saveID(); }catch(e){} hpLog(on?'値段の毎日の取り寄せを入れた':'値段の毎日の取り寄せを切った'); hpPayBtns(); return true; }
+async function hpPxTick(now){
+  try{ if(typeof ID==='undefined'||!ID||HP_PX_BUSY) return ''; now=now||Date.now(); hpPxAcctWatch(now); const P=hpPxSt();
+    if(!P.on||P.auto===0||!((typeof hpLeaseAcct==='function')&&hpLeaseAcct())) return 'off';
+    if(Number(P.last)&&now-Number(P.last)<HP_PX_MINGAP) return 'done';
+    const day=Math.floor(now/864e5); let pl=P.plan; if(!pl||pl.day!==day){ pl=P.plan={day:day,at:day*864e5+Math.floor(Math.random()*864e5),n:0}; saveID(); }
+    if(now<pl.at) return 'wait';
+    if(!pl.go){ pl.go=now+HP_PX_W0+Math.floor(Math.random()*(HP_PX_W1-HP_PX_W0)); saveID(); return 'wait'; }
+    if(now<pl.go) return 'wait';
+    if(Number(pl.n)>=3) return 'done';
+    if(hpPxOps()) return 'busy';
+    if(!HP_PAY||now-(Number(HP_PAY.at)||0)>10*60e3){ try{ await hpPayRead(true); }catch(e){} }
+    const u=hpPxQuietUntil(Date.now()); if(u){ pl.go=u+HP_PX_W0+Math.floor(Math.random()*(HP_PX_W1-HP_PX_W0)); saveID(); return 'quiet'; }
+    pl.n=(Number(pl.n)||0)+1; saveID(); const ok=await hpPxGet('auto');
+    if(!ok){ pl.go=Date.now()+3600e3+Math.floor(Math.random()*3600e3); saveID(); return 'fail'; } return 'got'; }catch(e){ return ''; } }
+
+function hpPayVis(){ try{ const c=document.getElementById('post-pay'), t=document.getElementById('p-post'); return !!(c&&c.style.display!=='none'&&t&&t.classList&&t.classList.contains('on')); }catch(e){ return false; } }
+function hpPayAuto(now){
+  try{ if(HP_PAY_BUSY||!hpPayVis()) return ''; const a=(typeof hpLeaseAcct==='function')?hpLeaseAcct():''; if(!a) return ''; now=now||Date.now();
+    if(HP_PAY&&HP_PAY.acct===a&&now-(Number(HP_PAY.at)||0)<HP_PAY_STALE) return 'fresh'; if(HP_PAY_FAIL&&now-HP_PAY_FAIL<HP_PAY_RETRY) return '';
+    hpPayRead(true).catch(()=>{}); return 'read'; }catch(e){ return ''; } }
+
+function hpPayParts(r){
+  const out=[], fee=Number(r.fee)||0, xa=(Number(r.xah)||0)+fee;
+  if(r.kind==='buy') out.push({k:'buy',evr:-(Number(r.evr)||0),xah:-xa});
+  else if(r.kind==='ext') out.push({k:'ext',evr:-(Number(r.evr)||0),xah:-xa});
+  else if(r.kind==='refund') out.push({k:'ref',evr:-(Number(r.evr)||0),xah:-(Number(r.xah)||0)});
+  if(fee&&r.kind!=='refund') out.push({k:'fee',evr:0,xah:fee});
+  return out; }
+function hpPayYm(t){ const d=new Date(Number(t)); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function hpPayMonths(rows,px){
+  const M={}, z=()=>({evr:0,xah:0,v:0,miss:0});
+  for(const r of (rows||[])){ const key=hpPayYm(r.at), m=M[key]||(M[key]={ym:key,n:0,miss:0,buy:z(),ext:z(),ref:z(),fee:z(),tot:z()}), p=px[hpPxDay(r.at)]||{}; let rm=false; m.n++;
+    for(const q of hpPayParts(r)){ const c=m[q.k]; c.evr+=q.evr; c.xah+=q.xah; m.tot.evr+=q.evr; m.tot.xah+=q.xah;
+      let v=0, ok=true; if(q.evr){ if(p.evr>0) v+=q.evr*p.evr; else ok=false; } if(q.xah){ if(p.xah>0) v+=q.xah*p.xah; else ok=false; }
+      if(ok){ c.v+=v; m.tot.v+=v; } else { c.miss++; m.tot.miss++; rm=true; } }
+    if(rm) m.miss++; }
+  return Object.keys(M).sort().reverse().map(k=>M[k]); }
+function hpPayCoin(evr,xah){ const a=[]; if(Math.abs(evr)>1e-12) a.push((evr<0?'\u2212':'')+hpNum(evr,4)+' EVR'); if(Math.abs(xah)>1e-12) a.push((xah<0?'\u2212':'')+hpNum(xah,6)+' XAH'); return a.join('\u30FB'); }
+function hpPayMonDraw(){
+  if(typeof document==='undefined'||!document.getElementById) return -1; const box=document.getElementById('pay-mon'); if(!box) return -1; box.textContent=''; if(!HP_PAY||!HP_PAY.rows||!HP_PAY.rows.length) return 0;
+  const cur=hpPayCur(), M=hpPayMonths(HP_PAY.rows,hpPxMap(cur)); let part=false;
+  const h=document.createElement('div'); h.className='note'; h.style.cssText='color:var(--ink);font-weight:600;margin-top:4px'; h.textContent=TF('pay_m_title',{c:cur.toUpperCase()}); box.appendChild(h);
+  const tb=document.createElement('table'); tb.className='paytb'; tb.id='pay-mon-tb'; const hd=document.createElement('tr');
+  for(const k of ['pay_m_ym','pay_m_buy','pay_m_ext','pay_m_ref','pay_m_fee','pay_m_tot','pay_m_n']){ const th=document.createElement('th'); th.textContent=T(k); hd.appendChild(th); } tb.appendChild(hd);
+  const sub=(td,t)=>{ if(!t) return; const d=document.createElement('div'); d.textContent=t; d.style.cssText='font-size:11px;color:var(--dim);white-space:nowrap'; td.appendChild(d); };
+  for(const m of M){ const tr=document.createElement('tr'); const c0=document.createElement('td'); c0.textContent=m.ym; tr.appendChild(c0);
+    for(const k of ['buy','ext','ref','fee','tot']){ const c=m[k], td=document.createElement('td'), any=Math.abs(c.evr)>1e-12||Math.abs(c.xah)>1e-12;
+      if(!any||(c.miss&&!c.v)) td.textContent='\u2014'; else { td.textContent=hpCurTxt(c.v,cur,c.v<0)+(c.miss?'\uFF0A':''); if(c.miss) part=true; }
+      if(k==='tot') td.style.fontWeight='600'; sub(td,any?hpPayCoin(c.evr,c.xah):''); tr.appendChild(td); }
+    const cn=document.createElement('td'); cn.textContent=String(m.n); tr.appendChild(cn); tb.appendChild(tr); }
+  box.appendChild(tb); const nt=document.createElement('div'); nt.className='note'; nt.style.cssText='white-space:pre-line'; nt.textContent=T('pay_m_nt')+(part?'\n'+T('pay_m_part'):''); box.appendChild(nt);
+  return M.length; }
+function hpPayDrawAll(){ let n=-1; try{ n=hpPayDraw(); }catch(e){} try{ hpPayMonDraw(); }catch(e){} try{ hpPayCurUi(); hpPayBtns(); }catch(e){} return n; }
+function hpPayBtns(){
+  try{ if(typeof document==='undefined'||!document.getElementById) return ''; const b=document.getElementById('btn-pay-px'), nt=document.getElementById('pay-px-nt'), ar=document.getElementById('pay-auto-row'), ac=document.getElementById('pay-px-auto'), P=hpPxSt(), u=hpPxQuietUntil();
+    if(b) b.disabled=!!(HP_PX_BUSY||u);
+    if(nt) nt.textContent=u?TF('pay_px_wait',{t:hpPayWhen(u)}):(P.on?'':T('pay_px_first'));
+    if(ar&&ar.style) ar.style.display=P.on?'':'none'; if(ac) ac.checked=!!(P.on&&P.auto!==0);
+    return u?'wait':'ok'; }catch(e){ return ''; } }
+
+function hpCsvCell(v){ const s=String(v===null||v===undefined?'':v); return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
+function hpCsvText(rows){ return '\uFEFF'+rows.map(r=>r.map(hpCsvCell).join(',')).join('\r\n')+'\r\n'; }
+function hpCsvNum(v,dp){ if(v===null||v===undefined||!isFinite(v)) return ''; let s=Number(v).toFixed(dp); if(s.indexOf('.')>=0) s=s.replace(/0+$/,'').replace(/\.$/,''); return (s==='-0'||/^-0$/.test(s))?'0':s; }
+function hpPayCsvRows(kind){
+  const cur=hpPayCur(), C=cur.toUpperCase(), px=hpPxMap(cur), rows=(HP_PAY&&HP_PAY.rows)||[], dp=hpCurDp(cur), out=[];
+  if(kind==='m'){ out.push([T('pay_c_ym'),TF('pay_c_buy',{u:'EVR'}),TF('pay_c_ext',{u:'EVR'}),TF('pay_c_ref',{u:'EVR'}),TF('pay_c_fee',{u:'XAH'}),TF('pay_c_buy',{u:C}),TF('pay_c_ext',{u:C}),TF('pay_c_ref',{u:C}),TF('pay_c_fee',{u:C}),TF('pay_c_tot',{u:C}),T('pay_c_n'),T('pay_c_miss')]);
+    for(const m of hpPayMonths(rows,px)){ const v=c=>c.miss?'':hpCsvNum(c.v,dp); out.push([m.ym,hpCsvNum(m.buy.evr,6),hpCsvNum(m.ext.evr,6),hpCsvNum(m.ref.evr,6),hpCsvNum(m.fee.xah,6),v(m.buy),v(m.ext),v(m.ref),v(m.fee),v(m.tot),m.n,m.miss]); }
+    return out; }
+  const p2=n=>String(n).padStart(2,'0'), loc=t=>{ const d=new Date(Number(t)); return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())+' '+p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds()); }, ud=t=>{ const d=new Date(Number(t)); return d.getUTCFullYear()+'-'+p2(d.getUTCMonth()+1)+'-'+p2(d.getUTCDate()); };
+  out.push([T('pay_c_at'),T('pay_c_kind'),'EVR','XAH',T('pay_c_day'),TF('pay_c_pe',{u:C}),TF('pay_c_ph',{u:C}),TF('pay_c_cost',{u:C}),T('pay_c_hash'),T('pay_c_acct')]);
+  for(const r of rows.slice().sort((a,b)=>a.at-b.at)){ const p=px[hpPxDay(r.at)]||{}; let v=0, ok=true; for(const q of hpPayParts(r)){ if(q.evr){ if(p.evr>0) v+=q.evr*p.evr; else ok=false; } if(q.xah){ if(p.xah>0) v+=q.xah*p.xah; else ok=false; } }
+    out.push([loc(r.at),hpPayKind(r),hpCsvNum(r.evr,6),hpCsvNum(r.xah,6),ud(r.at),p.evr>0?hpCsvNum(p.evr,8):'',p.xah>0?hpCsvNum(p.xah,8):'',ok?hpCsvNum(v,dp):'',r.hash,(HP_PAY&&HP_PAY.acct)||'']); }
+  return out; }
+async function hpPayCsvSave(kind){
+  if(!HP_PAY||!HP_PAY.rows||!HP_PAY.rows.length){ hpPaySt(T('pay_csv_none'),true); return false; }
+  const d=new Date(), p2=n=>String(n).padStart(2,'0'), stamp=d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate()), name='handpost-lease-'+(kind==='m'?'monthly':'detail')+'-'+stamp+'.csv';
+  const blob=new Blob([hpCsvText(hpPayCsvRows(kind))],{type:'text/csv;charset=utf-8'}); hpLog('支払い記録を CSV にした（'+(kind==='m'?'月ごと':'明細')+'・'+name+'）');
+  try{ if(typeof hpBlobDownload==='function') return await hpBlobDownload(blob,name); }catch(e){} return false; }
+try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'&&typeof setInterval==='function'){ setInterval(()=>{ try{ hpPayAuto(); }catch(e){} },3000); setInterval(()=>{ hpPxTick().catch(()=>{}); },60e3); setTimeout(()=>{ hpPxTick().catch(()=>{}); },20e3); } }catch(e){}
+
 function hpLeaseAuto(){
   try{ if(!hpLeaseAcct()||HP_LG_BUSY) return false; if(typeof hpSceneOnline==='function'&&!hpSceneOnline()) return false;
     const since=Date.now()-HP_LG_AT, rly=(typeof hpScnSt==='function')?hpScnSt().rly:'', gone=!!(ID.lease&&ID.lease.gone);
@@ -481,7 +613,8 @@ function hpCsBoot(){
   try{ const el=document.getElementById('lease-exp'); if(el&&!el.dataset.hpWired){ el.dataset.hpWired='1'; el.addEventListener('change',()=>{ const v=el.value; hpLeaseSet(v?new Date(v).getTime():0); }); } }catch(e){}
   try{ for(const id of ['btn-pt-spare'])  { const b=document.getElementById(id); if(b&&!b.dataset.hpWired){ b.dataset.hpWired='1'; b.addEventListener('click',hpPostTodo); } } }catch(e){}
   try{ const b=document.getElementById('btn-pt-move'); if(b&&!b.dataset.hpWired){ b.dataset.hpWired='1'; b.addEventListener('click',()=>{ if(typeof hpMoveOpen==='function') hpMoveOpen(); }); } }catch(e){}
-  try{ for(const [id,f] of [['btn-pay-load',()=>hpPayRead()],['btn-pay-usd',()=>hpPayUsdRun()]]){ const b=document.getElementById(id); if(b&&!b.dataset.hpWired){ b.dataset.hpWired='1'; b.addEventListener('click',f); } } }catch(e){}
+  try{ for(const [id,f] of [['btn-pay-load',()=>hpPayRead()],['btn-pay-px',()=>hpPxPress()],['btn-pay-csv-m',()=>hpPayCsvSave('m')],['btn-pay-csv-d',()=>hpPayCsvSave('d')]]){ const b=document.getElementById(id); if(b&&!b.dataset.hpWired){ b.dataset.hpWired='1'; b.addEventListener('click',f); } } }catch(e){}
+  try{ hpPayCurUi(); const sel=document.getElementById('pay-cur'), cb=document.getElementById('pay-px-auto'); if(sel&&!sel.dataset.hpWired){ sel.dataset.hpWired='1'; sel.addEventListener('change',()=>{ hpPayCurSet(sel.value); }); } if(cb&&!cb.dataset.hpWired){ cb.dataset.hpWired='1'; cb.addEventListener('change',()=>{ hpPxAutoSet(!!cb.checked); }); } }catch(e){}
   try{ const b=document.getElementById('btn-lease-renew'); if(b&&!b.dataset.hpWired){ b.dataset.hpWired='1'; b.addEventListener('click',()=>{ hpLeaseRenew(); }); } }catch(e){}
   try{ const mi=document.getElementById('lease-mom'), mb=document.getElementById('btn-lease-mom');
     if(mi&&!mi.dataset.hpWired){ mi.dataset.hpWired='1'; mi.addEventListener('paste',()=>{ setTimeout(()=>{ hpLeaseFromMoment(mi.value); },0); }); mi.addEventListener('keydown',e=>{ if(e.key==='Enter'){ try{ e.preventDefault(); }catch(_){} hpLeaseFromMoment(mi.value); } }); }
