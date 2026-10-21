@@ -1206,7 +1206,7 @@ function hpBmCut(s,fs,max){ s=String(s||''); if(hpBmW(s,fs)<=max) return s; let 
 function hpBmShort(l){ const m=/^(.+?) · (.+)$/.exec(String(l||'')); return m?{a:m[2],b:m[1]}:{a:String(l||'')||T('dv_noname'),b:''}; }
 function hpBmBrowser(me,dev){ try{ if(me){ const a=(typeof hpDnAuto==='function')?hpDnAuto():''; return hpBmShort(a).b; } const m=(ID&&ID.devBr2&&typeof ID.devBr2==='object')?ID.devBr2:{}; return typeof m[dev]==='string'?m[dev]:''; }catch(e){ return ''; } }
 function hpBmMd(t){ const d=new Date(Number(t)||0); return (d.getMonth()+1)+'/'+d.getDate(); }
-function hpBmLeft(t){ return Math.ceil(((Number(t)||0)-Date.now())/864e5); }
+function hpBmLeft(t){ return Math.floor(((Number(t)||0)-Date.now())/864e5); }
 function hpBmHost(u){ const s=String(u||'').replace(/^wss?:\/\//,''), i=s.lastIndexOf(':'); return {h:i>0?s.slice(0,i):s,p:i>0?s.slice(i):''}; }
 function hpBmModel(){ try{ if(typeof ID==='undefined'||!ID) return null; const cur=String(hpPostUrl()||''); if(!cur||!(typeof hpPostHave!=='function'||hpPostHave())) return null;
   const rows=(typeof hpDevRows==='function')?hpDevRows():[], devs=[];
@@ -1264,9 +1264,9 @@ function hpBmSvg(M){ if(!M) return ''; const NB=M.boxes.length, W=(NB>=3&&typeof
       else o.push('<text x="'+x+'" y="'+y+'" font-size="'+l.fs+'" font-weight="'+l.fw+'" fill="'+l.fill+'">'+hpBmEsc(l.t)+'</text>'); }); return; }
     o.push('<text x="'+(p.x+12)+'" y="'+(p.y+25)+'" font-size="12" font-weight="700" fill="#e6edf6">'+hpBmEsc(hpBmCut(hp.h,12,tw))+'</text>');
     if(hp.p||b.on){ const nw=bw<150; o.push('<text x="'+(p.x+12)+'" y="'+(p.y+43)+'" font-size="'+(nw?10:11)+'" fill="#8aa0bd">'+hpBmEsc(hp.p||'')+(b.on?'<tspan dx="'+(hp.p?(nw?4:8):0)+'" fill="'+col+'">'+hpBmEsc(nw?String(T('bm_on')).replace(' ',''):T('bm_on'))+'</tspan>':'')+'</text>'); }
-    if(b.exp){ const dl=hpBmLeft(b.exp), ec=dl<=0?'#ff6b6b':dl<=7?'#f5b85c':'#8aa0bd';
+    if(b.exp){ const lf=Number(b.exp)-Date.now(), ec=lf<=0?'#ff6b6b':lf<7*864e5?'#f5b85c':'#8aa0bd';
       o.push('<text x="'+(p.x+12)+'" y="'+(p.y+64)+'" font-size="11" fill="#8aa0bd">'+hpBmEsc(hpBmCut(TF('bm_exp',{t:hpBmMd(b.exp)}),11,tw))+'</text>');
-      o.push('<text x="'+(p.x+12)+'" y="'+(p.y+82)+'" font-size="11" font-weight="700" fill="'+ec+'">'+hpBmEsc(hpBmCut(dl>0?TF('bm_left',{n:dl}):T('bm_expired'),11,tw))+'</text>'); } });
+      o.push('<text x="'+(p.x+12)+'" y="'+(p.y+82)+'" font-size="11" font-weight="700" fill="'+ec+'">'+hpBmEsc(hpBmCut((lf<=0?T('bm_expired'):lf>=2*864e5?TF('bm_left',{n:hpBmLeft(b.exp)}):lf>=2*3600e3?TF('lease_left_h',{n:Math.floor(lf/3600e3)}):TF('lease_left_m',{n:Math.max(1,Math.floor(lf/60e3))})),11,tw))+'</text>'); } });
   M.boxes.forEach((b,i)=>{ const ak=b.acct||(AC.indexOf('?')>=0?'?':''); if(!ak) return; const p=bx(i), j=AC.indexOf(ak), cx=ax0+j*(aw2+10)+aw2/2, sx=p.x+bw/2;
     o.push('<path d="M'+sx+' '+(p.y+BH)+' C'+sx+' '+(p.y+BH+20)+', '+cx+' '+(AY-20)+', '+cx+' '+AY+'" stroke="'+(ak==='?'?'#5d6f8c':'#9b8cff')+'" stroke-width="2" stroke-dasharray="5 4" fill="none"/>'); });
   AC.forEach((a,j)=>{ const x=ax0+j*(aw2+10); if(a==='?'){ o.push('<rect x="'+x+'" y="'+AY+'" width="'+aw2+'" height="'+AH+'" rx="10" fill="#121a2b" stroke="#5d6f8c" stroke-width="1.5" stroke-dasharray="4 3"/><text x="'+(x+aw2/2)+'" y="'+(AY+19)+'" text-anchor="middle" font-size="13" font-weight="700" fill="#8aa0bd">？</text><text x="'+(x+aw2/2)+'" y="'+(AY+35)+'" text-anchor="middle" font-size="10" fill="#8aa0bd">'+hpBmEsc(hpBmCut(T('bm_noacct'),10,aw2-12))+'</text>'); return; }   o.push('<rect x="'+x+'" y="'+AY+'" width="'+aw2+'" height="'+AH+'" rx="10" fill="#1d1838" stroke="#9b8cff" stroke-width="1.5"/>');
@@ -1871,7 +1871,7 @@ function hpBmBoxLines(b,bw){
   for(const s of hpBmWrap(hp.h,fsH,tw)) L.push({t:s,fs:fsH,fw:700,fill:'#e6edf6'});
   if(typeof hpBsLine==='function'){ if(hp.p) L.push({port:hp.p,on:false,fs:nw?10:11,col:col,nw:nw}); const sl=hpBsLine(b); if(sl) for(const t of ((typeof hpBcWrapJ==='function')?hpBcWrapJ(sl.t,11,tw):[sl.t])) L.push({t:t,fs:11,fw:700,fill:sl.st==='ng'?'#ff6b6b':sl.st==='me'?col:'#a9bbd0'}); }
   else if(hp.p||b.on) L.push({port:hp.p||'',on:!!b.on,fs:nw?10:11,col:col,nw:nw});
-  if(b.exp){ const dl=hpBmLeft(b.exp), ec=dl<=0?'#ff6b6b':dl<=7?'#f5b85c':'#8aa0bd'; L.push({t:hpBmCut(TF('bm_exp',{t:hpBmMd(b.exp)}),11,tw),fs:11,fw:400,fill:'#8aa0bd'}); L.push({t:hpBmCut(dl>0?TF('bm_left',{n:dl}):T('bm_expired'),11,tw),fs:11,fw:700,fill:ec}); }
+  if(b.exp){ const lf=Number(b.exp)-Date.now(), ec=lf<=0?'#ff6b6b':lf<7*864e5?'#f5b85c':'#8aa0bd';   L.push({t:hpBmCut(TF('bm_exp',{t:hpBmMd(b.exp)}),11,tw),fs:11,fw:400,fill:'#8aa0bd'}); L.push({t:hpBmCut((lf<=0?T('bm_expired'):lf>=2*864e5?TF('bm_left',{n:hpBmLeft(b.exp)}):lf>=2*3600e3?TF('lease_left_h',{n:Math.floor(lf/3600e3)}):TF('lease_left_m',{n:Math.max(1,Math.floor(lf/60e3))})),11,tw),fs:11,fw:700,fill:ec}); }
   else if(b.noexp&&typeof hpBcWrapJ==='function'){ if(b.noexp==='cur') L.push({t:hpBmCut(T('bm_noexp0'),11,tw),fs:11,fw:400,fill:'#8aa0bd'}); else { for(const t of hpBcWrapJ(T('bm_noexp'),11,tw)) L.push({t:t,fs:11,fw:400,fill:'#8aa0bd'}); for(const t of hpBcWrapJ(TF('bm_noexp2',{b:hpBcName(b.noexp)}),11,tw)) L.push({t:t,fs:11,fw:700,fill:'#8aa0bd'}); } }
   return L; }
 

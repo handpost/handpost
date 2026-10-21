@@ -501,7 +501,7 @@ function hpAdCheck(url){
   try{ const u=String(url||'').trim();
     if(!/^wss:\/\/[a-z0-9.-]+:[0-9]{2,5}$/i.test(u)||(typeof hpC4PostOk==='function'&&!hpC4PostOk(u))) return 'url';
     if(u===String((typeof hpPostUrl==='function'&&hpPostUrl())||'')) return 'cur';
-    for(const d of (typeof hpSibs==='function'?hpSibs():[])){ if(!d||!d.devSig) continue;   let b=''; try{ b=String((typeof hpMcBoxOf==='function'&&hpMcBoxOf(d.dev))||''); }catch(e){} if(b===u) return 'sib:'+(d.label||String(d.dev||'').slice(0,10)); }
+    for(const d of (typeof hpSibs==='function'?hpSibs():[])){ if(!d||!d.devSig) continue;   let b=''; try{ b=String((typeof hpMcBoxOf==='function'&&hpMcBoxOf(d.dev))||''); }catch(e){} if(b===u) return 'sib:'+((typeof hpAxLabel==='function')?hpAxLabel(d):(d.label||String(d.dev||'').slice(0,10))); }
     return ''; }catch(e){ return 'other'; } }
 async function hpAdProbe(url){
   let c=null; const out=[];
@@ -528,7 +528,7 @@ function hpAdSwitch(url){
   return true; }
 async function hpAdUse(url){
   if(HP_AD_BUSY) return {why:'busy'}; let u=String(url||'').trim().replace(/\/+$/,''); if(/^[a-z0-9.-]+:[0-9]{2,5}$/i.test(u)) u='wss://'+u;
-  if(!(typeof hpBfOn==='function'&&hpBfOn())) return {why:'notsub'};
+  if(!((typeof hpBfOn==='function'&&hpBfOn())||(typeof hpObOwn==='function'&&hpObOwn()))) return {why:'notsub'};
   const w=hpAdCheck(u); if(w) return {why:w};
   HP_AD_BUSY=true; let lock=false;
   try{ for(let i=0;i<120&&((typeof HP_BX_BUSY!=='undefined'&&HP_BX_BUSY)||(typeof HP_FB_BUSY!=='undefined'&&HP_FB_BUSY));i++) await sleep(250);
@@ -546,6 +546,7 @@ function hpAdWhy(r){ const w=String((r&&r.why)||'');
   if(w==='owner exists') return T('ad_e_owner'); if(w==='removed') return T('ad_e_removed'); if(w==='too many devices') return T('ad_e_full');
   if(w==='bad sig'||w==='bad claim') return T('ad_e_sig'); if(w==='killed') return T('ad_e_killed'); if(w==='down') return T('ad_e_down'); if(w==='noreply') return T('ad_e_noreply');
   if(w==='busy') return T('ad_checking'); if(w==='notsub') return T('ad_e_notsub');
+  if(w==='job') return T('ax_e_job'); if(w==='short') return TF('ax_r_short',{d:(typeof HP_AX_MIN!=='undefined')?HP_AX_MIN:7}); if(w==='over') return T('ax_r_over'); if(w==='noexp') return T('ax_r_noexp'); if(w==='notmain') return T('mv2_nomain');
   return TF('ad_e_other',{e:(r&&r.e)||w||'?'}); }
 async function hpAdGo(url,st,row){
   st.style.color=''; st.textContent=T('ad_checking'); let r=null;
@@ -580,7 +581,7 @@ function hpAdUi(c){
 hpBfDrawClosed=(function(f){ return function(c){ const r=f.apply(this,arguments); try{ hpAdUi(c); }catch(e){} return r; }; })(hpBfDrawClosed);
 
 const HP_AX_MIN=7, HP_AX_WARN=14, HP_AX_PAR=2, HP_AX_CONN=15000, HP_AX_FRESH=600e3, HP_AX_UPLOW=97, HP_AX_REPLOW=200;
-let HP_AX=null, HP_AX_RUN=null, HP_AX_CK=false, HP_AX_PB={}, HP_AX_EL=null, HP_AX_ST=null, HP_AX_NT=null, HP_AX_GO='', HP_AX_TT=null;
+let HP_AX=null, HP_AX_RUN=null, HP_AX_CK=false, HP_AX_PB={}, HP_AX_EL=null, HP_AX_ST=null, HP_AX_NT=null, HP_AX_GO='', HP_AX_TT=null, HP_AX_OPEN=false;
 function hpAxUrlOk(u){ return /^wss:\/\/[a-z0-9.-]+:[0-9]{2,5}$/i.test(String(u||''))&&(typeof hpC4PostOk!=='function'||hpC4PostOk(String(u))); }
 function hpAxHost(u){ return ((/^wss:\/\/([^:\/]+)/i.exec(String(u||''))||[])[1]||'').toLowerCase(); }
 function hpAxAid(a){ try{ a=String(a||''); if(!/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(a)) return ''; let n=0n; for(const ch of a){ const i=HP_B58.indexOf(ch); if(i<0) return ''; n=n*58n+BigInt(i); } let h=n.toString(16); while(h.length<50) h='0'+h; return h.length===50?h.slice(2,42).toUpperCase():''; }catch(e){ return ''; } }
@@ -619,13 +620,15 @@ function hpAxKnown(acct,single){
     if(typeof hpLeaseAcct==='function'&&hpLeaseAcct()===acct) add(hpPostUrl()); else loose(hpPostUrl());
     try{ const o=(typeof hpOldGet==='function')?hpOldGet():null; if(o) loose(o.url); }catch(e){}
     try{ if(ID.link&&ID.link.postOld) loose(ID.link.postOld.url); if(ID.leaseOld) loose(ID.leaseOld.url); }catch(e){}
-    for(const d of (typeof hpSibs==='function'?hpSibs():[])){ try{ loose(hpMcBoxOf(d.dev)); }catch(e){} } }catch(e){}
+    for(const d of (typeof hpSibs==='function'?hpSibs():[])){ try{ loose(hpMcBoxOf(d.dev)); }catch(e){} }
+    try{ const B=(typeof hpLbGet==='function')?hpLbGet():{}; for(const u of Object.keys(B)){ const x=B[u]; if(x&&(x.a===acct||(!x.a&&single))) add(u); } }catch(e){}   }catch(e){}
   return out; }
 async function hpAxRows(acct,L,single){
   const toks=L.toks.map(t=>Object.assign({},t,{url:'',src:''})), taken=u=>toks.some(x=>x.url===u);
   let seeds=[]; try{ seeds=((typeof hpLsMs==='function')&&await hpLsMs(acct))||[]; }catch(e){ seeds=[]; }
   for(const t of toks){ if(!t.acq) continue; for(const sd of seeds){ try{ const u=hpEvUrl(hpEvInfo(await hpEvOpen(hpHexStr(t.acq),sd))); if(hpAxUrlOk(u)&&!taken(u)){ t.url=u; t.src='key'; break; } }catch(e){} } }
   try{ const lb=(ID.leaseByUrl&&typeof ID.leaseByUrl==='object')?ID.leaseByUrl:{}; for(const u of Object.keys(lb)){ const k=String(lb[u]||'').toUpperCase(), t=toks.find(x=>x.tok===k&&!x.url); if(t&&hpAxUrlOk(u)&&!taken(u)){ t.url=u; t.src='keep'; } } }catch(e){}
+  try{ const B=(typeof hpLbGet==='function')?hpLbGet():{}; for(const u of Object.keys(B)){ const x=B[u]; if(!x||x.a!==acct||!x.t) continue; const t=toks.find(y=>y.tok===x.t&&!y.url); if(t&&hpAxUrlOk(u)&&!taken(u)){ t.url=u; t.src='book'; } } }catch(e){}
   const G={}; for(const t of toks){ if(t.url||!t.dom) continue; (G[t.dom]=G[t.dom]||{t:[],u:[]}).t.push(t); }
   for(const u of hpAxKnown(acct,single)){ if(taken(u)) continue; const g=G[hpAxHost(u)]; if(g&&g.u.indexOf(u)<0) g.u.push(u); }
   const rows=[], amb=new Set();
@@ -645,7 +648,7 @@ async function hpAxScan(){
   const rows=[], hosts={}; let cnt=0, err='', okN=0;
   for(const a of accts){ let L=null;
     try{ L=await hpAxLedger(a,C,n=>{ if(HP_AX&&HP_AX.st==='busy'){ HP_AX.n=n; hpAxTick(); } }); }catch(e){ err=String((e&&e.message)||e).slice(0,80); continue; }
-    okN++; cnt+=L.toks.length; Object.assign(hosts,L.hosts); for(const r of await hpAxRows(a,L,accts.length===1)) rows.push(r); }
+    okN++; cnt+=L.toks.length; Object.assign(hosts,L.hosts); const ra=await hpAxRows(a,L,accts.length===1); for(const r of ra) rows.push(r); try{ if(typeof hpLbFromScan==='function') hpLbFromScan(a,L.toks,ra); }catch(e){}   }
   if(!okN){ HP_AX={st:'err',at:Date.now(),rows:[],why:err||'?'}; hpLog('借りている郵便受けを台帳から読めない（'+(err||'?')+'）'); hpAxDraw(); return HP_AX; }
   HP_AX={st:'ok',at:Date.now(),rows:rows,cnt:cnt,hosts:hosts,accts:accts,part:err};
   hpLog('借りている郵便受けを台帳から読んだ（札 '+cnt+' 枚・場所の分かるもの '+rows.filter(r=>r.url).length+'）');
@@ -660,10 +663,13 @@ function hpAxUsers(url){ const o={me:false,sibs:[]};
   try{ o.me=String((typeof hpPostUrl==='function'&&hpPostUrl())||'')===url;
     for(const d of (typeof hpSibs==='function'?hpSibs():[])){ if(!d||!d.devSig) continue; let b=''; try{ b=String((typeof hpMcBoxOf==='function'&&hpMcBoxOf(d.dev))||''); }catch(e){} if(b===url) o.sibs.push(d); } }catch(e){}
   return o; }
-function hpAxLabel(d){ try{ if(typeof hpMvLabel==='function') return hpMvLabel(d.dev); if(typeof hpDevName==='function') return hpDevName(d.label); }catch(e){} return String((d&&(d.label||d.dev))||'').slice(0,12); }
+function hpAxLabel(d){
+  try{ const dev=String((d&&d.dev)||''); let lb=String((d&&d.label)||''); try{ const rr=(typeof hpDevRows==='function')?hpDevRows():[], x=Array.isArray(rr)?rr.find(y=>y&&y.dev===dev):null; if(x&&x.label) lb=String(x.label); }catch(e){}
+    if(!lb) return dev.slice(0,10)+'…'; if(/ · /.test(lb)) return (typeof hpDevName==='function')?hpDevName(lb):lb;
+    let br=''; try{ br=(typeof hpBmBrowser==='function')?String(hpBmBrowser(false,dev)||''):''; }catch(e){} return br?TF('dv_name',{b:lb,o:br}):lb; }catch(e){ return String((d&&(d.label||d.dev))||'').slice(0,12); } }
 function hpAxWhy0(r,now){
   if(!r.url) return 'unk'; const u=hpAxUsers(r.url); if(u.me) return 'cur'; if(u.sibs.length) return 'sib:'+hpAxLabel(u.sibs[0]);
-  if(!(Number(r.exp)>0)) return 'noexp'; if(Number(r.exp)-(now||Date.now())<HP_AX_MIN*864e5) return 'short'; return ''; }
+  if(!(Number(r.exp)>0)) return 'noexp'; const lf=Number(r.exp)-(now||Date.now()); if(lf<=0) return 'over';   if(lf<HP_AX_MIN*864e5) return 'short'; return ''; }
 function hpAxWhy(r,now){ const w=hpAxWhy0(r,now); if(w) return w; const p=HP_AX_PB[r.url]; return (p&&p.st==='down')?'down':''; }
 function hpAxSort(rows,now){ const rank=r=>{ const w=hpAxWhy(r,now); return w===''?0:(w==='cur'||w.indexOf('sib:')===0)?1:w==='unk'?3:2; }, up=r=>{ const x=(r.host&&typeof HP_UP!=='undefined')?HP_UP[r.host]:null; return (x&&x.st==='ok')?Number(x.pct)||0:-1; };
   return rows.slice().sort((a,b)=>(rank(a)-rank(b))||((Number(b.exp)||0)-(Number(a.exp)||0))||(up(b)-up(a))||String(a.url||a.dom).localeCompare(String(b.url||b.dom))); }
@@ -692,7 +698,7 @@ async function hpAxCheck(){
 function hpAxTick(){ if(HP_AX_TT) return; HP_AX_TT=setTimeout(()=>{ HP_AX_TT=null; hpAxDraw(); },250); }
 function hpAxBind(el,st,nt){ HP_AX_EL=el; HP_AX_ST=st; HP_AX_NT=nt||null; try{ if(HP_AX) hpAxDraw(); }catch(e){} return true; }
 async function hpAxGo(r){
-  if(HP_AX_GO||!HP_AX_ST||!r||!r.url) return null; HP_AX_GO=r.url; hpAxDraw();
+  if(HP_AX_GO||!HP_AX_ST||!r||!r.url) return null; if(typeof hpIsMain==='function'&&hpIsMain()&&typeof hpAxMoveGo==='function') return hpAxMoveGo(r);   HP_AX_GO=r.url; hpAxDraw();
   try{ return await hpAdGo(r.url,HP_AX_ST,r); } finally{ HP_AX_GO=''; hpAxDraw(); } }
 function hpAxKeep(r){
   try{ if(!r||!r.url||typeof ID==='undefined'||!ID) return false; if(r.acct&&typeof hpBmAcctKeep==='function') hpBmAcctKeep(r.url,r.acct);
@@ -719,15 +725,16 @@ function hpAxDraw(){
     const hd=document.createElement('tr'); for(const h of ['ax_h_box','ax_h_left','ax_h_use','ax_h_conn','ax_h_up','ax_h_rep','']){ const th=document.createElement('th'); th.textContent=h?T(h):''; th.style.cssText='text-align:left'; hd.appendChild(th); } tb.appendChild(hd);
     const td=(tr,txt,css,hk)=>{ const c=document.createElement('td'); c.style.cssText='text-align:left;vertical-align:top'+(css?';'+css:''); if(hk) c.setAttribute('data-h',T(hk)+T('ax_sep')); if(txt!=null) c.textContent=txt; tr.appendChild(c); return c; };
     const sub=(c,txt)=>{ const d=hpFlEl('div','',txt); d.style.cssText='font-size:11px;color:var(--dim)'; c.appendChild(d); return d; };
-    let rec=false;
-    for(const r of hpAxSort(X.rows,now)){ const tr=document.createElement('tr'), why=hpAxWhy(r,now), pb=r.url?HP_AX_PB[r.url]:null, us=r.url?hpAxUsers(r.url):{me:false,sibs:[]};
+    let rec=false; const main=(typeof hpIsMain==='function'&&hpIsMain()), rank=r=>{ const w=hpAxWhy(r,now); return w===''?0:(w==='cur'||w.indexOf('sib:')===0)?1:w==='unk'?3:2; };
+    const all=hpAxSort(X.rows,now), vis=all.filter(r=>rank(r)<2), fold=all.filter(r=>rank(r)>=2);
+    const row=r=>{ const tr=document.createElement('tr'), why=hpAxWhy(r,now), pb=r.url?HP_AX_PB[r.url]:null, us=r.url?hpAxUsers(r.url):{me:false,sibs:[]};
       if(r.url&&HP_AX_GO===r.url) tr.className='pick';
 
       const c1=td(tr,null); { const m=hpFlEl('span','',r.url?r.url.replace(/^wss:\/\//,''):r.dom); m.style.cssText='font-family:ui-monospace,Menlo,Consolas,monospace;color:'+(r.url?'var(--teal)':'var(--dim)'); c1.appendChild(m);
         if(!rec&&why===''&&pb&&pb.st==='ok'){ rec=true; const b=hpFlEl('span','',T('ax_rec')); b.style.cssText='margin-left:6px;font-size:11px;padding:0 6px;border:1px solid var(--teal);border-radius:8px;color:var(--teal)'; c1.appendChild(b); }
         if(!r.url) sub(c1,T('ax_unk')); else if(r.amb) sub(c1,TF('ax_amb',{n:r.amb})); else if(r.buy) sub(c1,TF('ax_buy',{d:hpAxDate(r.buy).split(' ')[0]})); }
 
-      if(Number(r.exp)>0){ const left=Number(r.exp)-now, d=Math.ceil(left/864e5)  , col=left<HP_AX_MIN*864e5?'color:var(--red)':left<HP_AX_WARN*864e5?'color:var(--amber)':''; const c2=td(tr,left<864e5?T('ax_lt1'):TF('ax_days',{d:d}),'font-weight:600;'+col,'ax_h_left'); sub(c2,TF(r.amb?'ax_until_amb':'ax_until',{t:hpAxDate(Number(r.exp))})); }
+      if(Number(r.exp)>0){ const left=Number(r.exp)-now, d=Math.floor(left/864e5)  , col=left<HP_AX_MIN*864e5?'color:var(--red)':left<HP_AX_WARN*864e5?'color:var(--amber)':''; const c2=td(tr,left<=0?T('ax_over'):left<864e5?T('ax_lt1'):TF('ax_days',{d:d}),'font-weight:600;'+col,'ax_h_left'); sub(c2,TF(r.amb?'ax_until_amb':'ax_until',{t:hpAxDate(Number(r.exp))})); }
       else td(tr,'—','','ax_h_left');
 
       if(!r.url) td(tr,'—','','ax_h_use'); else { const n=us.sibs.length; td(tr,us.me?(n?TF('ax_me_n',{n:n}):T('ax_me')):n?(n>1?TF('ax_sib_n',{d:hpAxLabel(us.sibs[0]),n:n-1}):hpAxLabel(us.sibs[0])):T('ax_nobody'),(us.me||n)?'':'color:var(--dim)','ax_h_use'); }
@@ -740,12 +747,113 @@ function hpAxDraw(){
 
       const c7=td(tr,null);
       if(r.url&&HP_AX_GO===r.url){ c7.textContent=T('ax_c_busy'); c7.style.color='var(--dim)'; }
-      else if(why===''){ const b=hpFlBtn('btn_ad_use',()=>{ hpAxGo(r); },true); b.style.cssText='padding:2px 10px'; if(HP_AX_GO||(typeof HP_AD_BUSY!=='undefined'&&HP_AD_BUSY)) b.disabled=true; c7.appendChild(b); }
-      else { const t=why==='cur'?T('ax_r_cur'):why.indexOf('sib:')===0?TF('ax_r_sib',{n:why.slice(4)}):why==='short'?TF('ax_r_short',{d:HP_AX_MIN}):why==='noexp'?T('ax_r_noexp'):why==='down'?T('ax_r_down'):''; c7.textContent=t; c7.style.color='var(--dim)'; }
-      tb.appendChild(tr); }
+      else if(why===''){ const b=hpFlBtn(main?'btn_ax_mv':'btn_ad_use',()=>{ hpAxGo(r); },true); b.style.cssText='padding:2px 10px'; if(HP_AX_GO||(typeof HP_AD_BUSY!=='undefined'&&HP_AD_BUSY)) b.disabled=true; c7.appendChild(b); }
+      else { const t=why==='cur'?T('ax_r_cur'):why.indexOf('sib:')===0?TF('ax_r_sib',{n:why.slice(4)}):why==='short'?TF('ax_r_short',{d:HP_AX_MIN}):why==='noexp'?T('ax_r_noexp'):why==='down'?T('ax_r_down'):why==='over'?T('ax_r_over'):''; c7.textContent=t; c7.style.color='var(--dim)'; }
+      tb.appendChild(tr); };
+    for(const r of vis) row(r);
+    if(fold.length){ const tr=document.createElement('tr'), c=document.createElement('td'); c.colSpan=7; c.style.cssText='text-align:left;padding-top:6px'; const b=hpFlBtn('btn_ax_less',()=>{ HP_AX_OPEN=!HP_AX_OPEN; hpAxDraw(); }); b.id='btn-ax-more'; if(!HP_AX_OPEN) b.textContent=TF('btn_ax_more',{n:fold.length}); b.style.cssText='padding:2px 10px'; c.appendChild(b); tr.appendChild(c); tb.appendChild(tr);
+      if(HP_AX_OPEN) for(const r of fold) row(r); }
     wrap.appendChild(tb); box.appendChild(wrap);
     if(HP_AX_CK) nt(T('ax_work'),'margin-top:6px');
-    if(X.rows.some(r=>!r.url)) nt(T('ax_unk_nt'),'margin-top:6px',nb);
+    if(HP_AX_OPEN&&fold.some(r=>!r.url)) nt(T('ax_unk_nt'),'margin-top:6px',nb);
     nt(T('ax_watch_nt'),'margin-top:4px',nb);
     return true; }catch(e){ return false; } }
+
+const HP_LB_MAX=16, HP_LB_KEEP=864e5, HP_LB_NOEXP=40*864e5, HP_LB_GONE=60*864e5;
+const HP_LB_U=/^wss:\/\/[a-z0-9.-]+:[0-9]{2,5}$/i, HP_LB_R=/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, HP_LB_T=/^[0-9A-F]{64}$/;
+function hpLbGet(){ try{ return (typeof ID!=='undefined'&&ID&&ID.lbook&&typeof ID.lbook==='object'&&!Array.isArray(ID.lbook))?ID.lbook:{}; }catch(e){ return {}; } }
+function hpLbGoneOf(t){ try{ const g=(ID&&ID.lbGone&&typeof ID.lbGone==='object'&&!Array.isArray(ID.lbGone))?ID.lbGone:null; return !!(g&&t&&g[t]&&Date.now()-Number(g[t])<HP_LB_GONE); }catch(e){ return false; } }
+function hpLbGoneAdd(t,now){ try{ if(!HP_LB_T.test(String(t||''))) return; const g=(ID.lbGone&&typeof ID.lbGone==='object'&&!Array.isArray(ID.lbGone))?ID.lbGone:{}; g[t]=now||Date.now(); for(const k of Object.keys(g)){ if(Date.now()-Number(g[k])>=HP_LB_GONE) delete g[k]; } const ks=Object.keys(g); while(ks.length>32) delete g[ks.shift()]; ID.lbGone=g; }catch(e){} }
+function hpLbOk(u,x){ return HP_LB_U.test(String(u||''))&&!!x&&typeof x==='object'&&!Array.isArray(x)&&Number(x.at)>0&&(x.a===undefined||HP_LB_R.test(String(x.a)))&&(x.t===undefined||HP_LB_T.test(String(x.t).toUpperCase()))&&(x.e===undefined||Number(x.e)>0)&&(x.h===undefined||HP_LB_R.test(String(x.h)))&&!!(x.a||x.t); }
+function hpLbClean(x){ const o={at:Number(x.at)}; if(x.a) o.a=String(x.a); if(x.t) o.t=String(x.t).toUpperCase(); if(Number(x.e)>0) o.e=Number(x.e); if(x.h) o.h=String(x.h); return o; }
+function hpLbPrune(m,now){ now=now||Date.now(); let n=0;
+  for(const u of Object.keys(m)){ const x=m[u]; const dead=!x||(x.e?(Number(x.e)+HP_LB_KEEP<now):(Number(x.at)+HP_LB_NOEXP<now))||(x.t&&hpLbGoneOf(x.t)); if(dead){ if(x&&x.t&&x.e) hpLbGoneAdd(x.t,now); delete m[u]; n++; } }
+  const ks=Object.keys(m); if(ks.length>HP_LB_MAX){ const end=x=>Number(x.e)||(Number(x.at)+30*864e5); ks.sort((a,b)=>end(m[a])-end(m[b])); for(const u of ks.slice(0,ks.length-HP_LB_MAX)){ delete m[u]; n++; } }
+  return n; }
+function hpLbMerge(m,u,x){
+  const c=hpLbClean(x); if(c.t&&hpLbGoneOf(c.t)) return false; const o=m[u]; if(!o){ m[u]=c; return true; }
+  const newer=c.at>Number(o.at||0);
+  if(c.t&&o.t&&c.t!==o.t){ if(!newer) return false; m[u]=c; return true; }
+  let ch=false; for(const k of ['a','t','e','h']){ if(c[k]===undefined) continue; if(o[k]===undefined||(newer&&o[k]!==c[k])){ o[k]=c[k]; ch=true; } }
+  if(ch&&newer) o.at=c.at; return ch; }
+function hpLbPut(u,x){ try{ if(typeof ID==='undefined'||!ID) return false; u=String(u||'').trim().replace(/\/+$/,''); const y=Object.assign({at:Date.now()},x); for(const k of Object.keys(y)){ if(y[k]===undefined||y[k]==='') delete y[k]; }
+    if(!hpLbOk(u,y)) return false; const m=hpLbGet(), ch=hpLbMerge(m,u,y), pr=hpLbPrune(m); if(ch||pr){ ID.lbook=m; saveID(); } return ch; }catch(e){ return false; } }
+function hpLbSelf(){
+  try{ if(typeof ID==='undefined'||!ID) return 0; let n=0; const lb=(ID.leaseByUrl&&typeof ID.leaseByUrl==='object')?ID.leaseByUrl:{}, ab=(ID.acctByUrl&&typeof ID.acctByUrl==='object')?ID.acctByUrl:{}, L=(ID.lease&&typeof ID.lease==='object')?ID.lease:{}, cur=String((typeof hpPostUrl==='function'&&hpPostUrl())||'');
+    for(const u of Object.keys(lb)){ const t=String(lb[u]||'').toUpperCase(), a=String(ab[u]||((u===cur)?(L.acct||''):'')); if(!HP_LB_T.test(t)||!HP_LB_R.test(a)||hpLbGoneOf(t)) continue;
+      const x={a:a,t:t}; if(u===cur&&!L.gone&&String(L.tok||'').toUpperCase()===t&&Number(L.exp)>0){ x.e=Number(L.exp); if(L.host&&HP_LB_R.test(String(L.host))) x.h=String(L.host); }
+      if(hpLbPut(u,x)) n++; }
+    return n; }catch(e){ return 0; } }
+function hpLbList(){ try{ hpLbSelf(); const m=hpLbGet(); if(hpLbPrune(m)){ ID.lbook=m; saveID(); } const o={}; for(const u of Object.keys(m)) o[u]=hpLbClean(m[u]); return Object.keys(o).length?o:null; }catch(e){ return null; } }
+function hpLbTake(o,from){
+  try{ if(typeof ID==='undefined'||!ID||!o||typeof o!=='object'||Array.isArray(o)) return 0; const m=hpLbGet(), now=Date.now(); let n=0;
+    for(const u of Object.keys(o).slice(0,32)){ const x=o[u]; if(!hpLbOk(u,x)||Number(x.at)>now+600e3) continue; if(hpLbMerge(m,u,x)) n++; }
+    const pr=hpLbPrune(m,now); if(n||pr){ ID.lbook=m; saveID(); }
+    if(n) hpLog('自分の端末（'+String(from||'').slice(0,10)+'…）から、借りている郵便受けの控え '+n+' 件を受け取った'); return n; }catch(e){ return 0; } }
+function hpLbFromScan(acct,toks,rows){
+  try{ let n=0, gone=0; for(const r of (rows||[])){ if(!r||!r.url||!r.tok||r.amb||['key','keep','book'].indexOf(r.src)<0) continue; if(hpLbPut(r.url,{a:acct,t:r.tok,e:Number(r.exp)>0?Number(r.exp):undefined,h:r.host||undefined})) n++; }
+    const live=new Set((toks||[]).map(t=>String(t.tok||'').toUpperCase())), m=hpLbGet(), now=Date.now();
+    for(const u of Object.keys(m)){ const x=m[u]; if(x&&x.a===acct&&x.t&&!live.has(x.t)){ hpLbGoneAdd(x.t,now); delete m[u]; gone++; } }
+    if(gone){ ID.lbook=m; saveID(); }
+    if(n||gone) hpLog('借りている郵便受けの控えを台帳で直した（足した・替えた '+n+'・台帳から消えた '+gone+'）'); return n; }catch(e){ return 0; } }
+try{ if(typeof hpSibPut==='function'&&!hpSibPut.__lb){ const f=hpSibPut; hpSibPut=Object.assign(async function(body){ try{ if(body&&body.type==='sibc'&&Number(body.i)===1){ const x=hpLbList(); if(x) body.lbook=x; } }catch(e){} return f.apply(this,arguments); },f,{__lb:1}); } }catch(e){}
+try{ if(typeof hpSibSyncIn0==='function'&&!hpSibSyncIn0.__lb){ const f=hpSibSyncIn0; hpSibSyncIn0=Object.assign(async function(o,r){ const v=await f.apply(this,arguments); try{ if(v!==false&&o&&r&&r.fromDev&&o.lbook) hpLbTake(o.lbook,String(r.fromDev)); }catch(e){} return v; },f,{__lb:1}); } }catch(e){}
+try{ if(typeof hpSyncDigest==='function'&&!hpSyncDigest.__lb){ const f=hpSyncDigest; hpSyncDigest=Object.assign(async function(){ const h=await f.apply(this,arguments), x=hpLbList(); if(!x) return h; await hpReady(); return hpHex(hp5S().crypto_generichash(16, hp5U(JSON.stringify([h,'lbook',Object.keys(x).sort().map(k=>[k,x[k].a||'',x[k].t||'',x[k].e||0])])))); },f,{__lb:1}); } }catch(e){}
+
+async function hpAxMoveMain(r){
+  if(typeof hpIsMain!=='function'||!hpIsMain()) return {why:'notmain'};
+  if((typeof ID!=='undefined'&&ID&&ID.rentJob)||(typeof HP_MOVE!=='undefined'&&HP_MOVE)||(typeof hpMvBusy==='function'&&hpMvBusy())) return {why:'job'};
+  const url=String((r&&r.url)||''), w=hpAdCheck(url); if(w) return {why:w};
+  const lf=Number(r.exp)-Date.now(); if(!(Number(r.exp)>0)) return {why:'noexp'}; if(lf<=0) return {why:'over'}; if(lf<HP_AX_MIN*864e5) return {why:'short'};
+  if(HP_AD_BUSY) return {why:'busy'}; HP_AD_BUSY=true; let lock=false;
+  try{ for(let i=0;i<120&&((typeof HP_BX_BUSY!=='undefined'&&HP_BX_BUSY)||(typeof HP_FB_BUSY!=='undefined'&&HP_FB_BUSY));i++) await sleep(250);
+    if(typeof HP_BX_BUSY!=='undefined'){ HP_BX_BUSY=true; lock=true; }
+    hpLog('契約中の郵便受け（'+url+'）へ移す前に確かめる（この端末の鍵でつないで名乗る）');
+    const p=await hpAdProbe(url); if(!p.ok){ hpLog('契約中の郵便受け（'+url+'）へは移せない（'+p.why+(p.e?' '+p.e:'')+'）。何も替えていない'); return p; }
+    if(lock){ HP_BX_BUSY=false; lock=false; }
+    const from=String(hpPostUrl()||''), J={move:{from:from,lease:Object.assign({},(ID.lease&&typeof ID.lease==='object')?ID.lease:{})},acct:r.acct||'',tok:r.tok||'',host:r.host||''};
+    let mv=null; try{ mv=await hpMoveBefore(J,url); }catch(e){ mv={n:0,why:String((e&&e.message)||e)}; }
+    try{ if(typeof POST!=='undefined'&&POST&&POST.up&&!POST.notOwner&&POST.url===from&&typeof hpSend==='function') await hpWithin(hpSend({op:'lease',exp:0}),HP_SEND_WAIT,'前の郵便受けの期限を消す'); }catch(e){}
+    try{ stopBg(); }catch(e){} try{ localStorage.setItem('p2p_post',url); }catch(e){}
+    const L={at:Date.now()}; if(r.acct) L.acct=r.acct; if(r.tok&&!r.amb){ L.tok=r.tok; if(r.host) L.host=r.host; if(Number(r.exp)>0) L.exp=Number(r.exp);
+      const m=(ID.leaseByUrl&&typeof ID.leaseByUrl==='object')?ID.leaseByUrl:{}; m[url]=r.tok; const ks=Object.keys(m); while(ks.length>8) delete m[ks.shift()]; ID.leaseByUrl=m; }
+    ID.lease=L; let c=0; try{ c=hpMoveAfter(J,url,mv); }catch(e){}
+    try{ if(r.acct&&typeof hpBmAcctKeep==='function') hpBmAcctKeep(url,r.acct); }catch(e){}
+    saveID(); try{ if(typeof HP_LG_AT!=='undefined') HP_LG_AT=0; }catch(e){}
+    hpLog('契約中の郵便受け（'+url+'）へ移した（借りずに。前の郵便受け '+from+' は期限まで見回る・転居届 '+((mv&&mv.n)||0)+' 台・名刺 '+c+' 人）');
+    setTimeout(()=>{ try{ startBg(); }catch(e){} },1500);
+    return {ok:1,n:(mv&&mv.n)||0,c:c,why2:(mv&&mv.why)||''}; }
+  catch(e){ return {why:'other',e:String((e&&e.message)||e).slice(0,80)}; }
+  finally{ if(lock) HP_BX_BUSY=false; HP_AD_BUSY=false; } }
+async function hpAxMoveGo(r){
+  const st=HP_AX_ST; if(!st||!r||!r.url||HP_AX_GO) return null;
+  const from=String(hpPostUrl()||''), us=hpAxUsers(from), n=us.sibs.length, oe=(typeof hpLeaseExp==='function')?Number(hpLeaseExp())||0:0;
+  let yes=false; try{ yes=await hpAsk({title:T('btn_ax_move'),text:oe?TF('ax_mv_ask',{h:r.url.replace(/^wss:\/\//,''),n:n,o:from.replace(/^wss:\/\//,''),t:hpAxDate(oe)}):TF('ax_mv_ask_nt',{h:r.url.replace(/^wss:\/\//,''),n:n,o:from.replace(/^wss:\/\//,'')}),ok:T('btn_ax_mv'),why:'契約中の郵便受けへ移す'}); }catch(e){ yes=false; }
+  if(!yes) return null;
+  HP_AX_GO=r.url; hpAxDraw(); st.style.color=''; st.textContent=T('ad_checking'); let x=null;
+  try{ x=await hpAxMoveMain(r); }catch(e){ x={why:'other',e:String((e&&e.message)||e)}; }
+  finally{ HP_AX_GO=''; }
+  if(x&&x.ok){ st.style.color='var(--teal)'; st.textContent=TF('ax_mv_ok',{h:r.url.replace(/^wss:\/\//,''),n:x.n})+(x.why2?'\n'+TF('mv2_nosub',{why:x.why2}):''); }
+  else { st.style.color='var(--amber)'; st.textContent=hpAdWhy(x); }
+  hpAxDraw(); return x; }
+
+function hpAxMoveUi(){ try{ if(typeof document==='undefined'||typeof document.getElementById!=='function') return false; const card=document.getElementById('post-move'), go=document.getElementById('btn-pt-move'); if(!card||!go||!go.parentNode) return false;
+    const can=(typeof hpIsMain==='function'&&hpIsMain())||(typeof hpObOwn==='function'&&hpObOwn()); let b=document.getElementById('btn-ax-move'), box=document.getElementById('post-move-ax');
+    if(!can){ if(b) b.style.display='none'; if(box) box.style.display='none'; return false; }
+    const on=!!(typeof HP_MOVE!=='undefined'&&HP_MOVE);
+    if(!b){ b=document.createElement('button'); b.className='b'; b.id='btn-ax-move'; b.type='button'; b.textContent=T('btn_ax_move'); b.style.marginLeft='8px'; go.parentNode.appendChild(b);
+      box=document.createElement('div'); box.id='post-move-ax'; box.style.cssText='display:none;margin-top:8px';
+      const nt=hpFlEl('div','note',''); nt.id='ax-mv-nt'; nt.style.cssText='white-space:pre-line;line-height:1.5'; box.appendChild(nt);
+      const ax=hpFlEl('div',''); ax.id='ax-box2'; ax.style.cssText='margin-top:8px'; box.appendChild(ax);
+      const st=hpFlEl('div','note',''); st.id='ax-mv-st'; st.style.cssText='margin-top:6px;white-space:pre-line;line-height:1.5'; box.appendChild(st);
+      const axn=hpFlEl('div',''); axn.id='ax-nt2'; box.appendChild(axn);
+      const r2=hpFlEl('div','row'); r2.style.cssText='margin-top:8px;justify-content:flex-start;flex-wrap:wrap;gap:8px';
+      const rb=hpFlBtn('btn_ax_reload',()=>{ hpAxOpen(true); }); rb.id='btn-ax-reload2'; const cb=hpFlBtn('btn_ax_close',()=>{ box.style.display='none'; st.textContent=''; }); cb.id='btn-ax-close2';
+      r2.appendChild(rb); r2.appendChild(cb); box.appendChild(r2); card.appendChild(box);
+      b.addEventListener('click',()=>{ const show=box.style.display==='none'; box.style.display=show?'':'none'; if(show){ nt.textContent=T((typeof hpIsMain==='function'&&hpIsMain())?'ax_mv_nt_main':'ax_mv_nt_own'); hpAxBind(ax,st,axn); hpAxOpen(false); } }); }
+    b.style.display=on?'none':''; if(on&&box) box.style.display='none';
+    return true; }catch(e){ return false; } }
+function hpAxWrapMoveUi(){ try{ if(typeof hpMoveUi==='function'&&!hpMoveUi.__ax){ const f=hpMoveUi; hpMoveUi=Object.assign(function(){ const v=f.apply(this,arguments); try{ hpAxMoveUi(); }catch(e){} return v; },f,{__ax:1}); return true; } }catch(e){} return false; }
+
+if(!hpAxWrapMoveUi()){ try{ if(typeof document!=='undefined'&&typeof document.addEventListener==='function') document.addEventListener('DOMContentLoaded',()=>{ hpAxWrapMoveUi(); try{ hpAxMoveUi(); }catch(e){} }); }catch(e){} }
 
