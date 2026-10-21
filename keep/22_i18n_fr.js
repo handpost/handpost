@@ -526,8 +526,6 @@ I18N.fr={
   pay_px_used:"Prix unitaires\u00a0: CoinGecko, {d} (dates UTC)",
   btn_pay_px:"Récupérer les prix",
   pay_cur_l:"Devise",
-  pay_cur_g1:"Devises courantes",
-  pay_cur_g2:"Autres devises (par nom)",
   pay_px_busy:"Récupération des prix… ({c})",
   pay_px_got:"Prix récupérés ({c}, {n} jours)",
   pay_px_err:"Impossible de récupérer les prix unitaires ({why}). Vous pourrez appuyer à nouveau un peu plus tard.",

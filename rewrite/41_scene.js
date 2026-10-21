@@ -239,8 +239,7 @@ async function hpPayRead(quiet){ const a=hpLeaseAcct(); if(!a||HP_PAY_BUSY) retu
     HP_PAY_FAIL=0; if(typeof hpPayDrawAll==='function') hpPayDrawAll(); else hpPayDraw(); if(!quiet||got.more) hpPaySt(got.more?TF('pay_more',{n:got.all.length}):''); return true;
   }catch(e){ HP_PAY_FAIL=Date.now(); if(!quiet) hpPaySt(TF('pay_fail',{why:String((e&&e.message)||e)}),true); return false; } finally{ HP_PAY_BUSY=false; } }
 
-const HP_PAY_CUR_TOP=['jpy','usd','eur','gbp','krw','cny','twd','hkd','sgd','aud','cad','chf','inr'];
-const HP_PAY_CURS=HP_PAY_CUR_TOP.concat(['aed','ars','bdt','bhd','bmd','brl','clp','czk','dkk','gel','huf','idr','ils','kwd','lkr','mmk','mxn','myr','ngn','nok','nzd','php','pkr','pln','rub','sar','sek','thb','try','uah','vnd','zar']);
+const HP_PAY_CURS=['aed','ars','aud','bdt','bhd','bmd','brl','cad','chf','clp','cny','czk','dkk','eur','gbp','gel','hkd','huf','idr','ils','inr','jpy','krw','kwd','lkr','mmk','mxn','myr','ngn','nok','nzd','php','pkr','pln','rub','sar','sek','sgd','thb','try','twd','uah','usd','vnd','zar'];
 const HP_PAY_STALE=30*60e3, HP_PAY_RETRY=5*60e3, HP_PX_QUIET=6*3600e3, HP_PX_MINGAP=20*3600e3, HP_PX_W0=5*60e3, HP_PX_W1=60*60e3, HP_PC_KEY='p2p_pxc';
 let HP_PAY_FAIL=0;
 function hpPcLoad(){ try{ const s=(typeof hpHGet==='function')?hpHGet(HP_PC_KEY):null, o=s?JSON.parse(s):{}; return (o&&typeof o==='object'&&!Array.isArray(o))?o:{}; }catch(e){ return {}; } }
@@ -251,14 +250,7 @@ function hpPxMap(cur){
     const o=hpPcLoad()[cur]||{}; for(const k of ['evr','xah']){ const t=(o[k]&&typeof o[k]==='object')?o[k]:{}; for(const d of Object.keys(t)) put(d,k,t[d]); } }catch(e){}
   return m; }
 function hpPayLoc(){ try{ if(typeof hpLocale==='function') return hpLocale(); return (typeof curLang==='function'&&curLang()==='en')?'en-US':'ja-JP'; }catch(e){ return 'ja-JP'; } }
-
-const HP_EUR_CC='ATBECYDEEEESFIFRGRHRIEITLTLULVMTNLPTSISKADMCSMVAMEXK'.match(/../g);
-const HP_CC_CUR={US:'usd',JP:'jpy',GB:'gbp',KR:'krw',CN:'cny',TW:'twd',HK:'hkd',SG:'sgd',AU:'aud',CA:'cad',CH:'chf',LI:'chf',IN:'inr',AE:'aed',AR:'ars',BD:'bdt',BH:'bhd',BM:'bmd',BR:'brl',CL:'clp',CZ:'czk',DK:'dkk',GE:'gel',HU:'huf',ID:'idr',IL:'ils',KW:'kwd',LK:'lkr',MM:'mmk',MX:'mxn',MY:'myr',NG:'ngn',NO:'nok',NZ:'nzd',PH:'php',PK:'pkr',PL:'pln',RU:'rub',SA:'sar',SE:'sek',TH:'thb',TR:'try',UA:'uah',VN:'vnd',ZA:'zar'};
-const HP_LANG_CUR={ja:'jpy',en:'usd',fr:'eur',de:'eur',pl:'pln',it:'eur',es:'eur',nl:'eur',fi:'eur',el:'eur',sk:'eur',sl:'eur',et:'eur',lv:'eur',lt:'eur',ko:'krw',zh:'cny',sv:'sek',da:'dkk',nb:'nok',no:'nok',cs:'czk',hu:'huf',tr:'try',ru:'rub',uk:'uah',th:'thb',vi:'vnd',id:'idr',ms:'myr',he:'ils'};
-function hpCurDef(){ try{ const n=(typeof navigator!=='undefined'&&navigator)?[].concat(navigator.languages||[],navigator.language||[]):[], m=/^([a-z]{2,3})(?:[-_](?:[a-z]{4}[-_])?([a-z]{2}))?\b/i.exec(String(n[0]||''));
-    if(m&&m[2]){ const cc=m[2].toUpperCase(), c=HP_EUR_CC.indexOf(cc)>=0?'eur':HP_CC_CUR[cc]; return (c&&HP_PAY_CURS.indexOf(c)>=0)?c:'usd'; }
-    const l=m?m[1].toLowerCase():((typeof curLang==='function')?curLang():'en'), c=HP_LANG_CUR[l]; return (c&&HP_PAY_CURS.indexOf(c)>=0)?c:'usd'; }catch(e){ return 'usd'; } }
-function hpPayCur(){ try{ const c=(typeof ID!=='undefined'&&ID)?String(ID.payCur||''):''; if(HP_PAY_CURS.indexOf(c)>=0) return c; }catch(e){} return (typeof hpCurDef==='function')?hpCurDef():(hpPayLoc()==='ja-JP'?'jpy':'usd'); }
+function hpPayCur(){ try{ const c=(typeof ID!=='undefined'&&ID)?String(ID.payCur||''):''; if(HP_PAY_CURS.indexOf(c)>=0) return c; }catch(e){} return 'usd'; }
 function hpCurTxt(v,cur,sign){
   if(v===null||v===undefined||!isFinite(v)) return '\u2014'; const a=Math.abs(Number(v)), C=String(cur||'usd').toUpperCase(); let s='';
   try{ const dig=new Intl.NumberFormat('en-US',{style:'currency',currency:C}).resolvedOptions().maximumFractionDigits;
@@ -269,8 +261,8 @@ function hpCurSym(cur){ try{ const p=new Intl.NumberFormat(hpPayLoc(),{style:'cu
 function hpCurDp(cur){ try{ return new Intl.NumberFormat('en-US',{style:'currency',currency:String(cur).toUpperCase()}).resolvedOptions().maximumFractionDigits+2; }catch(e){ return 4; } }
 function hpPayCurName(c){ try{ const n=new Intl.DisplayNames([hpPayLoc()],{type:'currency'}).of(c.toUpperCase()); return n?n+(typeof hpPar==='function'?hpPar(c.toUpperCase()):'（'+c.toUpperCase()+'）'):c.toUpperCase(); }catch(e){ return c.toUpperCase(); } }
 function hpPayCurUi(){ try{ if(typeof document==='undefined'||!document.getElementById) return false; const sel=document.getElementById('pay-cur'); if(!sel) return false; const cur=hpPayCur();
-    if(!sel.options||!sel.options.length||sel.dataset.loc!==hpPayLoc()){ sel.textContent=''; const loc=hpPayLoc(), nm=c=>({c:c,n:hpPayCurName(c)}), rest=HP_PAY_CURS.filter(c=>HP_PAY_CUR_TOP.indexOf(c)<0).map(nm).sort((a,b)=>a.n.localeCompare(b.n,loc));
-      for(const [k,L] of [['pay_cur_g1',HP_PAY_CUR_TOP.map(nm)],['pay_cur_g2',rest]]){ const g=document.createElement('optgroup'); g.label=T(k); for(const x of L){ const o=document.createElement('option'); o.value=x.c; o.textContent=x.n; g.appendChild(o); } sel.appendChild(g); }
+    if(!sel.options||!sel.options.length||sel.dataset.loc!==hpPayLoc()){ sel.textContent=''; const loc=hpPayLoc();
+      for(const c of HP_PAY_CURS.slice().sort()){ const o=document.createElement('option'); o.value=c; o.textContent=hpPayCurName(c); sel.appendChild(o); }
       sel.dataset.loc=loc; }
     sel.value=cur; return true; }catch(e){ return false; } }
 function hpPayCurSet(c){ c=String(c||'').toLowerCase(); if(HP_PAY_CURS.indexOf(c)<0||typeof ID==='undefined'||!ID) return false; ID.payCur=c; try{ saveID(); }catch(e){} hpLog('支払い記録の通貨を '+c.toUpperCase()+' にした'); hpPaySt(''); hpPayDrawAll(); return true; }

@@ -526,8 +526,6 @@ I18N.pl={
   pay_px_used:"Kursy: CoinGecko, {d} (daty UTC)",
   btn_pay_px:"Pobierz kursy",
   pay_cur_l:"Waluta",
-  pay_cur_g1:"Popularne waluty",
-  pay_cur_g2:"Inne waluty (wg nazwy)",
   pay_px_busy:"Pobieranie kursów… ({c})",
   pay_px_got:"Pobrano kursy ({c}, dni: {n})",
   pay_px_err:"Nie udało się pobrać kursów ({why}). Możesz nacisnąć ponownie za chwilę.",

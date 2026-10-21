@@ -526,8 +526,6 @@ I18N.de={
   pay_px_used:"Kurse: CoinGecko, {d} (UTC-Datum)",
   btn_pay_px:"Kurse abrufen",
   pay_cur_l:"Währung",
-  pay_cur_g1:"Häufige Währungen",
-  pay_cur_g2:"Weitere Währungen (nach Name)",
   pay_px_busy:"Kurse werden abgerufen… ({c})",
   pay_px_got:"Kurse abgerufen ({c}, {n} Tage)",
   pay_px_err:"Kurse konnten nicht abgerufen werden ({why}). Sie können es etwas später erneut versuchen.",
