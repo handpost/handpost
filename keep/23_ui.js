@@ -1,5 +1,5 @@
 function TF(k,v){ let s=T(k); if(v){ for(const n of Object.keys(v)) s=s.split('{'+n+'}').join(String(v[n])); } return s; }
-const HP_LANG_ORDER=['ja','en','fr','de','pl'], HP_LANG_NAME={ja:'日本語',en:'English',fr:'Français',de:'Deutsch',pl:'Polski'};
+const HP_LANG_ORDER=['en','fr','de','pl','ja']  , HP_LANG_NAME={ja:'日本語',en:'English',fr:'Français',de:'Deutsch',pl:'Polski'};
 function hpLangs(){ try{ return HP_LANG_ORDER.filter(l=>l==='ja'||l==='en'||!!(I18N&&I18N[l]&&typeof I18N[l]==='object')); }catch(e){ return ['ja','en']; } }
 function curLang(){ const ls=(typeof hpLangs==='function')?hpLangs():['ja','en']; let v=''; try{ v=String(localStorage.getItem('p2p_lang')||''); }catch(e){} if(ls.indexOf(v)>=0) return v; try{ const n=(typeof navigator!=='undefined'&&navigator)?[].concat(navigator.languages||[],navigator.language||[]):[]; for(const t of n){ const q=String(t||'').toLowerCase().split(/[-_]/)[0]; if(ls.indexOf(q)>=0) return q; } }catch(e){} return 'en'; }
 function T(k){ const L=curLang(), d=I18N[L]||I18N.ja; if(d[k]!==undefined) return d[k]; if(L!=='ja'&&I18N.en&&I18N.en[k]!==undefined) return I18N.en[k]; return I18N.ja[k]!==undefined?I18N.ja[k]:k; }
