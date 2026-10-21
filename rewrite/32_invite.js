@@ -187,7 +187,7 @@ function hpInvUiInit(){
 function hpIvjErr(k,msg){ const e=new Error(msg||k); e.hpj=k; return e; }
 function hpIvjWhy(e){ return ({dead:'e_inv_dead',used:'e_inv_used',none:'e_inv_none',wait:'e_inv_conn',old:'e_inv_old',self:'e_inv_self'})[e&&e.hpj]||'e_inv_bad'; }
 async function hpInvGet(url, id){
-  let c; try{ c=await HotPocket.createClient([url], await HotPocket.generateKeys()); }catch(e){ throw hpIvjErr('wait','つながらない'); }
+  let c; try{ c=await HotPocket.createClient([url], await HotPocket.generateKeys()); }catch(e){ throw hpIvjErr('wait','つながらない'); } if(typeof hpGateWrap==='function') hpGateWrap(c,url,null,'招待を受け取る',{bare:true});
   const replies=[]; c.on(HotPocket.events.contractOutput, r=>{ for(const out of r.outputs){ try{ replies.push(JSON.parse(hpText(out))); }catch(e){} } });
   let up=false; try{ up=await c.connect(); }catch(e){ up=false; } if(!up) throw hpIvjErr('wait','つながらない');
   try{ await c.submitContractInput(JSON.stringify({op:'iget', id:id})); const t0=Date.now(); while(!replies.length&&Date.now()-t0<HP_INV_WAIT) await sleep(50); if(!replies.length) throw hpIvjErr('wait','返事がない'); return replies[0]; }

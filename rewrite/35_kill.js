@@ -61,7 +61,7 @@ async function hpKillLetter(r){
 }
 
 async function hpKillPost(url, cert){
-  let c; try{ c=await HotPocket.createClient([url], await HotPocket.generateKeys()); }catch(e){ throw new Error('つながらない'); }
+  let c; try{ c=await HotPocket.createClient([url], await HotPocket.generateKeys()); }catch(e){ throw new Error('つながらない'); } if(typeof hpGateWrap==='function') hpGateWrap(c,url,null,'失効証明書を預ける',{bare:true});
   const replies=[]; c.on(HotPocket.events.contractOutput, r=>{ for(const out of r.outputs){ try{ replies.push(JSON.parse(hpText(out))); }catch(e){} } });
   let up=false; try{ up=await c.connect(); }catch(e){ up=false; } if(!up) throw new Error('つながらない');
   try{

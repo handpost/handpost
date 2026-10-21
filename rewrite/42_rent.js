@@ -123,7 +123,7 @@ async function hpEvDeploy(info,ownerSkHex,zip,step){ step=step||(()=>{});
   const wait=(type,ms)=>new Promise((ok,ng)=>{ const t=setTimeout(()=>ng(new Error('no '+type)),ms); W.push({type:type,ok:v=>{ clearTimeout(t); ok(v); }}); });
   try{ step('connect',url);
     const sk=String(ownerSkHex||''); const keys=await HotPocket.generateKeys(/^ed/i.test(sk)?sk:'ed'+sk);
-    hpc=await HotPocket.createClient([url],keys,{protocol:HotPocket.protocols.bson});
+    hpc=await HotPocket.createClient([url],keys,{protocol:HotPocket.protocols.bson}); if(typeof hpGateWrap==='function') hpGateWrap(hpc,url,keys,'郵便受けのプログラムを入れる',{bare:true});
     hpc.on(HotPocket.events.contractOutput,r=>{ for(const o of ((r&&r.outputs)||[])){ let m=null; try{ m=BSON.deserialize(o); }catch(e){ continue; } for(let i=W.length-1;i>=0;i--){ if(W[i].type===m.type) W.splice(i,1)[0].ok(m); } } });
     const conn=await hpEvRace(hpc.connect(),CONN,'timeout'); if(conn!==true) throw new Error('connect '+url+(conn==='timeout'?' ('+Math.round(CONN/1000)+' s)':''));
     const send=async(obj,type,ms)=>{ const p=wait(type,ms); p.catch(()=>{});
@@ -136,7 +136,7 @@ async function hpEvDeploy(info,ownerSkHex,zip,step){ step=step||(()=>{});
 
 async function hpEvHasPost(url,ms){ let c=null;
   try{ await hpRentLibs(); const id=Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join(''), got=[];
-    c=await HotPocket.createClient([url], await HotPocket.generateKeys());
+    c=await HotPocket.createClient([url], await HotPocket.generateKeys()); if(typeof hpGateWrap==='function') hpGateWrap(c,url,null,'郵便受けのプログラムが動いているか',{bare:true});
     c.on(HotPocket.events.contractOutput, r=>{ for(const out of ((r&&r.outputs)||[])){ try{ const o=JSON.parse(typeof out==='string'?out:new TextDecoder().decode(out)); if(o&&o.id===id&&(o.err==='none'||o.err==='used'||o.ok==='iget')) got.push(o); }catch(e){} } });
     const CONN=(typeof HP_EV_CONN_MS==='number')?HP_EV_CONN_MS:45e3, race=(p,w,v)=>Promise.race([p,new Promise(r=>setTimeout(()=>r(v),w))]);
     if((await race(c.connect(),CONN,false))!==true) return false; await c.submitContractInput(JSON.stringify({op:'iget',id:id}));

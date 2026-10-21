@@ -4,7 +4,7 @@ const HP_HO_LS=['p2p_bkseq','p2p_bkh','p2p_sibp','p2p_sibc','p2p_sibseen','p2p_t
 const HP_HO_H=/^p2p_(req|sibsince)_|^p2p_(tk|tkrv|sibc|sibp|sibseen|seen)$/;
 
 async function hpHoProbe(url){
-  let c; try{ c=await HotPocket.createClient([url], await HotPocket.generateKeys()); }catch(e){ return {st:'noconn'}; }
+  let c; try{ c=await HotPocket.createClient([url], await HotPocket.generateKeys()); }catch(e){ return {st:'noconn'}; } if(typeof hpGateWrap==='function') hpGateWrap(c,url,null,'引き継ぎの確かめ',{bare:true});
   const replies=[]; c.on(HotPocket.events.contractOutput, r=>{ for(const out of r.outputs){ try{ replies.push(JSON.parse(hpText(out))); }catch(e){} } });
   let up=false; try{ up=await c.connect(); }catch(e){ up=false; }
   if(!up){ try{ await c.close(); }catch(e){} return {st:'noconn'}; }

@@ -120,7 +120,7 @@ async function hpOldVisit(why){
   if(O.until&&Date.now()>O.until){ hpOldEnd(rec,'期限'); return 0; }
   HP_OLD_BUSY=true; let c=null, n=0;
   try{
-    const kp=await hpDevKey(), out=[]; c=await HotPocket.createClient([O.url], kp);
+    const kp=await hpDevKey(), out=[]; c=await HotPocket.createClient([O.url], kp); if(typeof hpGateWrap==='function') hpGateWrap(c,O.url,kp,'前の郵便受けの見回り');
     c.on(HotPocket.events.contractOutput, r=>{ for(const x of r.outputs){ try{ out.push(JSON.parse(hpText(x))); }catch(e){} } });
     let up=false; try{ up=await hpWithin(c.connect(),20000,'前の郵便受けへのつなぎ'); }catch(e){ up=false; }
     if(!up) throw new Error('つながらない');

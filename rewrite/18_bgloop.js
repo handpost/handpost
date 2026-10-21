@@ -88,13 +88,13 @@ function hpOnOutput(o){
 }
 function hpRetryLater(gen){
   if(!BG_ON||POST.gen!==gen) return;
-  const i=Math.min(POST.retryI||0,HP_RETRY_STEPS.length-1), ms=Math.max(HP_RETRY_STEPS[i],hpConnWait(hpConnKey(POST.url)));   POST.retryI=i+1; POST.retry=ms;
+  const i=Math.min(POST.retryI||0,HP_RETRY_STEPS.length-1), ms=Math.max(HP_RETRY_STEPS[i],hpConnWait(hpConnKey(POST.url)),(typeof hpSusWait==='function'?hpSusWait(hpConnKey(POST.url)):0));   POST.retryI=i+1; POST.retry=ms;
   hpLog(Math.round(ms/1000)+' 秒後につなぎ直す');
   POST.nextAt=Date.now()+ms; if(POST.retryT) clearTimeout(POST.retryT); POST.retryT=setTimeout(()=>{ POST.retryT=null; POST.nextAt=0; if(BG_ON&&POST.gen===gen){ if(HP_IOS&&hpHidden()){ POST.waitVis=gen;   hpLog('画面が裏にあるので、戻ってからつなぎ直す'); } else hpConnect(); } },ms);   try{ if(typeof hpSceneCap==='function') hpSceneCap(); }catch(e){}
 }
 
 const HP_RETRY_NOW_GAP=20000;
-function hpRetryNow(why){ if(typeof BG_ON==='undefined'||!BG_ON||POST.up||POST.connecting||!POST.retryT) return false; if(Date.now()-(Number(POST.lastTry)||0)<HP_RETRY_NOW_GAP) return false; if(hpConnWait(hpConnKey(POST.url))>0) return false;   clearTimeout(POST.retryT); POST.retryT=null; POST.nextAt=0; hpLog((why||'')+'。待たずにつなぎ直す'); hpConnect(); return true; }
+function hpRetryNow(why){ if(typeof BG_ON==='undefined'||!BG_ON||POST.up||POST.connecting||!POST.retryT) return false; if(Date.now()-(Number(POST.lastTry)||0)<HP_RETRY_NOW_GAP) return false; if(hpConnWait(hpConnKey(POST.url))>0) return false;   if(typeof hpSusWait==='function'&&hpSusWait(hpConnKey(POST.url))>0) return false;   clearTimeout(POST.retryT); POST.retryT=null; POST.nextAt=0; hpLog((why||'')+'。待たずにつなぎ直す'); hpConnect(); return true; }
 try{ if(typeof document!=='undefined'&&typeof document.addEventListener==='function') document.addEventListener('visibilitychange',()=>{ if(document.hidden){ if(HP_IOS&&BG_ON) hpSleepConn(); return; }   if(POST.waitVis&&POST.waitVis===POST.gen&&BG_ON&&!POST.up&&!POST.connecting){ POST.waitVis=0; hpLog('画面が戻った。つなぎ直す'); hpConnect(); } else hpRetryNow('画面が戻った'); try{ if(POST.up&&typeof hpResendKick==='function') hpResendKick(); }catch(e){}   }); if(typeof window!=='undefined'&&typeof window.addEventListener==='function') window.addEventListener('online',()=>hpRetryNow('回線が戻った')); }catch(e){}
 
 const HP_CONN_WIN=600000, HP_CONN_MAX=4, HP_CONN_LOG=new Map(); let HP_CONN_SLOW=4000;
@@ -116,6 +116,53 @@ function hpConnWait(key){ const now=Date.now(); const a=(HP_CONN_LOG.get(key)||[
 function hpConnNote(key){ const a=HP_CONN_LOG.get(key)||[]; a.push(Date.now()); HP_CONN_LOG.set(key,a); return a.filter(t=>Date.now()-t<HP_CONN_WIN).length; }
 const HP_CONN_OK=new Map();
 function hpConnCount(key,up,t0){ const now=Date.now(); if(up){ HP_CONN_OK.set(key,now); return hpConnNote(key); } const ok=Number(HP_CONN_OK.get(key))||0; return (now-t0>=HP_CONN_SLOW&&ok&&now-ok<HP_CONN_WIN)?hpConnNote(key):0; }
+
+const HP_GATE_WAIT=30e3, HP_GATE_POLL=250, HP_GATE_ON=new Map(), HP_GATE_SAID=new Map();
+const HP_SUS_MAX=2, HP_SUS_GAP=60e3, HP_SUS_LOG=new Map();
+function hpGateKey(url,kp){ let pub=''; try{ const k=kp&&kp.publicKey; pub=typeof k==='string'?k:(k&&k.length?Array.from(k,b=>Number(b).toString(16).padStart(2,'0')).join(''):''); }catch(e){} return String(url)+'|'+pub; }
+function hpSusWait(key){ const now=Date.now(), a=(HP_SUS_LOG.get(key)||[]).filter(t=>now-t<HP_CONN_WIN); HP_SUS_LOG.set(key,a); if(!a.length) return 0;
+  return Math.max(0,a[a.length-1]+HP_SUS_GAP-now,a.length>=HP_SUS_MAX?a[0]+HP_CONN_WIN-now:0); }
+function hpSusNote(key,url,what,why){ const now=Date.now(), a=(HP_SUS_LOG.get(key)||[]).filter(t=>now-t<HP_CONN_WIN); a.push(now); HP_SUS_LOG.set(key,a);
+  try{ hpLog('（関所）'+String(url).replace(/^wss:\/\//,'')+' へ'+(what?'（'+what+'）':'')+(why==='drop'?'つないだのに、返事の前に向こうから切られた（前のつなぎが向こうに残っていた見込み）':'名乗りの途中で止まった見込み')+'。10 分で '+a.length+' 回目なので、'+Math.ceil(hpSusWait(key)/1000)+' 秒あける'); }catch(e){}
+  return a.length; }
+function hpGateSay(why,url,what,ms){ try{ const k=why+'|'+url, t=Number(HP_GATE_SAID.get(k))||0; if(Date.now()-t<HP_CONN_WIN) return; HP_GATE_SAID.set(k,Date.now());
+  hpLog('（関所）'+String(url).replace(/^wss:\/\//,'')+' へ'+(what?'（'+what+'）':'')+(why==='hidden'?'画面が裏なので新しくつながない':why==='main'?'この端末がいま使っている郵便受けなので、2 本目は開かない':why==='busy'?'同じ端末鍵のつなぎが閉じないので、2 本目は開かない':why==='sus'?'前のつなぎがうまく終わらなかったので、'+Math.ceil((ms||0)/1000)+' 秒あとにする':'新しくつなぐのが 10 分に '+HP_CONN_MAX+' 回を超えるので、'+Math.ceil((ms||0)/1000)+' 秒あとにする')); }catch(e){} }
+function hpGateWrap(c,url,kp,what,o){ o=o||{}; if(!c||c.__gate||typeof c.connect!=='function') return c;
+  const key=hpGateKey(url,kp), one=!/\|$/.test(key), ck=hpConnKey([url]), oc=c.connect.bind(c), ox=(typeof c.close==='function')?c.close.bind(c):(()=>Promise.resolve());
+  const EV=(typeof HotPocket!=='undefined'&&HotPocket&&HotPocket.events)||{}, E_CH=EV.connectionChange||'connection_change', E_OUT=EV.contractOutput||'contract_output', E_DIS=EV.disconnect||'disconnect';
+  const on0=(typeof c.on==='function')?c.on.bind(c):null, dis=[]; let pend=null, closed=false, up1=false, got=false;
+  const mine=()=>{ const x=HP_GATE_ON.get(key); return !!(x&&x.c===c); }, drop=()=>{ if(mine()) HP_GATE_ON.delete(key); };
+  c.connect=async function(){
+    if(closed) return false;
+    if(!o.main&&!o.bare&&HP_IOS&&hpHidden()){ hpGateSay('hidden',url,what); return false; }
+    for(let i=0;one&&i*HP_GATE_POLL<HP_GATE_WAIT;i++){ const x=HP_GATE_ON.get(key); if(!x||x.c===c) break;
+      if(x.main&&o.main){ HP_GATE_ON.delete(key); break; }
+      if(x.main){ hpGateSay('main',url,what); return false; }
+      await sleep(HP_GATE_POLL); if(closed) return false; }
+    if(one){ const x=HP_GATE_ON.get(key); if(x&&x.c!==c){ hpGateSay('busy',url,what); return false; } }
+    { const w=hpSusWait(ck); if(w>0){ hpGateSay('sus',url,what,w); return false; } }
+    if(!o.main&&!o.bare){ const w=hpConnWait(ck); if(w>0){ hpGateSay('wait',url,what,w); return false; } }
+    if(closed) return false;
+    if(one) HP_GATE_ON.set(key,{c:c,at:Date.now(),what:what||'',main:!!o.main}); const t0=Date.now();
+    const p=Promise.resolve().then(()=>oc()); pend=p;
+    try{ const up=await p;
+      if(!up&&Date.now()-t0>=HP_CONN_SLOW){ const ok=Number(HP_CONN_OK.get(ck))||0; if(ok&&Date.now()-ok<HP_CONN_WIN) hpSusNote(ck,url,what,'slow'); }
+      try{ if(!o.main&&!o.bare) hpConnCount(ck,!!up,t0); }catch(e){}
+      if(!up) drop(); else up1=true; return up; }
+    catch(e){ drop(); throw e; }
+    finally{ if(pend===p) pend=null; } };
+  c.close=function(){ if(closed) return Promise.resolve(); closed=true; const done=()=>{ drop(); try{ return Promise.resolve(ox()).catch(()=>{}); }catch(e){ return Promise.resolve(); } };
+    if(pend){ const p=pend; p.then(done,done); return Promise.resolve(); }
+    return done(); };
+  if(on0){
+    c.on=function(ev,fn){ if(ev===E_DIS&&typeof fn==='function') dis.push(fn); return on0(ev,fn); };
+    try{ on0(E_OUT,()=>{ got=true; });
+      on0(E_CH,(srv,act)=>{ if(act!=='remove'||closed||!up1) return;
+        if(!got) hpSusNote(ck,url,what,'drop');
+        let r=null; try{ r=c.close(); }catch(e){}
+        Promise.resolve(r).catch(()=>{}).then(()=>{ for(const fn of dis.slice()){ try{ fn(); }catch(e){} } }); }); }catch(e){} }
+  c.__gate=1; return c; }
+
 function hpPostNone(){ try{ if(localStorage.getItem('p2p_post')) return false; const h=(typeof location!=='undefined'&&location)?String(location.hostname||''):''; return !!h&&!/^(localhost|127\.0\.0\.1)$/.test(h); }catch(e){ return false; } }
 async function hpConnect(){
   if(POST.connecting||POST.up) return;
@@ -125,7 +172,7 @@ async function hpConnect(){
   try{
     if(POST.closing){ const p=POST.closing; POST.closing=null; try{ await hpWithin(p,HP_CLOSE_WAIT,'前のつながりを閉じる'); }catch(e){ hpLog('前のつながりが '+Math.round(HP_CLOSE_WAIT/1000)+' 秒で閉じない。そのまま進む'); } if(!BG_ON||POST.gen!==gen) return; }
     const kp=await hpDevKey(); POST.kp=kp; POST.pub=hpHex(kp.publicKey); POST.url=hpPostUrl();
-    const c=await HotPocket.createClient([POST.url], kp);
+    const c=await HotPocket.createClient([POST.url], kp); hpGateWrap(c,POST.url,kp,'自分の郵便受け',{main:true});
     c.on(HotPocket.events.contractOutput, r=>{ for(const out of r.outputs){ let o; try{ o=JSON.parse(hpText(out)); }catch(e){ continue; } try{ hpOnOutput(o); }catch(e){ hpLog('出力の処理で失敗 '+e.message); } } });
     c.on(HotPocket.events.disconnect, ()=>{ if(POST.client!==c) return; POST.client=null; POST.up=false; dot('d-rly','warn'); hpLog('切れた'); try{ if(typeof hpMonRec==='function') hpMonRec(POST.url,'drop','own'); }catch(_){}   hpRetryLater(gen); });
     dot('d-rly','warn');
@@ -208,7 +255,9 @@ async function hpPoolGet(urls, fail){
 async function hpPoolOpen(urls, fail, key){
   if(HP_IOS&&hpHidden()) throw fail('画面が裏にある間は新しくつながない（戻ってから投函する）','wait');
   const w=hpConnWait(key); if(w>0) throw fail('同じ郵便受けへ新しくつなぐのが多すぎる（'+Math.ceil(w/1000)+' 秒後から）','wait');
+  const ws=(typeof hpSusWait==='function')?hpSusWait(key):0; if(ws>0) throw fail('同じ郵便受けへのつなぎを少しあけている（'+Math.ceil(ws/1000)+' 秒後から）','wait');
   let c; try{ c=await HotPocket.createClient(urls, await HotPocket.generateKeys()); }catch(e){ throw fail('相手のポストにつながらない '+key,'wait'); }
+  if(typeof hpGateWrap==='function') hpGateWrap(c,key,null,'手紙を入れる',{bare:true});
   const p={c:c,replies:[],chain:Promise.resolve(),t:null,up:false,key:key};
   c.on(HotPocket.events.contractOutput, r=>{ for(const out of r.outputs){ try{ p.replies.push(JSON.parse(hpText(out))); }catch(e){} } });
   try{ c.on(HotPocket.events.disconnect, ()=>{ p.up=false; if(HP_POOL.get(key)===p) HP_POOL.delete(key); }); }catch(e){}

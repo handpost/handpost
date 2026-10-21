@@ -1502,7 +1502,7 @@ function hpFbUrls(){ try{ if(typeof ID==='undefined'||!ID||typeof hpSibs!=='func
     return out; }catch(e){ return []; } }
 async function hpFbVisit(url, why){
   let c=null, n=0; const out=[];
-  try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url], kp);
+  try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url], kp); if(typeof hpGateWrap==='function') hpGateWrap(c,url,kp,'自分のほかの端末の郵便受けの見回り');
     c.on(HotPocket.events.contractOutput, r=>{ for(const x of r.outputs){ try{ out.push(JSON.parse(hpText(x))); }catch(e){} } });
     let up=false; try{ up=await hpWithin(c.connect(),20000,'自分のほかの郵便受けへのつなぎ'); }catch(e){ up=false; }
     if(!up) throw new Error('つながらない');
@@ -1683,7 +1683,7 @@ async function hpMfLedger(acct,seeds){
   return out.sort((a,b)=>(b.buy||0)-(a.buy||0)); }
 async function hpMfProbe(url){
   let c=null; const out=[];
-  try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url],kp);
+  try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url],kp); if(typeof hpGateWrap==='function') hpGateWrap(c,url,kp,'新しい郵便受けを探す');
     c.on(HotPocket.events.contractOutput,r=>{ for(const x of r.outputs){ try{ out.push(JSON.parse(hpText(x))); }catch(e){} } });
     let up=false; try{ up=await hpWithin(c.connect(),20000,'候補の郵便受けへのつなぎ'); }catch(e){ up=false; }
     if(!up) return {err:'つながらない'};
