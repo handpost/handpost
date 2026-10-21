@@ -150,6 +150,7 @@ async function hpLeaseLedger(acct,want){
     best.cnt=toks.length; best.pick=W.byDom?'dom':wt?'tok':'new';   return best;
   });
 }
+function hpLgDays(n,size){ const d=(Number(n)||0)*(Number(size)||3600)/86400; return Number.isInteger(d)?d:Math.round(d*10)/10; }
 function hpLgSt(t,err){ try{ const el=document.getElementById('lease-lg-st'); if(el){ el.textContent=t||''; el.style.color=err?'var(--red)':''; } }catch(e){} }
 async function hpLeaseFromLedger(why){ const a=hpLeaseAcct(); if(!a||HP_LG_BUSY) return false; HP_LG_BUSY=true; HP_LG_AT=Date.now();
   const Tt=k=>(typeof T==='function')?T(k):k, Tf=(k,o)=>(typeof TF==='function')?TF(k,o):k, Lg=(k,o)=>{ try{ if(typeof log==='function') log((typeof TL==='function')?TL(k,o):k); }catch(e){} }, fm=x=>{ try{ return (typeof fmtTS==='function')?fmtTS(x):new Date(x).toLocaleString(); }catch(e){ return String(x); } };
@@ -158,15 +159,15 @@ async function hpLeaseFromLedger(why){ const a=hpLeaseAcct(); if(!a||HP_LG_BUSY)
     const now=Date.now();
     if(r.gone){ const was=!!(ID.lease&&ID.lease.gone), cur=hpLeaseExp(); const exp=r.burn||(cur&&cur<now?cur:now); const h0=(ID.lease&&ID.lease.acct===a&&typeof ID.lease.host==='string')?ID.lease.host:''; ID.lease={acct:a,exp:exp,at:now,gone:1}; if(r.tok) ID.lease.tok=r.tok;   if(r.host||h0) ID.lease.host=r.host||h0;   try{ saveID(); }catch(e){} try{ if(typeof hpSceneCap==='function') hpSceneCap(); }catch(e){}
       if(!was) Lg('lg_lease_lg_gone',{a:a,t:fm(exp)}); hpLgSt(Tf('lease_lg_gone',{t:fm(exp)}),true); try{ hpLeaseUi(); hpLeaseCheck(); }catch(e){} return true; }
-    let exp=0, how='';
-    if(r.buy&&r.n>0){ let size=3600; try{ const c=await hpMomCfg(); if(c&&c.size>0) size=c.size; }catch(e){} exp=r.buy+r.n*size*1000; how='buy'; }
+    let exp=0, how='', size=3600;
+    if(r.buy&&r.n>0){ try{ const c=await hpMomCfg(); if(c&&c.size>0) size=c.size; }catch(e){} exp=r.buy+r.n*size*1000; how='buy'; }
     else if(r.mom){ try{ const c=await hpMomCfg(); exp=hpMomStart(r.mom,c); how='mom'; }catch(e){} }
     if(!exp){ Lg('lg_lease_lg_fail',{why:'no expiry'}); hpLgSt(Tt('lease_lg_noexp'),true); return false; }
     const old=hpLeaseExp(), same=!!(ID.lease&&!ID.lease.gone&&old===exp&&ID.lease.tok===r.tok);
     if(!same){ ID.lease={acct:a,exp:exp,at:now,tok:r.tok}; if(r.host) ID.lease.host=r.host; if(r.unit>0) ID.lease.unit=r.unit;     try{ saveID(); }catch(e){} try{ if(typeof hpSceneCap==='function') hpSceneCap(); }catch(e){} Lg('lg_lease_lg_ok',{t:fm(exp),n:r.n||('moment '+r.mom),tok:r.tok.slice(0,8),why:why||''}); }
     if(same&&r.host&&ID.lease.host!==r.host){ ID.lease.host=r.host; try{ saveID(); }catch(e){} }
     if(same&&r.unit>0&&ID.lease.unit!==r.unit){ ID.lease.unit=r.unit; try{ saveID(); }catch(e){} }
-    hpLgSt(Tf(how==='buy'?'lease_lg_ok':'lease_lg_okm',{t:fm(exp),n:r.n,m:r.mom})+(r.cnt>1?Tf('lease_lg_many',{n:r.cnt}):''));
+    hpLgSt(Tf(how==='buy'?'lease_lg_ok':'lease_lg_okm',{t:fm(exp),n:r.n,m:r.mom,d:hpLgDays(r.n,size)})  +(r.cnt>1?Tf('lease_lg_many',{n:r.cnt}):''));
     try{ hpLeaseUi(); hpLeaseCheck(); }catch(e){} return true;
   } finally { HP_LG_BUSY=false; } }
 function hpXplUrl(a){ a=String(a||'').trim(); return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(a)?'https://xahauexplorer.com/explorer/'+a:''; }
@@ -238,7 +239,8 @@ async function hpPayRead(quiet){ const a=hpLeaseAcct(); if(!a||HP_PAY_BUSY) retu
     HP_PAY_FAIL=0; if(typeof hpPayDrawAll==='function') hpPayDrawAll(); else hpPayDraw(); if(!quiet||got.more) hpPaySt(got.more?TF('pay_more',{n:got.all.length}):''); return true;
   }catch(e){ HP_PAY_FAIL=Date.now(); if(!quiet) hpPaySt(TF('pay_fail',{why:String((e&&e.message)||e)}),true); return false; } finally{ HP_PAY_BUSY=false; } }
 
-const HP_PAY_CURS=['jpy','usd','eur','gbp','krw','cny','twd','hkd','sgd','aud','cad','chf','inr'];
+const HP_PAY_CUR_TOP=['jpy','usd','eur','gbp','krw','cny','twd','hkd','sgd','aud','cad','chf','inr'];
+const HP_PAY_CURS=HP_PAY_CUR_TOP.concat(['aed','ars','bdt','bhd','bmd','brl','clp','czk','dkk','gel','huf','idr','ils','kwd','lkr','mmk','mxn','myr','ngn','nok','nzd','php','pkr','pln','rub','sar','sek','thb','try','uah','vnd','zar']);
 const HP_PAY_STALE=30*60e3, HP_PAY_RETRY=5*60e3, HP_PX_QUIET=6*3600e3, HP_PX_MINGAP=20*3600e3, HP_PX_W0=5*60e3, HP_PX_W1=60*60e3, HP_PC_KEY='p2p_pxc';
 let HP_PAY_FAIL=0;
 function hpPcLoad(){ try{ const s=(typeof hpHGet==='function')?hpHGet(HP_PC_KEY):null, o=s?JSON.parse(s):{}; return (o&&typeof o==='object'&&!Array.isArray(o))?o:{}; }catch(e){ return {}; } }
@@ -260,7 +262,9 @@ function hpCurSym(cur){ try{ const p=new Intl.NumberFormat(hpPayLoc(),{style:'cu
 function hpCurDp(cur){ try{ return new Intl.NumberFormat('en-US',{style:'currency',currency:String(cur).toUpperCase()}).resolvedOptions().maximumFractionDigits+2; }catch(e){ return 4; } }
 function hpPayCurName(c){ try{ const n=new Intl.DisplayNames([hpPayLoc()],{type:'currency'}).of(c.toUpperCase()); return n?n+'（'+c.toUpperCase()+'）':c.toUpperCase(); }catch(e){ return c.toUpperCase(); } }
 function hpPayCurUi(){ try{ if(typeof document==='undefined'||!document.getElementById) return false; const sel=document.getElementById('pay-cur'); if(!sel) return false; const cur=hpPayCur();
-    if(!sel.options||!sel.options.length||sel.dataset.loc!==hpPayLoc()){ sel.textContent=''; for(const c of HP_PAY_CURS){ const o=document.createElement('option'); o.value=c; o.textContent=hpPayCurName(c); sel.appendChild(o); } sel.dataset.loc=hpPayLoc(); }
+    if(!sel.options||!sel.options.length||sel.dataset.loc!==hpPayLoc()){ sel.textContent=''; const loc=hpPayLoc(), nm=c=>({c:c,n:hpPayCurName(c)}), rest=HP_PAY_CURS.filter(c=>HP_PAY_CUR_TOP.indexOf(c)<0).map(nm).sort((a,b)=>a.n.localeCompare(b.n,loc));
+      for(const [k,L] of [['pay_cur_g1',HP_PAY_CUR_TOP.map(nm)],['pay_cur_g2',rest]]){ const g=document.createElement('optgroup'); g.label=T(k); for(const x of L){ const o=document.createElement('option'); o.value=x.c; o.textContent=x.n; g.appendChild(o); } sel.appendChild(g); }
+      sel.dataset.loc=loc; }
     sel.value=cur; return true; }catch(e){ return false; } }
 function hpPayCurSet(c){ c=String(c||'').toLowerCase(); if(HP_PAY_CURS.indexOf(c)<0||typeof ID==='undefined'||!ID) return false; ID.payCur=c; try{ saveID(); }catch(e){} hpLog('支払い記録の通貨を '+c.toUpperCase()+' にした'); hpPaySt(''); hpPayDrawAll(); return true; }
 

@@ -2014,7 +2014,7 @@ function hpDlRows(){ try{ if(typeof document==='undefined'||!document.getElement
     hpDlLive(); return n; }catch(e){ return 0; } }
 function hpDlConn(){ try{ const c=document.getElementById('set-conn'); if(c&&c.style&&c.style.display!=='none'){ c.style.display='none'; return 1; } }catch(e){} return 0; }
 function hpDlMove(){ try{ const c=document.getElementById('post-move'); if(!c||document.getElementById('pt-mv-why')) return 0; const w=document.createElement('div'); w.id='pt-mv-why'; w.style.margin='6px 0 8px';
-    for(const k of ['pt_mv_cause','pt_mv_when','pt_mv_cost']){ const p=document.createElement('div'); p.className='note'; p.setAttribute('data-i18n',k); p.textContent=T(k); if(k==='pt_mv_cause') p.style.color='var(--amber)'; w.appendChild(p); }
+    for(const k of ['pt_mv_cause','pt_mv_when','pt_mv_cost']){ const p=document.createElement('div'); p.className='note'; p.setAttribute('data-i18n',k); p.textContent=T(k);   w.appendChild(p); }
     let nt=null; try{ nt=c.querySelector?c.querySelector('[data-i18n="nt_pt_move"]'):null; }catch(e){}
     if(nt&&nt.parentNode&&typeof nt.parentNode.insertBefore==='function') nt.parentNode.insertBefore(w,nt.nextSibling||null); else c.appendChild(w); return 1; }catch(e){ return 0; } }
 try{ if(typeof renderDevices==='function'&&!renderDevices.__dl){ const f=renderDevices; renderDevices=Object.assign(function(){ const v=f.apply(this,arguments); try{ hpDlRows(); }catch(e){} return v; },f,{__dl:1}); } }catch(e){}

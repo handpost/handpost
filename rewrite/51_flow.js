@@ -722,14 +722,14 @@ function hpAxHostOf(a,H){ try{ const L=(typeof HP_HOSTS!=='undefined'&&HP_HOSTS&
 async function hpAxCheck(){
   if(HP_AX_CK) return; const X=HP_AX; if(!X||X.st!=='ok') return; HP_AX_CK=true; hpAxTick();
   try{ const skip=new Set([String((typeof hpPostUrl==='function'&&hpPostUrl())||'')]), fb=new Set();
-    try{ const o=(typeof hpOldGet==='function')?hpOldGet():null; if(o&&o.url) skip.add(o.url); }catch(e){} try{ for(const u of ((typeof hpFbUrls==='function'&&hpFbUrls())||[])) fb.add(u); }catch(e){}
+    let oldU=''; try{ const o=(typeof hpOldGet==='function')?hpOldGet():null; if(o&&o.url){ oldU=String(o.url); fb.add(oldU); } }catch(e){}   try{ for(const u of ((typeof hpFbUrls==='function'&&hpFbUrls())||[])) fb.add(u); }catch(e){}
     const now=Date.now(), due=r=>r.url&&!skip.has(r.url)&&!hpAxWhy0(r,now)&&!(HP_AX_PB[r.url]&&HP_AX_PB[r.url].st!=='busy'&&now-HP_AX_PB[r.url].at<HP_AX_FRESH), want=X.rows.filter(r=>due(r)&&!fb.has(r.url)), wantFb=X.rows.filter(r=>due(r)&&fb.has(r.url));
     const probe=async r=>{ HP_AX_PB[r.url]={st:'busy',at:Date.now()}; hpAxTick(); let p=null; try{ p=await hpAxProbe(r.url,{ver:true});   }catch(e){ p={st:'down'}; } HP_AX_PB[r.url]=Object.assign(p,{at:Date.now()}); hpAxTick(); };
     let i=0; const one=async()=>{ while(i<want.length) await probe(want[i++]); };
     const P=[]; for(let k=0;k<HP_AX_PAR;k++) P.push(one());
     P.push((async()=>{ const busy=()=>(typeof HP_BX_BUSY!=='undefined'&&HP_BX_BUSY)||(typeof HP_FB_BUSY!=='undefined'&&HP_FB_BUSY)||(typeof HP_OLD_BUSY!=='undefined'&&HP_OLD_BUSY);
       for(const r of wantFb){ for(let j=0;j<240&&busy();j++) await sleep(250); if(busy()) continue;
-        let lock=false; try{ if(typeof HP_BX_BUSY!=='undefined'){ HP_BX_BUSY=true; lock=true; } await probe(r); } finally{ if(lock) HP_BX_BUSY=false; } } })());
+        let lock=false, lockO=false; try{ if(typeof HP_BX_BUSY!=='undefined'){ HP_BX_BUSY=true; lock=true; } if(r.url===oldU&&typeof HP_OLD_BUSY!=='undefined'){ HP_OLD_BUSY=true; lockO=true; }   await probe(r); } finally{ if(lock) HP_BX_BUSY=false; if(lockO) HP_OLD_BUSY=false; } } })());
     const seen=new Set(); for(const r of X.rows){ if(!r.url||!r.host||seen.has(r.host)) continue; seen.add(r.host);
       if(typeof hpUpHost!=='function'||typeof HP_UP==='undefined') break; const a=r.host, x=HP_UP[a]; if((typeof hpUpFresh==='function'&&hpUpFresh(x))||(x&&x.st==='busy')) continue;
       const h=hpAxHostOf(a,X.hosts&&X.hosts[a]); if(!h) continue; HP_UP[a]={st:'busy',k:1,n:1,done:0,total:0}; hpAxTick();
