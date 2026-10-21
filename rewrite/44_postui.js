@@ -145,7 +145,7 @@ function hpHsRecPick(hosts,med,now){ const P=(typeof HP_HS_OPT!=='undefined'&&HP
   let best=null; for(const s of steps){ const F=Object.assign(HP_HS_F0(),{live:true,free:1,ver:ver?[ver]:[]},s,{tier:s.tier.slice()}); const n=(hosts||[]).filter(h=>hpHsPass(h,F,'',now)).length;
     if(!best||n>best.n) best={F:F,n:n}; if(n>=HP_HS_REC_MIN) return {F:F,n:n}; }
   return best; }
-function hpHsRecText(F){ const p=[]; if(F.rep) p.push(TF('hs_rec_rep',{v:F.rep})); if(F.tier&&F.tier.length) p.push(TF('hs_rec_tier',{v:F.tier.map(t=>T(HP_HS_TK[t])).join('・')})); if(F.price) p.push(TF('hs_rec_price',{v:F.price})); if(F.days) p.push(TF('hs_rec_days',{v:F.days})); if(F.ver&&F.ver.length) p.push(TF('hs_rec_ver',{v:F.ver[0]})); p.push(T('hs_rec_free')); return p.join('・'); }
+function hpHsRecText(F){ const p=[]; if(F.rep) p.push(TF('hs_rec_rep',{v:F.rep})); if(F.tier&&F.tier.length) p.push(TF('hs_rec_tier',{v:F.tier.map(t=>T(HP_HS_TK[t])).join((typeof hpSep==='function'?hpSep():'・'))})); if(F.price) p.push(TF('hs_rec_price',{v:F.price})); if(F.days) p.push(TF('hs_rec_days',{v:F.days})); if(F.ver&&F.ver.length) p.push(TF('hs_rec_ver',{v:F.ver[0]})); p.push(T('hs_rec_free')); return p.join((typeof hpSep==='function'?hpSep():'・')); }
 function hpHsSame(a,b){ try{ return JSON.stringify(a)===JSON.stringify(b); }catch(e){ return false; } }
 function hpHsHave(){ return typeof HP_HOSTS!=='undefined'&&!!HP_HOSTS&&!HP_HOSTS.empty&&Array.isArray(HP_HOSTS.hosts)&&HP_HOSTS.hosts.length>0; }
 function hpHsRecApply(){ if(!hpHsHave()) return false; const R=hpHsRecPick(HP_HOSTS.hosts,Number(HP_HOSTS.med)||0,Date.now()); if(!R) return false; HP_HS_REC=R.F; HP_HS_F=JSON.parse(JSON.stringify(R.F)); HP_HS_N=HP_HS_SHOW; return true; }
@@ -1429,7 +1429,7 @@ try{ if(typeof hpPostUi==='function'&&!hpPostUi.__sp){ const f=hpPostUi; hpPostU
 function hpSwOn(){ try{ return typeof hpRkOn==='function'&&hpRkOn()&&typeof hpRkFree==='function'&&hpRkFree(); }catch(e){ return false; } }
 function hpSwMe(){ try{ return String((ID&&ID.link&&ID.link.dev)||(typeof POST!=='undefined'&&POST&&POST.pub)||''); }catch(e){ return ''; } }
 function hpSwCands(){ const out=[], cur=String(hpPostUrl()||''); try{ if(cur) out.push(cur); const M=hpBmModel(); for(const b of ((M&&M.boxes)||[])){ if(b&&b.url&&hpPmUrlOk(b.url)&&out.indexOf(b.url)<0) out.push(b.url); } }catch(e){} return out; }
-function hpSwWho(u){ try{ const M=hpBmModel(), b=((M&&M.boxes)||[]).find(x=>x&&x.url===u); return b?b.devs.filter(d=>!d.me).map(d=>d.a&&d.b&&d.a!==d.b?d.a+' の '+d.b:(d.b||d.a)).filter(Boolean).join('・'):''; }catch(e){ return ''; } }
+function hpSwWho(u){ try{ const M=hpBmModel(), b=((M&&M.boxes)||[]).find(x=>x&&x.url===u); return b?b.devs.filter(d=>!d.me).map(d=>d.a&&d.b&&d.a!==d.b?((typeof TF==='function'&&typeof I18N!=='undefined'&&I18N.ja&&I18N.ja.bm_dev_of)?TF('bm_dev_of',{a:d.a,b:d.b}):d.a+' の '+d.b):(d.b||d.a)).filter(Boolean).join((typeof hpSep==='function'?hpSep():'・')):''; }catch(e){ return ''; } }
 async function hpSwCheck(url){ try{ await hpBoxErrand(url, ask=>ask({op:'pushkey'},'pushkey')); return 'ok'; }catch(e){ const m=String((e&&e.message)||''); return /not owner/.test(m)?'noreg':'fail'; } }
 let HP_SW_BUSY=false;
 async function hpSwGo(url){
@@ -1924,11 +1924,11 @@ function hpDsList(cur){
 function hpDsBox(wrap,cur){ try{ if(!wrap||typeof document==='undefined'||!document.createElement) return null; const L=hpDsList(cur); if(!L.length) return null; let mk='other'; try{ mk=hpDevKindOf(hpDnAuto())||'other'; }catch(e){}
     const box=document.createElement('div'); box.id='ds-box'; box.style.cssText='margin-top:12px'; const h=document.createElement('div'); h.className='note'; h.textContent=HP_BC_KW[mk]?TF('ds_head',{k:HP_BC_KW[mk]}):T('ds_head0'); box.appendChild(h);
     const items=[]; for(const x of L){ const lab=document.createElement('label'); lab.style.cssText='display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer'; const c=document.createElement('input'); c.type='checkbox'; c.checked=x.on; c.setAttribute('data-dev',x.dev);
-      const sp=document.createElement('span'); sp.textContent=x.br+'（'+(x.named||HP_BC_KW[x.kind]||T('bm_noname'))+'）'; lab.appendChild(c); lab.appendChild(sp); box.appendChild(lab); items.push({c:c,x:x}); }
+      const sp=document.createElement('span'); sp.textContent=x.br+(y=>(typeof hpPar==='function'?hpPar(y):'（'+y+'）'))(x.named||HP_BC_KW[x.kind]||T('bm_noname')); lab.appendChild(c); lab.appendChild(sp); box.appendChild(lab); items.push({c:c,x:x}); }
     wrap.appendChild(box); return items; }catch(e){ return null; } }
 function hpDsApply(items,nm){ nm=String(nm==null?'':nm).replace(/[\r\n\t]/g,' ').trim().slice(0,24); let n=0; const names=[]; if(!nm) return 0;
   for(const it of (Array.isArray(items)?items:[])){ if(!it||!it.c||!it.c.checked||!it.x) continue; const x=it.x; if((x.named||'')===nm) continue; if(hpDnFor(x.dev,nm,x.kind,x.bo===undefined?x.br:x.bo)){ n++; names.push(x.br); } }
-  if(n){ try{ hpToast(TF(nm?'ds_done':'ds_clear',{b:hpBcName(names.join('・')),n:nm}),3000); }catch(e){} try{ renderDevices(); }catch(e){} try{ hpBmUi(); }catch(e){} }
+  if(n){ try{ hpToast(TF(nm?'ds_done':'ds_clear',{b:hpBcName(names.join((typeof hpSep==='function'?hpSep():'・'))),n:nm}),3000); }catch(e){} try{ renderDevices(); }catch(e){} try{ hpBmUi(); }catch(e){} }
   return n; }
 function hpDnFor(dev,nm,kind,br){ try{ if(typeof ID==='undefined'||!ID||!/^ed[0-9a-f]{64}$/.test(String(dev||''))||dev===hpDsMe()) return false; nm=String(nm==null?'':nm).replace(/[\r\n\t]/g,' ').trim().slice(0,24); const ts=Date.now();
     const k=['pc','iphone','android','other'].indexOf(kind)>=0?kind:'other', b=String(br||'').replace(/[^A-Za-z ]/g,'').slice(0,16);
@@ -1971,7 +1971,7 @@ function hpDsRows(){ try{ if(typeof document==='undefined'||!document.getElement
     const kw=hpDsKw(), cur=hpDnMine(), L=kw?hpDsList(cur):[], rows=hpDevRows(); let n=0;
     rows.forEach((d,i)=>{ const row=list.children[i]; if(!d||!row) return;
       try{ const lb=d.me?cur:String(d.label||''), br=(lb&&!/ · /.test(lb))?hpBmBrowser(!!d.me,d.dev):''; const b=row.querySelector?row.querySelector('b'):null;
-        if(br&&b&&!(b.dataset&&b.dataset.dsbr)){ if(b.dataset) b.dataset.dsbr='1'; b.appendChild(document.createTextNode('（'+br+'）')); } }catch(e){}
+        if(br&&b&&!(b.dataset&&b.dataset.dsbr)){ if(b.dataset) b.dataset.dsbr='1'; b.appendChild(document.createTextNode((typeof hpPar==='function'?hpPar(br):'（'+br+'）'))); } }catch(e){}
       const x=L.find(y=>y.dev===d.dev); if(!x||x.on||(cur&&x.named)) return;
       if(row.querySelector&&row.querySelector('.ds-btn')) return; const b=document.createElement('button'); b.className='b ds-btn'; b.type='button'; b.textContent=TF('ds_btn',{k:kw}); b.addEventListener('click',()=>{ hpDsAsk(d.dev).catch(()=>{}); });
       const rm=row.querySelector?row.querySelector('button.warn'):null; if(rm&&typeof row.insertBefore==='function') row.insertBefore(b,rm); else row.appendChild(b); n++; });
@@ -2042,7 +2042,7 @@ let HP_BM_NOTE=null;
 function hpBmNoteFor(url){ const h=String(url||'').replace(/^wss:\/\//,''); let M=null; try{ M=hpBmModel(); }catch(e){}
   const B=((M&&M.boxes)||[]).find(b=>b&&b.url===url), devs=(M&&M.devs)||[], mach=(M&&M.mach)||[];
   const L=(B?(B.devs||[]):[]).filter(d=>d&&!d.me).map(d=>{ const i=devs.indexOf(d), m=mach.find(x=>x&&Array.isArray(x.idx)&&x.idx.indexOf(i)>=0), mn=String((m&&m.name)||d.a||d.b||T('bm_noname')); return {full:(d.b&&d.b!==mn)?TF('bm_dvl',{m:mn,b:d.b}):mn,m:mn}; });
-  const t=L.length===1?TF('bm_box_other2',{h:h,d:L[0].full,m:L[0].m}):L.length>1?TF('bm_box_other3',{h:h,d:L.map(x=>x.full).join('・')}):TF('bm_box_other',{h:h});
+  const t=L.length===1?TF('bm_box_other2',{h:h,d:L[0].full,m:L[0].m}):L.length>1?TF('bm_box_other3',{h:h,d:L.map(x=>x.full).join((typeof hpSep==='function'?hpSep():'・'))}):TF('bm_box_other',{h:h});
   return {t:t,col:(B&&B.col)||''}; }
 function hpBmNoteShow(){ try{ if(typeof document==='undefined'||!document.getElementById) return ''; const c=document.getElementById('post-map'); let n=document.getElementById('bm-other');
     if(!HP_BM_NOTE||!c){ if(n&&n.parentNode&&n.parentNode.removeChild) n.parentNode.removeChild(n); return 'off'; }

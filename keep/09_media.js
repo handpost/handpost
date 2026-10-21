@@ -103,7 +103,7 @@ async function sibBinary(sid,buf){
   if(w) w.res(done.blob);
 }
 async function sibBlobAuto(img,sid){ try{ if(!img||!img.id||(Number(img.size)||0)>SIB_BLOB_AUTO) return; if(await blobGet(img.id)) return; await sibFetchBlob(img.id,sid); }catch(e){} }
-function sibBlobWhy(kind){ let devs='—'; try{ const rows=(typeof hpSibs==='function'&&ID)?hpSibs():[]; devs=rows.map(d=>d.label||String(d.dev).slice(0,10)+'…').join('・')||'—'; }catch(e){} return TF(sibOpenIds().length?'sys_blob_none':'sys_blob_noline',{kind:kind,devs:devs}); }
+function sibBlobWhy(kind){ let devs='—'; try{ const rows=(typeof hpSibs==='function'&&ID)?hpSibs():[]; devs=rows.map(d=>d.label||String(d.dev).slice(0,10)+'…').join((typeof hpSep==='function'?hpSep():'・'))||'—'; }catch(e){} return TF(sibOpenIds().length?'sys_blob_none':'sys_blob_noline',{kind:kind,devs:devs}); }
 
 const FILE_MAX_BYTES=100*1024*1024; CAPS.push('file');
 function fmtSize(n){ if(n>=1048576)return (n/1048576).toFixed(1)+' MB'; if(n>=1024)return Math.round(n/1024)+' KB'; return n+' B'; }

@@ -5,6 +5,9 @@ function curLang(){ const ls=(typeof hpLangs==='function')?hpLangs():['ja','en']
 function T(k){ const L=curLang(), d=I18N[L]||I18N.ja; if(d[k]!==undefined) return d[k]; if(L!=='ja'&&I18N.en&&I18N.en[k]!==undefined) return I18N.en[k]; return I18N.ja[k]!==undefined?I18N.ja[k]:k; }
 function hpLocale(){ try{ const L=curLang(); if(L==='ja') return 'ja-JP'; const n=(typeof navigator!=='undefined'&&navigator)?[].concat(navigator.languages||[],navigator.language||[]):[]; for(const t of n){ const m=/^([a-z]{2,3})[-_]([a-z]{2})$/i.exec(String(t||'')); if(m&&m[1].toLowerCase()===L) return L+'-'+m[2].toUpperCase(); } return ({en:'en-US',fr:'fr-FR',de:'de-DE',pl:'pl-PL'})[L]||'en-US'; }catch(e){ return 'ja-JP'; } }
 function TL(k,v){ let s=(I18N.ja[k]!==undefined)?I18N.ja[k]:T(k); if(v){ for(const n of Object.keys(v)) s=s.split('{'+n+'}').join(String(v[n])); } return s; }
+function hpPar(s){ return ((typeof curLang==='function')?curLang():'ja')==='ja'?'（'+s+'）':' ('+s+')'; }
+function hpSep(){ return ((typeof curLang==='function')?curLang():'ja')==='ja'?'・':', '; }
+function hpPctS(){ return ((typeof curLang==='function')?curLang():'ja')==='ja'?'％':'%'; }
 function setLang(l){ if(hpLangs().indexOf(l)<0) return; localStorage.setItem('p2p_lang', l); applyLang(); }
 function hpLangSel(){
   const s=(typeof document!=='undefined'&&document&&document.getElementById)?document.getElementById('lang-sel'):null; if(!s) return false; const ls=hpLangs();
@@ -13,6 +16,7 @@ function hpLangSel(){
 function applyLang(){
   document.querySelectorAll('[data-i18n]').forEach(function(el){ el.textContent=T(el.getAttribute('data-i18n')); });
   document.querySelectorAll('[data-i18n-ph]').forEach(function(el){ el.placeholder=T(el.getAttribute('data-i18n-ph')); });
+  document.querySelectorAll('[data-i18n-title]').forEach(function(el){ el.title=T(el.getAttribute('data-i18n-title')); });
   document.querySelectorAll('[data-i18n-first]').forEach(function(el){
     const k=el.getAttribute('data-i18n-first');
     for(const n of el.childNodes){ if(n.nodeType===3){ n.nodeValue=T(k); return; } }

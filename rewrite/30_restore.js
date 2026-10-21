@@ -189,7 +189,7 @@ function hpRestoreFlow(){
         if(d.me||!pickOn){ const dot=el('span',null,'・'); dot.style.cssText='width:13px;text-align:center;color:var(--dim)'; line.appendChild(dot); }
         else { cb=document.createElement('input'); cb.type='checkbox'; cb.checked=false; cb.dataset.dev=d.dev; line.appendChild(cb); }
         const name=d.me?T('re_dev_me'):d.kind==='wasmain'?T('re_dev_wasmain'):d.kind==='unknown'?T('re_dev_unknown'):(d.label||T('re_dev_unknown'));
-        const sp=el('span',null,name+'（'+String(d.dev).slice(0,10)+'…）'+(d.me?('　'+T('re_dev_keep')):''));
+        const sp=el('span',null,name+(typeof hpPar==='function'?hpPar(String(d.dev).slice(0,10)+'…'):'（'+String(d.dev).slice(0,10)+'…'+'）')+(d.me?('　'+T('re_dev_keep')):''));
         line.appendChild(sp); list.appendChild(line); if(cb) boxes.push(cb);
       }
       const er=el('div','note',null,'re-rm-msg'); er.style.marginTop='6px'; card.appendChild(er);

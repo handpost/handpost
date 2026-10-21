@@ -192,7 +192,7 @@ function hpXmSeen(a){
   try{ hpXmUi(); }catch(e){} return same; }
 function hpXmName(){ try{ return (typeof ID!=='undefined'&&ID&&typeof ID.xmName==='string')?ID.xmName:''; }catch(e){ return ''; } }
 function hpXmNameOf(a){ try{ const m=(typeof ID!=='undefined'&&ID&&ID.xmNames&&typeof ID.xmNames==='object')?ID.xmNames:null; const n=m&&a?m[a]:''; return (typeof n==='string')?n:''; }catch(e){ return ''; } }
-function hpXmLabel(x){ x=String(x||''); const s=x.slice(0,6)+'…'+x.slice(-4), n=hpXmNameOf(x); return n?n+'（'+s+'）':s; }
+function hpXmLabel(x){ x=String(x||''); const s=x.slice(0,6)+'…'+x.slice(-4), n=hpXmNameOf(x); return n?n+(typeof hpPar==='function'?hpPar(s):'（'+s+'）'):s; }
 function hpXmNick(nm){
   const a=hpXmAcct(); if(!a||typeof ID==='undefined'||!ID) return false; nm=String(nm||'').trim().slice(0,40);
   if(!ID.xmNames||typeof ID.xmNames!=='object') ID.xmNames={}; if(nm) ID.xmNames[a]=nm; else delete ID.xmNames[a]; ID.xmName=nm; try{ saveID(); }catch(e){}
@@ -210,7 +210,7 @@ function hpXmNickUi(a){ const b=document.getElementById('btn-xm-nick'); if(!b) r
   if(a){ const k=hpXmNameOf(a)?'btn_xm_nick':'btn_xm_nick0'; if(b.getAttribute('data-i18n')!==k){ b.setAttribute('data-i18n',k); b.textContent=T(k); } } return !!a; }
 function hpXmApply(a,n){ HP_XM_PEND=''; HP_XM_PEND_N=''; HP_XM_OPEN_AT=0; if(HP_XM_RET){ HP_XM_RET=false; try{ sessionStorage.removeItem('hp_xm_ret'); }catch(e){} }   HP_XM_PICKN++; HP_XM_LIVE={a:a,ok:true}; HP_XM_LIVE_AT=Date.now();   const was=hpXmAcct(); ID.xmAcct=a; ID.xmName=String(n||'').trim()||(typeof hpXmNameOf==='function'?hpXmNameOf(a):'');   try{ saveID(); }catch(e){}
   if(was!==a){ HP_XM_INFO=null; try{ log(TL('lg_xm_pick',{a:a})); }catch(e){} }
-  try{ const sh=a.slice(0,6)+'…'+a.slice(-4), nm=hpXmName(); hpToast(TF('xm_picked',{a:nm?nm+'（'+sh+'）':sh}),2500); }catch(e){}
+  try{ const sh=a.slice(0,6)+'…'+a.slice(-4), nm=hpXmName(); hpToast(TF('xm_picked',{a:nm?nm+(typeof hpPar==='function'?hpPar(sh):'（'+sh+'）'):sh}),2500); }catch(e){}
   if(HP_XM_BACK){ HP_XM_BACK=false; try{ const t=document.getElementById('t-post'); if(t&&t.click) t.click(); }catch(e){} }
   hpXmUi(); return true; }
 async function hpXmRead(a){ if(HP_XM_RD) return false; HP_XM_RD=true; hpXmSt(T('xm_busy'));
