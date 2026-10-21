@@ -605,7 +605,7 @@ try{ if(typeof hpCard4Make==='function'){ const f=hpCard4Make; hpCard4Make=async
 try{ if(typeof document!=='undefined'&&typeof setInterval==='function'&&typeof window!=='undefined'){ setInterval(()=>{ hpPgKick(); },2000); } }catch(e){}
 
 let HP_D2_SHOWN={}, HP_D2_BUSY=false, HP_D2_JT=0;
-function hpD2T(ms){ const d=new Date(Number(ms)||0), p=n=>String(n).padStart(2,'0'); return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+function hpD2T(ms){ const d=new Date(Number(ms)||0), p=n=>String(n).padStart(2,'0'), s=(typeof hpDateIntl==='function')?hpDateIntl(d.getTime(),'mdhm'):''; if(s) return s; return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
 async function hpD2Sk(){ const kp=await hpDevKey(); return {dev:hpHex(kp.publicKey), sk:kp.privateKey.slice(1)}; }
 async function hpD2Chain(){ try{ const l=ID&&Array.isArray(ID.roster)?ID.roster:null; if(!l||!l.length) return null; const ch=await hpRsChain(l,Date.now(),Array.isArray(ID.rsCancels)?ID.rsCancels:[]); return (ch&&ch.ok===true&&ch.cur.id===ID.address&&ch.cur.root===ID.publicKey)?{list:l,cur:ch.cur}:null; }catch(e){ return null; } }
 function hpD2CanLink(){ try{ if(!ID||hpIsMain()||!hpIsChild()||typeof POST==='undefined'||!POST||!POST.up||POST.notOwner||!POST.url) return false; if(!(typeof hpPgCap==='function'&&hpPgCap(POST.url))) return false;
@@ -801,7 +801,7 @@ function hpD2Who(excl,rows){
   try{ const ex={}; for(const d of (Array.isArray(excl)?excl:[])) if(d) ex[d]=1; try{ if(typeof POST!=='undefined'&&POST&&POST.pub) ex[POST.pub]=1; }catch(e){}
     if(!Array.isArray(rows)){ rows=[]; try{ rows=hpSibs(); }catch(e){ rows=[]; } }
     const names=[]; for(const d of rows){ if(!d||!d.dev||d.me||ex[d.dev]) continue; const l0=String(d.label||'').trim(); if(!l0) continue; const l=(typeof hpDevName==='function')?hpDevName(l0):l0; if(!l||names.indexOf(l)>=0) continue; names.push(l); }
-    if(!names.length) return T('d2_who_other'); return names.slice(0,4).map(x=>'「'+x+'」').join(T('d2_who_or')); }catch(e){ return T('d2_who_other'); } }
+    if(!names.length) return T('d2_who_other'); return names.slice(0,4).map(x=>(typeof hpQuo==='function'?hpQuo(x):'「'+x+'」')).join(T('d2_who_or')); }catch(e){ return T('d2_who_other'); } }
 function hpD2WhoJoin(J){ try{ const w=J&&J.wel; if(!w) return hpD2Who([],[]); const rows=[]; if(w.main&&w.main.dev) rows.push({dev:w.main.dev,label:w.main.label||''}); for(const d of (Array.isArray(w.sibs)?w.sibs:[])) if(d&&d.dev) rows.push({dev:d.dev,label:d.label||''});
   const by=(typeof w.by==='string'&&w.by)||(Array.isArray(w.sibs)&&w.sibs[0]&&w.sibs[0].dev)||''; return hpD2Who([by,J.dev],rows); }catch(e){ return hpD2Who([],[]); } }
 function hpD2MyAdds(){ try{ const my=(typeof POST!=='undefined'&&POST&&POST.pub)||''; return hpD2Pend().filter(e=>e&&e.by===my&&e.kind!=='rm'); }catch(e){ return []; } }
@@ -1205,7 +1205,7 @@ function hpBmW(s,fs){ let w=0; for(const ch of String(s)) w+=(/[\x20-\x7e]/.test
 function hpBmCut(s,fs,max){ s=String(s||''); if(hpBmW(s,fs)<=max) return s; let o=''; for(const ch of s){ if(hpBmW(o+ch+'…',fs)>max) break; o+=ch; } return o+'…'; }
 function hpBmShort(l){ const m=/^(.+?) · (.+)$/.exec(String(l||'')); return m?{a:m[2],b:m[1]}:{a:String(l||'')||T('dv_noname'),b:''}; }
 function hpBmBrowser(me,dev){ try{ if(me){ const a=(typeof hpDnAuto==='function')?hpDnAuto():''; return hpBmShort(a).b; } const m=(ID&&ID.devBr2&&typeof ID.devBr2==='object')?ID.devBr2:{}; return typeof m[dev]==='string'?m[dev]:''; }catch(e){ return ''; } }
-function hpBmMd(t){ const d=new Date(Number(t)||0); return (d.getMonth()+1)+'/'+d.getDate(); }
+function hpBmMd(t){ const d=new Date(Number(t)||0), s=(typeof hpDateIntl==='function')?hpDateIntl(d.getTime(),'md'):''; if(s) return s; return (d.getMonth()+1)+'/'+d.getDate(); }
 function hpBmLeft(t){ return Math.floor(((Number(t)||0)-Date.now())/864e5); }
 function hpBmHost(u){ const s=String(u||'').replace(/^wss?:\/\//,''), i=s.lastIndexOf(':'); return {h:i>0?s.slice(0,i):s,p:i>0?s.slice(i):''}; }
 function hpBmModel(){ try{ if(typeof ID==='undefined'||!ID) return null; const cur=String(hpPostUrl()||''); if(!cur||!(typeof hpPostHave!=='function'||hpPostHave())) return null;

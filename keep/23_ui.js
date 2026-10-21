@@ -8,6 +8,9 @@ function TL(k,v){ let s=(I18N.ja[k]!==undefined)?I18N.ja[k]:T(k); if(v){ for(con
 function hpPar(s){ return ((typeof curLang==='function')?curLang():'ja')==='ja'?'（'+s+'）':' ('+s+')'; }
 function hpSep(){ return ((typeof curLang==='function')?curLang():'ja')==='ja'?'・':', '; }
 function hpPctS(){ return ((typeof curLang==='function')?curLang():'ja')==='ja'?'％':'%'; }
+function hpDateIntl(ms,kind){ const L=((typeof curLang==='function')?curLang():'ja'); if(L==='ja'||L==='en'||typeof Intl==='undefined') return ''; const d=new Date(Number(ms)); if(!isFinite(d.getTime())) return ''; const O={md:{day:'numeric',month:'numeric'},ym:{year:'numeric',month:'numeric'},ymd:{year:'numeric',month:'2-digit',day:'2-digit'}}, o=O[String(kind).replace(/hm$/,'')]; if(!o) return ''; try{ return new Intl.DateTimeFormat((typeof hpLocale==='function')?hpLocale():L,/hm$/.test(kind)?Object.assign({hour:'2-digit',minute:'2-digit',hourCycle:'h23'},o):o).format(d); }catch(e){ return ''; } }
+function hpQuo(s){ const L=((typeof curLang==='function')?curLang():'ja'), q=({ja:['\u300c','\u300d'],fr:['\u00ab\u00a0','\u00a0\u00bb'],de:['\u201e','\u201c'],pl:['\u201e','\u201d']})[L]||['\u201c','\u201d']; return q[0]+s+q[1]; }
+function hpWordIs(s,k){ const L=((typeof curLang==='function')?curLang():'ja'), d=(typeof I18N!=='undefined'&&I18N[L])||{}, w=d[k]; if(L==='ja'||L==='en'||typeof w!=='string'||!w) return false; const n=x=>String(x==null?'':x).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); return n(s)===n(w); }
 function setLang(l){ if(hpLangs().indexOf(l)<0) return; localStorage.setItem('p2p_lang', l); applyLang(); }
 function hpLangSel(){
   const s=(typeof document!=='undefined'&&document&&document.getElementById)?document.getElementById('lang-sel'):null; if(!s) return false; const ls=hpLangs();

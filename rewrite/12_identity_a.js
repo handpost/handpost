@@ -18,6 +18,7 @@ function hpDayText(ts){
   const d=new Date(Number(ts)||0), p=n=>String(n).padStart(2,'0'), a=new Date(); a.setHours(0,0,0,0);
   if(d.getTime()>=a.getTime()) return T('dv_today');
   const y=new Date(a); y.setDate(y.getDate()-1); if(d.getTime()>=y.getTime()) return T('dv_yday');
+  { const s=(typeof hpDateIntl==='function')?hpDateIntl(d.getTime(),'ymd'):''; if(s) return s; }
   return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate());
 }
 function renderDevices(){

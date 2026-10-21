@@ -5,7 +5,7 @@ function hpKillMsg(id,ts){ return 'handpost-kill:v1:'+id+':'+ts; }
 function hpKillMe(){ return !!(ID&&ID.killed&&typeof ID.killed==='object'); }
 function hpDeadPeer(addr){ return !!(addr&&ID&&ID.dead&&typeof ID.dead==='object'&&ID.dead[addr]); }
 function hpDead(addr){ return hpKillMe()||hpDeadPeer(addr); }
-function hpKillWordOk(s){ const v=String(s||'').trim().toLowerCase(); return v==='無効'||v==='disable'; }
+function hpKillWordOk(s){ const v=String(s||'').trim().toLowerCase(); return v==='無効'||v==='disable'||(typeof hpWordIs==='function'&&hpWordIs(v,'wd_kill')); }
 
 async function hpKillOk(c){
   try{

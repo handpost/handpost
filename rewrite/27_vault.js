@@ -113,7 +113,7 @@ async function hpForgetHere(){
 }
 
 const HP_VL_FAIL_MAX=10;
-function hpForgetWordOk(s){ const v=String(s||'').trim().toLowerCase(); return v==='消す'||v==='remove'; }
+function hpForgetWordOk(s){ const v=String(s||'').trim().toLowerCase(); return v==='消す'||v==='remove'||(typeof hpWordIs==='function'&&hpWordIs(v,'wd_rm')); }
 
 function hpVaultGate(){
   return new Promise(res=>{

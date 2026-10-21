@@ -22,6 +22,7 @@ function onDC(raw,peer){
   if(o.type==='read'){ const ids=Array.isArray(o.ids)?o.ids:[]; ackClear(ids);   if(typeof hpOnRead==='function'){ hpOnRead(peer,ids); } else { histRead(peer,ids); } return; }
 }
 function fmtTS(ts){
+  { const s=(typeof hpDateIntl==='function')?hpDateIntl(ts,'ymdhm'):''; if(s) return s; }
   const d=new Date(ts);
   const p=n=>String(n).padStart(2,'0');
   return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());

@@ -282,7 +282,7 @@ function hpPxAcctWatch(now){
     if(P.acct!==k){ P.acct=k; if(a||x){ P.regAt=now||Date.now(); hpLog('借りた口座・支払う口座が替わった。値段はしばらく取り寄せない');   } saveID(); return true; } return false; }catch(e){ return false; } }
 function hpPxQuietUntil(now){ now=now||Date.now(); const P=hpPxSt(), ev=Math.max(Number(P.evAt)||0,Number(P.regAt)||0); return (ev&&now<ev+HP_PX_QUIET)?ev+HP_PX_QUIET:0; }
 function hpPxOps(){ try{ return !!((typeof HP_RENT_BUSY!=='undefined'&&HP_RENT_BUSY)||(typeof HP_RENT_J!=='undefined'&&HP_RENT_J)||(typeof HP_OB_RE!=='undefined'&&HP_OB_RE)||(typeof HP_MOVE!=='undefined'&&HP_MOVE)||(typeof ID!=='undefined'&&ID&&(ID.rentJob||ID.moveJob))); }catch(e){ return false; } }
-function hpPayWhen(t){ const d=new Date(Number(t)), p=n=>String(n).padStart(2,'0'); return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+function hpPayWhen(t){ const d=new Date(Number(t)), p=n=>String(n).padStart(2,'0'), s=(typeof hpDateIntl==='function')?hpDateIntl(d.getTime(),'mdhm'):''; if(s) return s; return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
 async function hpPxGet(why){
   if(HP_PX_BUSY) return false; if(!HP_PX_FETCH){ hpPaySt(T('pay_px_none'),true); return false; } const cur=hpPayCur(); HP_PX_BUSY=true; hpPayBtns(); hpPaySt(TF('pay_px_busy',{c:cur.toUpperCase()}));
   try{ const r=await hpPxRange(cur); const P=hpPxSt(); P.last=Date.now(); P.fail=0; try{ saveID(); }catch(e){}
