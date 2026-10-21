@@ -2349,3 +2349,5 @@ try{ if(typeof hpHlEval==='function'&&!hpHlEval.__rp){ const f=hpHlEval; hpHlEva
 try{ if(typeof hpHlUi==='function'&&!hpHlUi.__rp){ const f=hpHlUi; hpHlUi=Object.assign(function(){ const v=f.apply(this,arguments); try{ if(v==='drawn') hpRpHlDeco(); }catch(e){} return v; },f,{__rp:1}); } }catch(e){}
 try{ if(typeof hpHlTick==='function'&&!hpHlTick.__rp){ const f=hpHlTick; hpHlTick=Object.assign(function(now){ const v=f.apply(this,arguments); try{ hpRpKick(now); }catch(e){} return v; },f,{__rp:1}); } }catch(e){}
 
+try{ if(typeof hpMoveUi==='function'&&!hpMoveUi.__af){ const f=hpMoveUi; hpMoveUi=Object.assign(function(){ const v=f.apply(this,arguments); try{ if(typeof hpAfUi==='function') hpAfUi(); }catch(e){} return v; },f,{__af:1}); } }catch(e){}
+

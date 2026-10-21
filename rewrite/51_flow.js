@@ -1023,3 +1023,115 @@ function hpRpKick(now){
   HP_RP_NEXT=now+300e3; return false; }
 try{ if(typeof hpUpHost==='function'&&!hpUpHost.__rp){ const f=hpUpHost; hpUpHost=Object.assign(async function(h){ const r=await f.apply(this,arguments); try{ if(r&&r.rp&&h&&h.addr) HP_RP_LAST[h.addr]=r.rp; }catch(e){} return r; },f,{__rp:1}); } }catch(e){}
 
+const HP_AF_DOWN=3600e3, HP_AF_GAP=864e5, HP_AF_RETRY=1800e3, HP_AF_TRY=4, HP_AF_EVERY=60e3, HP_AF_PEND=6*3600e3, HP_AF_TELL_EVERY=900e3, HP_AF_TELL_MAX=4, HP_AF_STEP_MAX=180e3, HP_AF_NONE_LOG=6*3600e3;
+let HP_AF_BUSY=false, HP_AF_CK=0, HP_AF_TELL=false, HP_AF_DN=0, HP_AF_DT=0, HP_AF_NONE_AT=0;
+function hpAfGet(){ try{ if(typeof ID==='undefined'||!ID) return null; if(!ID.af||typeof ID.af!=='object'||Array.isArray(ID.af)) ID.af={on:1}; return ID.af; }catch(e){ return null; } }
+function hpAfOn(){ const a=hpAfGet(); return !!(a&&a.on!==0); }
+function hpAfSet(on){ const a=hpAfGet(); if(!a) return false; a.on=on?1:0; try{ saveID(); }catch(e){} try{ hpLog(on?'自動の移設を入れた':'自動の移設を切った'); }catch(e){} return true; }
+function hpAfBase(u){ const h=((/^wss:\/\/([^:\/]+)/i.exec(String(u||''))||[])[1]||'').toLowerCase().split('.').filter(Boolean); return h.slice(-2).join('.'); }
+function hpAfRole(){ try{ if(typeof hpIsMain==='function'&&hpIsMain()) return 'main'; if(typeof hpObOwn==='function'&&hpObOwn()) return 'own'; }catch(e){} return ''; }
+function hpAfStop(){ try{ return !!((typeof hpKillMe==='function'&&hpKillMe())||(typeof HP_TAB_OFF!=='undefined'&&HP_TAB_OFF)); }catch(e){ return false; } }
+function hpAfDownStep(now){
+  now=now||Date.now(); const gap=HP_AF_DT?now-HP_AF_DT:0; HP_AF_DT=now; let up=false, off=false, idle=false;
+  try{ up=!!(typeof POST!=='undefined'&&POST&&POST.up&&!POST.notOwner); }catch(e){}
+  try{ idle=(typeof BG_ON!=='undefined'&&!BG_ON)||hpAfStop(); }catch(e){}
+  if(up||idle){ HP_AF_DN=0; return 0; }
+  try{ off=(typeof navigator!=='undefined'&&!!navigator&&navigator.onLine===false)||(typeof POST!=='undefined'&&!!POST&&!!POST.waitVis); }catch(e){}
+  if(!off&&gap>0&&gap<=HP_AF_STEP_MAX) HP_AF_DN+=gap;
+  return HP_AF_DN; }
+function hpAfWhy(now){
+  now=now||Date.now(); const a=hpAfGet(); if(!a) return 'id'; if(a.on===0) return 'off';
+  if(!hpAfRole()) return 'role';
+  if(!String((typeof hpPostUrl==='function'&&hpPostUrl())||'')) return 'nobox'; if(hpAfStop()) return 'stop';
+  try{ if(typeof navigator!=='undefined'&&navigator&&navigator.onLine===false) return 'offline'; }catch(e){}
+  if(HP_AF_DN<HP_AF_DOWN) return 'up';
+  if(Number(a.last)>0&&now-Number(a.last)<HP_AF_GAP) return 'day';
+  if(Number(a.lastTry)>0&&now-Number(a.lastTry)<HP_AF_RETRY) return 'wait';
+  if((typeof ID!=='undefined'&&ID&&(ID.rentJob||ID.boxJob))||(typeof HP_MOVE!=='undefined'&&HP_MOVE)||(typeof HP_SWAP!=='undefined'&&HP_SWAP)||(typeof hpMvBusy==='function'&&hpMvBusy())||(typeof HP_AD_BUSY!=='undefined'&&HP_AD_BUSY)||(typeof HP_AX_GO!=='undefined'&&HP_AX_GO)) return 'job';
+  return ''; }
+function hpAfNm(s){ try{ return (typeof hpBcName==='function')?hpBcName(String(s||'')):String(s||''); }catch(e){ return String(s||''); } }
+function hpAfName(d){ try{ return (typeof hpAxLabel==='function')?String(hpAxLabel(d)):String((d&&(d.label||d.dev))||'').slice(0,16); }catch(e){ return String((d&&d.dev)||'').slice(0,10); } }
+function hpAfCands(now){
+  now=now||Date.now(); const cur=String((typeof hpPostUrl==='function'&&hpPostUrl())||''), m={}, L=(typeof hpLbGet==='function')?hpLbGet():{};
+  for(const u of Object.keys(L)){ const x=L[u]; if(!x) continue; m[u]={url:u,acct:x.a||'',tok:x.t||'',exp:Number(x.e)||0,host:x.h||'',src:'book'}; }
+  try{ if(typeof HP_AX!=='undefined'&&HP_AX&&Array.isArray(HP_AX.rows)) for(const r of HP_AX.rows){ if(!r||!r.url||r.amb) continue; const o=m[r.url]||{}; m[r.url]=Object.assign({},o,{url:r.url,acct:r.acct||o.acct||'',tok:r.tok||o.tok||'',exp:Number(r.exp)||o.exp||0,host:r.host||o.host||'',buy:r.buy||0,dom:r.dom||'',src:o.src?'both':'ax'}); } }catch(e){}
+  let old=''; try{ const o=(typeof hpOldGet==='function')?hpOldGet():null; old=String((o&&o.url)||''); }catch(e){}
+  const cb=hpAfBase(cur), out=[];
+  for(const u of Object.keys(m)){ const r=m[u]; if(!u||u===cur||u===old||!hpAxUrlOk(u)) continue; if(!(Number(r.exp)-now>=HP_AX_MIN*864e5)) continue;
+    const us=hpAxUsers(u); if(us.me) continue;
+    let cap=null; try{ cap=(typeof hpAxCap==='function'&&typeof HP_AX_PB!=='undefined'&&HP_AX_PB)?hpAxCap(r,HP_AX_PB[u]):null; }catch(e){} if(cap&&cap.full) continue;
+    const sib=us.sibs.map(hpAfName);
+    const rp=(r.host&&typeof hpRpData==='function')?hpRpData(r.host):null, rs=rp?hpRpSum(rp,now):null, rv=(rs&&rs.now>=0)?rs.now:((r.host&&typeof hpRpCurOf==='function')?hpRpCurOf(r.host):-1), x=(r.host&&typeof HP_UP!=='undefined'&&HP_UP)?HP_UP[r.host]:null;
+    out.push(Object.assign({},r,{shr:sib.length?1:0,sib:sib,diff:hpAfBase(u)!==cb?1:0,rep:rv,repOk:(rv<0||rv>=HP_RP_LOW)?1:0,up:(x&&x.st==='ok')?Number(x.pct)||0:-1})); }
+  return out.sort((a,b)=>(a.shr-b.shr)||(b.diff-a.diff)||(b.repOk-a.repOk)||(b.up-a.up)||(b.exp-a.exp)||a.url.localeCompare(b.url)); }
+async function hpAfPick(C){
+  const out=[]; let full=0;
+  for(const r of C.slice(0,HP_AF_TRY)){ let p=null; try{ p=await hpAxProbe(r.url,{ver:true}); }catch(e){ p={st:'down'}; } try{ if(typeof HP_AX_PB!=='undefined'&&HP_AX_PB) HP_AX_PB[r.url]=Object.assign({},p,{at:Date.now()}); }catch(e){}
+    if(!(p&&p.st==='ok')) continue; let cap=null; try{ cap=(typeof hpAxCap==='function')?hpAxCap(r,p):null; }catch(e){} if(cap&&cap.full){ full++; continue; }
+    out.push({r:r,p:p,ug:p.upg==='old'?0:1}); }
+  out.full=full; return out.sort((a,b)=>(a.r.shr-b.r.shr)||(b.r.diff-a.r.diff)||(b.ug-a.ug)||(b.r.repOk-a.r.repOk)||(b.r.up-a.r.up)||(b.r.exp-a.r.exp)); }
+function hpAfHost(u){ return String(u||'').replace(/^wss:\/\//,''); }
+async function hpAfRun(why){
+  if(HP_AF_BUSY) return {why:'busy'}; const now=Date.now(), w=hpAfWhy(now); if(w) return {why:w};
+  HP_AF_BUSY=true; const a=hpAfGet(), role=hpAfRole(), from=String((typeof hpPostUrl==='function'&&hpPostUrl())||''), fol=hpAxUsers(from).sibs.map(d=>d.dev);
+  try{ const C=hpAfCands(now);
+    if(!C.length){ a.lastTry=Date.now(); try{ saveID(); }catch(e){} if(!HP_AF_NONE_AT||Date.now()-HP_AF_NONE_AT>=HP_AF_NONE_LOG){ HP_AF_NONE_AT=Date.now(); hpLog('ふだんの郵便受け（'+hpAfHost(from)+'）につながらないが、自動の移設先が無い（借りてある郵便受けのうち、残り '+HP_AX_MIN+' 日以上で、自分の端末がみな入りきるもの）'); } return {why:'none'}; }
+    const nU=C.filter(x=>!x.shr).length; hpLog('ふだんの郵便受け（'+hpAfHost(from)+'）に '+Math.round(HP_AF_DN/60e3)+' 分つながらない。借りてある郵便受け '+C.length+' か所（だれも使っていない '+nU+'・ほかの端末が使っている '+(C.length-nU)+'）から自動の移設先を探す');
+    const P=await hpAfPick(C);
+    if(!P.length){ a.lastTry=Date.now(); try{ saveID(); }catch(e){} hpLog(P.full?'自動の移設先にはつながったが、自分の端末がみな入りきらない（'+P.full+' か所）。30 分あけてもう一度見る':'自動の移設先にどれもつながらない（この端末の回線の不調かもしれないので移設しない）。30 分あけてもう一度見る'); return {why:P.full?'full':'none'}; }
+    for(const x of P){ const r=x.r; let res=null;
+      try{ res=role==='main'?await hpAxMoveMain(r):await hpAdUse(r.url); }catch(e){ res={why:'other',e:String((e&&e.message)||e).slice(0,80)}; }
+      if(res&&res.ok){ if(role!=='main'){ try{ if(typeof hpAxKeep==='function') hpAxKeep(r); }catch(e){} }
+        const shr=!!r.shr, sib=(Array.isArray(r.sib)?r.sib:[]).join('・'), hh={at:Date.now(),from:from,to:r.url}; if(shr) hh.sib=sib;
+        a.last=hh.at; delete a.lastTry; a.hist=(Array.isArray(a.hist)?a.hist:[]).concat([hh]).slice(-10);
+        if(role==='main'&&fol.length) a.pend={from:from,to:r.url,fol:fol,at:a.last,k:0,n:0}; try{ saveID(); }catch(e){}
+        const f=hpAfHost(from), t=hpAfHost(r.url); hpLog('自動で移設した（'+f+' → '+t+(shr?'。自分のほかの端末（'+sib+'）も使っている郵便受け':'')+'。'+(why||'見回り')+'）'+(fol.length?'。同じ郵便受けを使っていた端末 '+fol.length+' 台へは、新しい郵便受けにつながってから、ほかの郵便受けを通して知らせる':''));
+        try{ if(typeof hpNote==='function'){ if(shr) hpNote('afmove2',{f:f,t:t,d:hpAfNm(sib)},'afmove:'+a.last); else hpNote('afmove',{f:f,t:t},'afmove:'+a.last); } }catch(e){}
+        try{ if(typeof hpToast==='function') hpToast(shr?TF('af_moved2',{t:t,d:hpAfNm(sib)}):TF('af_moved',{t:t}),8000); }catch(e){}
+        try{ hpAfUi(); }catch(e){} return {ok:1,to:r.url}; }
+      hpLog('自動の移設：'+hpAfHost(r.url)+' へは移せない（'+((res&&res.why)||'?')+((res&&res.e)?' '+res.e:'')+'）。次を試す'); }
+    a.lastTry=Date.now(); try{ saveID(); }catch(e){} return {why:'fail'}; }
+  catch(e){ try{ a.lastTry=Date.now(); saveID(); }catch(_){} return {why:'other',e:String((e&&e.message)||e).slice(0,80)}; }
+  finally{ HP_AF_BUSY=false; } }
+async function hpAfTellLodgers(P){
+  const s=(typeof ID!=='undefined'&&ID)?ID.postSig:null; if(!s||s.url!==P.to||!(Number(s.ts)>0)||typeof s.sig!=='string') return 0;
+  if(typeof POST==='undefined'||!POST||!POST.up||POST.notOwner||POST.url!==P.to) return 0;
+  const me=await hp5Me(), now=Date.now(), devices=[], devSigs={}, prekeys=[];
+  for(const d of hpSibs()){ if(!d||(P.fol||[]).indexOf(d.dev)<0) continue; if(!hpPreValid(d.pre,d.dev,now)||!(await hp5IdOk(me.id,me.master,d.dev,d.devSig))) continue;
+    devices.push(d.dev); devSigs[d.dev]=d.devSig; prekeys.push({dev:d.dev,x25519:d.pre.x25519,notAfter:d.pre.notAfter,sig:d.pre.sig}); }
+  if(!devices.length) return 0;
+  const urls=((typeof hpFbUrls==='function')?hpFbUrls():[]).filter(u=>u&&u!==P.to&&u!==P.from), body=JSON.stringify({v:1,type:'sibmv',url:s.url,ts:s.ts,sig:s.sig}); let n=0;
+  for(const u of urls){ const token=JSON.parse(hpIssue(3600e3)), card={v:3,id:me.id,master:me.master,post:[u],devices:devices,devSigs:devSigs,token:token,prekeys:prekeys,boxes:devices.map(d=>({dev:d,post:u,token:token}))};
+    try{ await hpPut(card,body,'msg'); n++; }catch(e){ hpLog('移設の知らせを '+hpAfHost(u)+' に入れられない（'+String((e&&e.message)||e).slice(0,60)+'）'); } }
+  return n; }
+function hpAfPendTick(now){
+  now=now||Date.now(); const a=hpAfGet(), P=a&&a.pend; if(!P||HP_AF_TELL) return '';
+  if(now-Number(P.at)>HP_AF_PEND||Number(P.k)>=HP_AF_TELL_MAX){ delete a.pend; try{ saveID(); }catch(e){} return 'end'; }
+  if(Number(P.tAt)>0&&now-Number(P.tAt)<HP_AF_TELL_EVERY) return 'wait';
+  if(typeof POST==='undefined'||!POST||!POST.up||POST.notOwner||POST.url!==P.to) return 'conn';
+  HP_AF_TELL=true; P.tAt=now; P.k=(Number(P.k)||0)+1; try{ saveID(); }catch(e){}
+  hpAfTellLodgers(P).then(n=>{ P.n=(Number(P.n)||0)+n; try{ saveID(); }catch(e){} if(n) hpLog('同じ郵便受けを使っていた端末 '+(P.fol||[]).length+' 台へ、自分のほかの郵便受け '+n+' か所を通して移設の知らせを入れた（'+P.k+' 回目）'); })
+    .catch(e=>{ try{ hpLog('移設の知らせを出せない（'+String((e&&e.message)||e).slice(0,60)+'）'); }catch(_){} }).finally(()=>{ HP_AF_TELL=false; });
+  return 'go'; }
+function hpAfTick(now){
+  now=now||Date.now(); try{ hpAfDownStep(now); }catch(e){} try{ hpAfPendTick(now); }catch(e){} if(now-HP_AF_CK<HP_AF_EVERY) return ''; HP_AF_CK=now;
+  try{ hpAfUi(); }catch(e){} const w=hpAfWhy(now); if(w) return w; hpAfRun('つながらない').catch(()=>{}); return 'go'; }
+function hpAfDate(ms){ const d=new Date(Number(ms)||0), p=n=>String(n).padStart(2,'0'); return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+function hpAfUi(){
+  try{ if(typeof document==='undefined'||!document.getElementById) return false; const card=document.getElementById('post-move'); if(!card) return false; let row=document.getElementById('af-row');
+    if(!hpAfRole()){ if(row) row.style.display='none'; return false; }
+    if(!row){ row=document.createElement('div'); row.id='af-row'; row.className='note'; row.style.cssText='margin-top:10px;line-height:1.5';
+      const lb=document.createElement('label'); lb.style.cssText='display:flex;gap:6px;align-items:flex-start;cursor:pointer'; const cb=document.createElement('input'); cb.type='checkbox'; cb.id='af-on'; cb.style.marginTop='3px';
+      cb.addEventListener('change',()=>{ hpAfSet(!!cb.checked); hpAfUi(); }); const sp=document.createElement('span'); sp.id='af-on-t'; lb.appendChild(cb); lb.appendChild(sp); row.appendChild(lb);
+      const cd=document.createElement('div'); cd.id='af-cand'; cd.style.cssText='margin-top:2px'; row.appendChild(cd);
+      const st=document.createElement('div'); st.id='af-st'; st.style.cssText='margin-top:2px'; row.appendChild(st); card.appendChild(row); }
+    row.style.display=''; const on=hpAfOn(), cb=document.getElementById('af-on'), sp=document.getElementById('af-on-t'), cd=document.getElementById('af-cand'), st=document.getElementById('af-st'); if(cb) cb.checked=on; if(sp) sp.textContent=T('af_on');
+    if(cd){ let C=[]; try{ C=hpAfCands(); }catch(e){} const n=C.filter(x=>!x.shr).length, m=C.length-n;
+      cd.textContent=(n&&m)?TF('af_cand2',{n:n,m:m}):n?TF('af_cand',{n:n}):m?TF('af_cand3',{m:m}):TF('af_none',{d:HP_AX_MIN}); cd.style.display=on?'':'none'; }
+    const a=hpAfGet(), h=(a&&Array.isArray(a.hist)&&a.hist.length)?a.hist[a.hist.length-1]:null;
+    if(st){ st.textContent=!h?'':h.sib?TF('af_last2',{t:hpAfDate(h.at),f:hpAfHost(h.from),u:hpAfHost(h.to),d:hpAfNm(h.sib)}):TF('af_last',{t:hpAfDate(h.at),f:hpAfHost(h.from),u:hpAfHost(h.to)}); st.style.display=h?'':'none'; }
+    return true; }catch(e){ return false; } }
+try{ if(typeof HP_NT_TXT!=='undefined'&&HP_NT_TXT){ if(!HP_NT_TXT.afmove) HP_NT_TXT.afmove=['ntc_afmove','ntd_afmove']; if(!HP_NT_TXT.afmove2) HP_NT_TXT.afmove2=['ntc_afmove2','ntd_afmove2'];
+  if(typeof HP_NT_KINDS!=='undefined'&&Array.isArray(HP_NT_KINDS)) for(const k of ['afmove','afmove2']) if(HP_NT_KINDS.indexOf(k)<0) HP_NT_KINDS.push(k); } }catch(e){}
+try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'&&typeof setInterval==='function') setInterval(()=>{ try{ hpAfTick(); }catch(e){} },15e3); }catch(e){}
+
