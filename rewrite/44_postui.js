@@ -778,10 +778,11 @@ try{ if(typeof hpOnRemoved==='function'){ const f=hpOnRemoved; hpOnRemoved=async
 
 function hpD3Me(){ try{ return (ID&&ID.link&&ID.link.dev)||((typeof POST!=='undefined'&&POST&&POST.pub)||''); }catch(e){ return ''; } }
 try{ if(typeof hpSibs==='function'){ const f=hpSibs; hpSibs=function(){ const base=f.apply(this,arguments);
-  try{ if(!ID) return base; const gone=(ID.rsGone&&typeof ID.rsGone==='object')?ID.rsGone:{}, out=base.filter(d=>d&&!gone[d.dev]);
+  try{ if(!ID) return base; const gone=(ID.rsGone&&typeof ID.rsGone==='object')?ID.rsGone:{}, out0=base.filter(d=>d&&!gone[d.dev]);
+    const gone2=new Set((Array.isArray(ID.gone)?ID.gone:[]).map(g=>g&&g.dev).filter(Boolean)), out=out0.filter(d=>!gone2.has(d.dev));
     if(!Array.isArray(ID.roster)||!ID.roster.length) return out; const last=ID.roster[ID.roster.length-1]; if(!last||last.id!==ID.address||last.root!==ID.publicKey||!Array.isArray(last.devs)) return out;
     const me=hpD3Me(), have=new Set(out.map(d=>d.dev));
-    for(const d of last.devs){ if(!d||!d.dev||d.dev===me||have.has(d.dev)||gone[d.dev]) continue;
+    for(const d of last.devs){ if(!d||!d.dev||d.dev===me||have.has(d.dev)||gone[d.dev]||gone2.has(d.dev)) continue;
       const p6=ID.pre6&&typeof ID.pre6==='object'?ID.pre6[d.dev]:null, lb=ID.rsLbl&&typeof ID.rsLbl==='object'?ID.rsLbl[d.dev]:null;
       out.push({dev:d.dev,devSig:'',label:(lb&&lb.label)||'',at:0,pre:(p6&&p6.x25519&&p6.sig)?{dev:d.dev,x25519:p6.x25519,notAfter:p6.notAfter,sig:p6.sig}:null,role:'child',seen:0,rs:1}); have.add(d.dev); }
     return out; }catch(e){ return base; } }; } }catch(e){}

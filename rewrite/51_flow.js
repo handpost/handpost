@@ -496,3 +496,75 @@ try{ if(typeof hpHsView==='function'){ const f=hpHsView; hpHsView=function(hosts
 try{ if(typeof hpHsDraw==='function'){ const f=hpHsDraw; hpHsDraw=async function(){ const r=await f.apply(this,arguments); try{ hpHsUpCol(); }catch(e){} return r; }; } }catch(e){}
 try{ if(typeof hpUpPut==='function'){ const f=hpUpPut; hpUpPut=function(h){ const r=f.apply(this,arguments); try{ hpHsUpPut(h&&h.addr); }catch(e){} return r; }; } }catch(e){}
 
+let HP_AD_BUSY=false, HP_AD_WAIT=45000, HP_AD_CONN=20000;
+function hpAdCheck(url){
+  try{ const u=String(url||'').trim();
+    if(!/^wss:\/\/[a-z0-9.-]+:[0-9]{2,5}$/i.test(u)||(typeof hpC4PostOk==='function'&&!hpC4PostOk(u))) return 'url';
+    if(u===String((typeof hpPostUrl==='function'&&hpPostUrl())||'')) return 'cur';
+    for(const d of (typeof hpSibs==='function'?hpSibs():[])){ if(!d||!d.devSig) continue;   let b=''; try{ b=String((typeof hpMcBoxOf==='function'&&hpMcBoxOf(d.dev))||''); }catch(e){} if(b===u) return 'sib:'+(d.label||String(d.dev||'').slice(0,10)); }
+    return ''; }catch(e){ return 'other'; } }
+async function hpAdProbe(url){
+  let c=null; const out=[];
+  try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url], kp);
+    c.on(HotPocket.events.contractOutput, r=>{ for(const x of ((r&&r.outputs)||[])){ try{ out.push(JSON.parse(hpText(x))); }catch(e){} } });
+    let up=false; try{ up=await hpWithin(c.connect(),HP_AD_CONN,'前に借りた郵便受けへのつなぎ'); }catch(e){ up=false; }
+    if(!up) return {why:'down'};
+    const cm=await hpWithin(hpClaimMsg(),HP_SEND_WAIT,'名乗りの中身');
+    await hpWithin(c.submitContractInput(JSON.stringify(cm)),HP_SEND_WAIT,'前に借りた郵便受けへの名乗り');
+    const t0=Date.now();
+    while(Date.now()-t0<HP_AD_WAIT){ const o=out.shift(); if(!o){ await sleep(250); continue; }
+      if(o.ok==='claim') return {ok:1, pv:String(o.pv||'')};
+      if(o.err) return {why:String(o.err)}; }
+    return {why:'noreply'};
+  }catch(e){ return {why:'other', e:String((e&&e.message)||e).slice(0,80)}; }
+  finally{ if(c){ try{ await c.close(); }catch(e){} } } }
+function hpAdSwitch(url){
+  const old=String(hpPostUrl()||''), acct=(typeof hpLeaseAcct==='function')?hpLeaseAcct():'';
+  if(typeof hpBoxSubBefore==='function'&&!hpBoxSubBefore(url)) throw new Error('前の郵便受けを控えられない');
+  try{ stopBg(); }catch(e){} try{ localStorage.setItem('p2p_post',url); }catch(e){}
+  ID.lease=acct?{acct:acct,at:Date.now()}:{at:Date.now()}; ID.adopt={url:url,from:old,at:Date.now()}; saveID();
+  hpLog('前に借りた郵便受け（'+url+'）を、この端末の郵便受けにした。つなぎ直して、自分のほかの端末を足し、住所録に新しい場所を知らせる（前の郵便受け '+old+' は期限まで見回る）');
+  setTimeout(()=>{ try{ startBg(); }catch(e){} },1500);
+  return true; }
+async function hpAdUse(url){
+  if(HP_AD_BUSY) return {why:'busy'}; let u=String(url||'').trim().replace(/\/+$/,''); if(/^[a-z0-9.-]+:[0-9]{2,5}$/i.test(u)) u='wss://'+u;
+  if(!(typeof hpBfOn==='function'&&hpBfOn())) return {why:'notsub'};
+  const w=hpAdCheck(u); if(w) return {why:w};
+  HP_AD_BUSY=true; let lock=false;
+  try{ for(let i=0;i<120&&((typeof HP_BX_BUSY!=='undefined'&&HP_BX_BUSY)||(typeof HP_FB_BUSY!=='undefined'&&HP_FB_BUSY));i++) await sleep(250);
+    if(typeof HP_BX_BUSY!=='undefined'){ HP_BX_BUSY=true; lock=true; }
+    hpLog('前に借りた郵便受け（'+u+'）を確かめる（この端末の鍵でつないで名乗る）');
+    const r=await hpAdProbe(u);
+    if(!r.ok){ hpLog('前に借りた郵便受け（'+u+'）は使えない（'+r.why+(r.e?' '+r.e:'')+'）。何も替えていない'); return r; }
+    hpLog('前に借りた郵便受け（'+u+'）に名乗れた（本体の版 '+(r.pv||'?')+'）');
+    if(lock){ HP_BX_BUSY=false; lock=false; }
+    hpAdSwitch(u); return {ok:1, pv:r.pv};
+  }catch(e){ return {why:'other', e:String((e&&e.message)||e).slice(0,80)}; }
+  finally{ if(lock) HP_BX_BUSY=false; HP_AD_BUSY=false; } }
+function hpAdWhy(r){ const w=String((r&&r.why)||'');
+  if(w==='url') return T('ad_e_url'); if(w==='cur') return T('ad_e_cur'); if(w.indexOf('sib:')===0) return TF('ad_e_sib',{n:w.slice(4)||'?'});
+  if(w==='owner exists') return T('ad_e_owner'); if(w==='removed') return T('ad_e_removed'); if(w==='too many devices') return T('ad_e_full');
+  if(w==='bad sig'||w==='bad claim') return T('ad_e_sig'); if(w==='killed') return T('ad_e_killed'); if(w==='down') return T('ad_e_down'); if(w==='noreply') return T('ad_e_noreply');
+  if(w==='busy') return T('ad_checking'); if(w==='notsub') return T('ad_e_notsub');
+  return TF('ad_e_other',{e:(r&&r.e)||w||'?'}); }
+function hpAdUi(c){
+  try{ if(!c||!c.querySelector) return false; const on=typeof hpBfOn==='function'&&hpBfOn(); let row=c.querySelector('#bf-adopt');
+    if(!on){ if(row&&row.parentNode) row.parentNode.removeChild(row); return false; }
+    if(row) return true;
+    row=hpFlEl('div',''); row.id='bf-adopt'; row.style.cssText='margin-top:8px';
+    const f=hpFlEl('div',''); f.id='bf-adopt-form'; f.style.cssText='display:none;margin-top:8px';
+    const r1=hpFlEl('div','row'); r1.style.cssText='justify-content:flex-start'; const ob=hpFlBtn('btn_ad_open',()=>{ f.style.display=(f.style.display==='none')?'':'none'; }); ob.id='btn-ad-open'; r1.appendChild(ob); row.appendChild(r1);
+    const nt=hpFlEl('div','note',T('ad_note')); nt.style.cssText='white-space:pre-line;line-height:1.5'; f.appendChild(nt);
+    const inp=document.createElement('input'); inp.id='bf-adopt-url'; inp.type='text'; inp.placeholder=T('ad_ph'); inp.setAttribute('autocomplete','off'); inp.setAttribute('autocapitalize','off'); inp.setAttribute('spellcheck','false'); inp.style.cssText='width:100%;margin-top:6px'; f.appendChild(inp);
+    const st=hpFlEl('div','note',''); st.id='bf-adopt-st'; st.style.cssText='margin-top:6px;white-space:pre-line;line-height:1.5';
+    const r2=hpFlEl('div','row'); r2.style.cssText='margin-top:8px;justify-content:flex-start';
+    let ub=null, cb=null;
+    ub=hpFlBtn('btn_ad_use',async()=>{ ub.disabled=true; cb.disabled=true; st.style.color=''; st.textContent=T('ad_checking');
+        let r=null; try{ r=await hpAdUse(inp.value); }catch(e){ r={why:'other',e:String((e&&e.message)||e)}; } ub.disabled=false; cb.disabled=false;
+        if(r&&r.ok){ st.style.color='var(--teal)'; st.textContent=TF('ad_ok',{h:String(inp.value).trim().replace(/^wss:\/\//,'')})+(((typeof hpLeaseAcct==='function')&&hpLeaseAcct())?'':'\n'+T('ad_lease_nt')); }
+        else { st.style.color='var(--amber)'; st.textContent=hpAdWhy(r); } },true); ub.id='btn-ad-use';
+    cb=hpFlBtn('btn_ad_cancel',()=>{ f.style.display='none'; st.textContent=''; }); cb.id='btn-ad-cancel'; cb.style.cssText='margin-left:8px';
+    r2.appendChild(ub); r2.appendChild(cb); f.appendChild(r2); f.appendChild(st); row.appendChild(f);
+    c.appendChild(row); return true; }catch(e){ return false; } }
+hpBfDrawClosed=(function(f){ return function(c){ const r=f.apply(this,arguments); try{ hpAdUi(c); }catch(e){} return r; }; })(hpBfDrawClosed);
+
