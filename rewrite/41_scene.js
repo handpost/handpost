@@ -218,16 +218,16 @@ function hpPaySt(t,err){ try{ const el=document.getElementById('pay-st'); if(el)
 const HP_PAY_K={buy:'pay_k_buy',ext:'pay_k_ext',refund:'pay_k_refund',in:'pay_k_in',out:'pay_k_out',fail:'pay_k_fail'};
 function hpPayKind(r){ if(r.key&&r.kind!=='fail') return T('pay_k_key');   return r.kind==='other'?TF('pay_k_other',{t:r.tt}):T(HP_PAY_K[r.kind]||'pay_k_fail'); }
 function hpPayDraw(){ if(typeof document==='undefined'||!document.getElementById) return -1; const box=document.getElementById('pay-list'), sm=document.getElementById('pay-sum'); if(!box||!HP_PAY) return -1;
-  const cur=(typeof hpPayCur==='function')?hpPayCur():'usd', px=(typeof hpPxMap==='function')?hpPxMap(cur):hpPxLoad(), rows=HP_PAY.rows, fm=(v,sg)=>(typeof hpCurTxt==='function')?hpCurTxt(v,cur,sg):hpUsdTxt(v,sg); box.textContent=''; let usd=0, got=0, miss=0;
+  const cur=(typeof hpPayCur==='function')?hpPayCur():'usd', px=(typeof hpPxMap==='function')?hpPxMap(cur):hpPxLoad(), rows=HP_PAY.rows, fm=(v,sg)=>(typeof hpCurTxt==='function')?hpCurTxt(v,cur,sg):hpUsdTxt(v,sg), fc=v=>(v<0&&Math.abs(v)>1e-12?'\u2212':'')+fm(Math.abs(v),false), hpPayAmt=(v,dp)=>{ const t=hpNum(v,dp); return (t==='0'||!(Math.abs(v)>0))?'0':((v<0?'\u2212':'')+t); };   box.textContent=''; let usd=0, got=0, miss=0;
   const tb=document.createElement('table'); tb.className='paytb'; const hd=document.createElement('tr'); for(const k of ['pay_h_at','pay_h_kind','pay_h_evr','pay_h_xah','pay_h_px','pay_h_cur'])  { const th=document.createElement('th'); th.textContent=k==='pay_h_cur'?TF(k,{c:cur.toUpperCase()}):T(k); hd.appendChild(th); } tb.appendChild(hd);
   const G={}; for(const r of rows){ const k=(r.key&&r.kind!=='fail')?'key':r.kind; (G[k]=G[k]||[]).push(r); }
   const cell=(tr,v)=>{ const td=document.createElement('td'); td.textContent=v; tr.appendChild(td); return td; }, when=t=>(typeof fmtTS==='function')?fmtTS(t):new Date(t).toLocaleString();
   for(const k of ['buy','ext','refund','key','fail','other','out','in']){ const a=G[k]; if(!a) continue; let ge=0, gx=0, gu=0, gm=0;
     for(const r of a){ ge+=r.evr; gx+=r.xah; const cu=hpPayUsd(hpPayCost(r),r.at,px); if(cu===null){ gm++; miss++; } else { gu+=cu; usd+=cu; got++; } }
     const gr=document.createElement('tr'); gr.className='grp'+(k==='refund'?' in':''); gr.dataset.k=k; gr.style.cursor='pointer'; gr.title=T('pay_open');
-    cell(gr,when(a[0].at)); const lab=cell(gr,'\u25B8 '+hpPayKind(a[0])+TF('pay_n',{n:a.length})); cell(gr,ge?hpSigned(ge,4):''); cell(gr,gx?hpSigned(gx,6):''); cell(gr,'');   cell(gr,gm===a.length?fm(null):fm(gu,true)); tb.appendChild(gr);
+    cell(gr,when(a[0].at)); const lab=cell(gr,'\u25B8 '+hpPayKind(a[0])+TF('pay_n',{n:a.length})); cell(gr,ge?hpPayAmt(-ge,4):''); cell(gr,gx?hpPayAmt(-gx,6):''); cell(gr,'');   cell(gr,gm===a.length?fm(null):fc(-gu));   tb.appendChild(gr);
     const det=[]; for(const r of a){ const tr=document.createElement('tr'); tr.className='det'+(k==='refund'?' in':''); tr.style.display='none'; const u=hpPayUsd({evr:r.evr,xah:r.xah},r.at,px);
-      for(const v of [when(r.at),'\u3000'+hpPayKind(r),r.evr?hpSigned(r.evr,4):'',r.xah?hpSigned(r.xah,6):'',(typeof hpPxTxt==='function')?hpPxTxt({evr:r.evr,xah:r.xah},r.at,px,cur):'',fm(u,true)]) cell(tr,v);   det.push(tr); tb.appendChild(tr); }
+      for(const v of [when(r.at),'\u3000'+hpPayKind(r),r.evr?hpPayAmt(-r.evr,4):'',r.xah?hpPayAmt(-r.xah,6):'',(typeof hpPxTxt==='function')?hpPxTxt({evr:r.evr,xah:r.xah},r.at,px,cur):'',u===null?fm(null):fc(-u)]) cell(tr,v);   det.push(tr); tb.appendChild(tr); }
     gr.addEventListener('click',()=>{ const open=det[0]&&det[0].style.display==='none'; for(const d of det) d.style.display=open?'':'none'; lab.textContent=(open?'\u25BE ':'\u25B8 ')+hpPayKind(a[0])+TF('pay_n',{n:a.length}); }); }
   if(rows.length) box.appendChild(tb); else box.textContent=T('pay_none');
   if(sm){ const s=hpPaySum(rows); sm.textContent=(!rows.length?'':TF('pay_sum',{evr:hpNum(s.evr,4),xah:hpNum(s.xah,6),n:s.n})+(got?TF(miss?'pay_sum_usd_part':'pay_sum_usd',{usd:fm(usd,false),m:miss}):'')+((got&&typeof hpPxDays==='function')?'\n'+TF('pay_px_used',{d:hpPxDays(rows,px)}):'')  )+((HP_PAY&&HP_PAY.other)?(rows.length?'\n':'')+TF('pay_other',{n:HP_PAY.other}):'')+((rows.length&&!got&&typeof hpPxSt==='function'&&hpPxSt().on)?'\n'+T('pay_px_nocur'):''); try{ sm.style.whiteSpace='pre-line'; }catch(e){} }
@@ -368,7 +368,7 @@ function hpPayCsvRows(kind){
   const p2=n=>String(n).padStart(2,'0'), loc=t=>{ const d=new Date(Number(t)); return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())+' '+p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds()); }, ud=t=>{ const d=new Date(Number(t)); return d.getUTCFullYear()+'-'+p2(d.getUTCMonth()+1)+'-'+p2(d.getUTCDate()); };
   out.push([T('pay_c_at'),T('pay_c_kind'),'EVR','XAH',T('pay_c_day'),TF('pay_c_pe',{u:C}),TF('pay_c_ph',{u:C}),TF('pay_c_cost',{u:C}),T('pay_c_hash'),T('pay_c_acct')]);
   for(const r of rows.slice().sort((a,b)=>a.at-b.at)){ const p=px[hpPxDay(r.at)]||{}; let v=0, ok=true; for(const q of hpPayParts(r)){ if(q.evr){ if(p.evr>0) v+=q.evr*p.evr; else ok=false; } if(q.xah){ if(p.xah>0) v+=q.xah*p.xah; else ok=false; } }
-    out.push([loc(r.at),hpPayKind(r),hpCsvNum(r.evr,6),hpCsvNum(r.xah,6),ud(r.at),p.evr>0?hpCsvNum(p.evr,8):'',p.xah>0?hpCsvNum(p.xah,8):'',ok?hpCsvNum(v,dp):'',r.hash,(HP_PAY&&HP_PAY.acct)||'']); }
+    out.push([loc(r.at),hpPayKind(r),hpCsvNum(-r.evr,6),hpCsvNum(-r.xah,6), ud(r.at),p.evr>0?hpCsvNum(p.evr,8):'',p.xah>0?hpCsvNum(p.xah,8):'',ok?hpCsvNum(v,dp):'',r.hash,(HP_PAY&&HP_PAY.acct)||'']); }
   return out; }
 async function hpPayCsvSave(kind){
   if(!HP_PAY||!HP_PAY.rows||!HP_PAY.rows.length){ hpPaySt(T('pay_csv_none'),true); return false; }
