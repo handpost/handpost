@@ -139,7 +139,7 @@ function renderConvList(){
     const w=document.createElement('div'); w.id='hist-unsafe'; w.style.cssText='margin-bottom:8px';
     const nt=document.createElement('div'); nt.className='note'; nt.textContent=T('nt_hist_unsafe'); w.appendChild(nt);
     const go=document.createElement('button'); go.className='b'; go.id='btn-hist-protect'; go.style.marginTop='6px'; go.textContent=T('btn_hist_protect');
-    go.onclick=()=>{ try{ document.getElementById('t-id').click(); const c=document.getElementById('vault-card'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'center'}); }catch(e){} };
+    go.onclick=()=>{ try{ if(typeof hpGoCard==='function'){ hpGoCard('vault-card'); return; } document.getElementById('t-id').click(); const c=document.getElementById('vault-card'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'center'}); }catch(e){} };
     w.appendChild(go); el.appendChild(w);
   } }catch(e){}
   const lo=lastOpenLoad(); const rows=[];

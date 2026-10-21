@@ -1549,7 +1549,7 @@ function hpBmFbLines(M,G){ const o=[]; try{ M.boxes.forEach((b,bi)=>{ const p=G.
       o.push('<path d="M'+x0+' '+(G.DY+G.DH)+' C'+x0+' '+(G.DY+G.DH+36)+', '+tx+' '+(G.BY-36+(p.y-G.BY))+', '+tx+' '+p.y+'" stroke="'+col+'" stroke-width="1.2" stroke-dasharray="2 3" stroke-linecap="round" opacity="0.85" fill="none"/>'); }); }); }catch(e){}
   return o.join(''); }
 
-const HP_TS_TABS={'p-post':'tab_post','p-id':'tab_id','p-set':'tab_set','p-log':'tab_log'}, HP_TS_MAX=100, HP_TS_LOGMAX=300;
+const HP_TS_TABS={'p-post':'tab_post','p-id':'tab_id','p-sec':'tab_sec','p-set':'tab_set','p-log':'tab_log'},   HP_TS_MAX=100, HP_TS_LOGMAX=300;
 var HP_TS_TAB=null;
 function hpTsTab(){ try{ if(typeof document==='undefined'||!document.getElementById) return null; for(const id of Object.keys(HP_TS_TABS)){ const s=document.getElementById(id); if(s&&s.classList&&s.classList.contains('on')) return id; } }catch(e){} return null; }
 function hpTsName(){ return T(HP_TS_TABS[HP_TS_TAB]||'tab_post'); }
@@ -2224,7 +2224,7 @@ function hpRelMsg(){ const R=HP_REL;
     :R.st==='badsig'?T('rel_bad'):R.st==='nosig'?T('rel_nosig'):R.st==='skip'?T('rel_skip'):R.st==='err'?TF('rel_err',{e:R.why}):T('rel_wait'); }
 function hpRelText(){ const R=HP_REL, t=hpRelT(); if(HP_REL_BUSY||Date.now()<HP_REL_HOLD||!R.st) return T('rel_wait');
   return hpRelMsg()+((!t||R.st==='ok'||R.st==='skip')?'':TF('rel_at',{t:t})); }
-function hpRelUi(){ try{ if(typeof document==='undefined'||!document.getElementById) return false; const sec=document.getElementById('p-id'); if(!sec) return false;
+function hpRelUi(){ try{ if(typeof document==='undefined'||!document.getElementById) return false; const sec=document.getElementById('p-sec')||document.getElementById('p-id');   if(!sec) return false;
   let c=document.getElementById('rel-card'); if(!c){ c=document.createElement('div'); c.className='card'; c.id='rel-card'; const h=document.createElement('h2'); h.id='rel-title'; c.appendChild(h); const st=document.createElement('div'); st.id='rel-state'; st.className='note'; st.style.cssText='margin:6px 0;line-height:1.6'; c.appendChild(st);
     const nt=document.createElement('div'); nt.id='rel-note'; nt.className='note'; nt.style.cssText='white-space:pre-line'; c.appendChild(nt); const row=document.createElement('div'); row.className='row'; row.style.cssText='margin-top:8px'; const b=document.createElement('button'); b.className='b'; b.id='btn-rel-again'; b.type='button'; b.onclick=()=>{ hpRelAgain().catch(()=>{}); }; row.appendChild(b); c.appendChild(row); const dm=document.getElementById('danger-more'); if(dm&&dm.parentNode===sec) sec.insertBefore(c,dm); else sec.appendChild(c); }
   const E=id=>document.getElementById(id);

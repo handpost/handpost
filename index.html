@@ -189,6 +189,7 @@ nav.open{display:flex;flex-direction:column;position:absolute;right:10px;top:46p
 nav.open button{text-align:left;padding:10px 12px;border-radius:8px;flex:none;font-size:14px;color:var(--ink)}
 nav.open button.on{border-bottom:none;background:#17233c;color:var(--teal)}
 nav.open button .badge{position:static;float:right;margin-left:8px}
+nav .nsep{display:none} nav.open .nsep{display:block;flex:none;height:1px;background:var(--line);margin:4px 6px}
 
 #composer{padding:8px 8px 10px 8px}
 #composer input{min-width:0;margin:0 2px;border:1px solid var(--line)}
@@ -400,9 +401,12 @@ a{color:var(--teal)}
   <button id="t-chat" class="on" data-i18n="tab_chat">チャット</button>
   <button id="t-contacts" data-i18n-first="tab_contacts">連絡先<span class="badge" id="ct-badge"></span></button>
   <button id="t-req" data-i18n-first="tab_req">申請<span class="badge" id="rq-badge"></span></button>
+  <div class="nsep" aria-hidden="true"></div>
   <button id="t-post" data-i18n="tab_post">郵便受け</button>
-  <button id="t-id" data-i18n-first="tab_id">アカウント<span class="badge" id="nt-badge"></span></button>
+  <button id="t-id" data-i18n-first="tab_id">アカウント</button>
+  <button id="t-sec" data-i18n-first="tab_sec">セキュリティ<span class="badge" id="nt-badge"></span></button>
   <button id="t-set" data-i18n="tab_set">設定</button>
+  <div class="nsep" aria-hidden="true"></div>
   <button id="t-log" data-i18n="tab_log">ログ</button>
   <button id="t-day" type="button" aria-pressed="false">Handpost</button>
 </nav>
@@ -539,7 +543,6 @@ a{color:var(--teal)}
 </section>
 
 <section id="p-id">
-  <div class="card" id="note-card" style="display:none"></div>
   <div class="card">
     <h2 data-i18n="id_cur">現在の身元</h2>
     <div class="kv"><b data-i18n="id_name">表示名</b><span id="id-myname">—</span></div>
@@ -579,6 +582,10 @@ a{color:var(--teal)}
     <div class="row" style="margin-top:8px"><button class="b warn" id="btn-id-clear" data-i18n="btn_clear">この端末のデータを消す</button></div>
   </div>
   </details>
+</section>
+
+<section id="p-sec">
+  <div class="card" id="note-card" style="display:none"></div>
 </section>
 
 <section id="p-set">
@@ -638,23 +645,23 @@ a{color:var(--teal)}
 <script src="rewrite/17_rtc.js?v=e9ce74eba869"></script>
 <script src="rewrite/18_bgloop.js?v=bc81d6e3c0d2"></script>
 <script src="keep/19_draft.js?v=f6f94869ca05"></script>
-<script src="keep/22_i18n.js?v=b16352bfe90e"></script>
-<script src="keep/22_i18n_fr.js?v=cdd67e9e3a74"></script>
-<script src="keep/22_i18n_de.js?v=e03c261af655"></script>
-<script src="keep/22_i18n_pl.js?v=0cd0ce1c46ec"></script>
-<script src="keep/23_ui.js?v=d80555ea6bb5"></script>
+<script src="keep/22_i18n.js?v=bb38fb0c4437"></script>
+<script src="keep/22_i18n_fr.js?v=b929d26977cc"></script>
+<script src="keep/22_i18n_de.js?v=e5b5a1ca99a3"></script>
+<script src="keep/22_i18n_pl.js?v=c304c326b652"></script>
+<script src="keep/23_ui.js?v=8d5b37a2ed21"></script>
 <script src="keep/24_qr.js?v=60fba8abce21"></script>
-<script src="rewrite/27_vault.js?v=797fd6b49695"></script>
-<script src="rewrite/28_paper.js?v=0d81eca7dbd5"></script>
+<script src="rewrite/27_vault.js?v=b003f1b52248"></script>
+<script src="rewrite/28_paper.js?v=c8d4a6f5dc21"></script>
 <script src="rewrite/29_backup.js?v=a5c96ff6fdf6"></script>
-<script src="rewrite/30_restore.js?v=13dc69b084e1"></script>
+<script src="rewrite/30_restore.js?v=0349afa4ed1e"></script>
 <script src="rewrite/31_hist.js?v=730318a67221"></script>
 <script src="rewrite/32_invite.js?v=68536d4ac135"></script>
 <script src="rewrite/33_confirm.js?v=a435a7c8507d"></script>
 <script src="rewrite/34_safety.js?v=6de7097fe59f"></script>
 <script src="rewrite/35_kill.js?v=f4c1d063403f"></script>
 <script src="rewrite/36_handover.js?v=72d0397da4fa"></script>
-<script src="rewrite/37_move.js?v=2afe2fd4de5c"></script>
+<script src="rewrite/37_move.js?v=36fd2d164f02"></script>
 <script src="rewrite/38_notes.js?v=b463a68c6366"></script>
 <script src="rewrite/39_onetab.js?v=619c7639d696"></script>
 <script src="rewrite/40_linkqr.js?v=bf82c09e8fd9"></script>
@@ -668,8 +675,8 @@ a{color:var(--teal)}
 <script src="rewrite/47_rootkey.js?v=ce5d9843d373"></script>
 <script src="rewrite/46_roster.js?v=7fcf862c11f5"></script>
 <script src="rewrite/45_invface.js?v=daef1738f436"></script>
-<script src="rewrite/44_postui.js?v=d1a03ccf675f"></script>
-<script src="rewrite/25_wiring.js?v=15c1af5b2b99"></script>
+<script src="rewrite/44_postui.js?v=e13f3c1b88ff"></script>
+<script src="rewrite/25_wiring.js?v=5935583af7ff"></script>
 <script src="keep/26_sound.js?v=dd1c7e5d5ba6"></script>
 </body>
 </html>

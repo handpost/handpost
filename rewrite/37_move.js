@@ -10,7 +10,7 @@ async function hpMvSigOk(s){
 }
 function hpMvLabel(dev){ const r=(typeof hpDevRows==='function'?hpDevRows():[]).find(d=>d.dev===dev); return (r&&r.label)?hpDevName(r.label):(String(dev||'').slice(0,10)+'…'); }
 function hpMvRm(k){ try{ if(typeof localStorage.removeItem==='function') localStorage.removeItem(k); else if(localStorage.getItem(k)!=null) localStorage.setItem(k,''); }catch(e){} }
-function hpMvGo(id){ try{ document.getElementById('t-id').click(); const c=document.getElementById(id); if(c&&c.scrollIntoView) c.scrollIntoView({block:'center'}); }catch(e){} }
+function hpMvGo(id){ try{ if(typeof hpGoCard==='function'){ hpGoCard(id); return; }   document.getElementById('t-id').click(); const c=document.getElementById(id); if(c&&c.scrollIntoView) c.scrollIntoView({block:'center'}); }catch(e){} }
 
 async function hpMvOffer(dev){
   if(!hpIsMain()||(typeof hpKillMe==='function'&&hpKillMe())) throw new Error(T('e_link_main'));

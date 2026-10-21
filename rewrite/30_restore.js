@@ -209,7 +209,7 @@ function hpRestoreFlow(){
         er.style.color=last?'var(--amber)':'var(--teal)'; er.textContent=msg;
         if(n){ RMMSG=msg; show(3); }
       }));
-      if(typeof hpVaultOn==='function'&&!hpVaultOn()) row.appendChild(btn(T('btn_pp4_vault'),true,'re-tovault',()=>{ close(); try{ document.getElementById('t-id').click(); const c=document.getElementById('vault-card'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'center'}); }catch(e){} }));
+      if(typeof hpVaultOn==='function'&&!hpVaultOn()) row.appendChild(btn(T('btn_pp4_vault'),true,'re-tovault',()=>{ close(); try{ if(typeof hpGoCard==='function'){ hpGoCard('vault-card'); return; } document.getElementById('t-id').click(); const c=document.getElementById('vault-card'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'center'}); }catch(e){} }));
       if(RES&&RES.idOnly) row.appendChild(btn(T('btn_re_tobox'),false,'re-tobox',()=>{ close(); try{ document.getElementById('t-post').click(); }catch(e){} }));
       row.appendChild(btn(T('btn_re_close'),!(typeof hpVaultOn==='function'&&!hpVaultOn()),'re-close',close));
     }

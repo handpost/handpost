@@ -1,4 +1,7 @@
-const TABS={'t-chat':'p-chat','t-contacts':'p-contacts','t-req':'p-req','t-post':'p-post','t-id':'p-id','t-set':'p-set','t-log':'p-log'};
+const TABS={'t-chat':'p-chat','t-contacts':'p-contacts','t-req':'p-req','t-post':'p-post','t-id':'p-id','t-sec':'p-sec','t-set':'p-set','t-log':'p-log'};
+function hpGoCard(id,how){
+  try{ const c=document.getElementById(id); let t='t-id'; if(c){ for(const k of Object.keys(TABS)){ const s=document.getElementById(TABS[k]); if(s&&s.contains&&s.contains(c)){ t=k; break; } } }
+    const b=document.getElementById(t); if(b) b.click(); if(c&&c.scrollIntoView) c.scrollIntoView(how||{block:'center'}); return t; }catch(e){ return ''; } }
 for(const [t,p] of Object.entries(TABS)){
   $('#'+t).onclick=()=>{
     try{ const pv=document.querySelector('nav button.on'); if(t==='t-id'&&pv&&pv.id&&pv.id!=='t-id'&&typeof HP_ID_BACK!=='undefined') HP_ID_BACK=pv.id; }catch(e){}
@@ -8,7 +11,7 @@ for(const [t,p] of Object.entries(TABS)){
     if(t==='t-req'){$('#rq-badge').style.display='none'; try{ $('#t-contacts').classList.add('on'); }catch(e){}   }
     if(t==='t-contacts'){ drawMyQR(); renderContacts(); try{ if(typeof hpInvTick==='function') hpInvTick(); }catch(e){}   }
     if(t==='t-chat'){ if(!CONV_OPEN)renderConvList(); }
-    if(t==='t-id'){ try{ if(typeof hpNotesUi==='function') hpNotesUi(); }catch(e){} }
+    if(t==='t-sec'){ try{ if(typeof hpNotesUi==='function') hpNotesUi(); }catch(e){} }
     if(t==='t-post'){ try{ if(typeof hpPostUi==='function') hpPostUi(); }catch(e){} }
     if(t==='t-set'){ try{ if(typeof hpStoreUi==='function') hpStoreUi(); }catch(e){} } if(t==='t-set'){ try{ if(typeof hpNfUi==='function') hpNfUi(); }catch(e){} }
     try{ if(typeof hpCsRefresh==='function') hpCsRefresh(); }catch(e){}

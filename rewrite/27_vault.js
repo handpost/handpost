@@ -167,13 +167,13 @@ function hpVaultGate(){
 }
 
 function hpVaultUiInit(){
-  const sec=document.getElementById('p-id'); if(!sec||document.getElementById('vault-card')) { hpVaultUi(); return; }
+  const sec=document.getElementById('p-sec')||document.getElementById('p-id');   if(!sec||document.getElementById('vault-card')) { hpVaultUi(); return; }
   const card=document.createElement('div'); card.className='card'; card.id='vault-card';
   card.innerHTML='<h2 data-i18n="vt_title"></h2><div id="vault-state" class="note"></div>'+
     '<div class="row" id="vault-btns" style="margin-top:8px"><button class="b pri" id="btn-vault-pk" data-i18n="btn_vault_pk"></button><button class="b" id="btn-vault-pw" data-i18n="btn_vault_pw"></button></div>'+
     '<form id="vault-pw-wrap" autocomplete="off" style="display:none;margin-top:8px"><input type="password" id="vault-pw1" data-i18n-ph="ph_vault_pw1" style="width:100%"><input type="password" id="vault-pw2" data-i18n-ph="ph_vault_pw2" style="width:100%;margin-top:6px"><div class="note" data-i18n="nt_vault_pw"></div><div class="row" style="margin-top:6px"><button type="button" class="b pri" id="btn-vault-pw-go" data-i18n="btn_vault_pw_go"></button></div></form>'+
     '<div id="vault-msg" class="note" style="color:var(--amber)"></div><div class="note" data-i18n="nt_vault"></div>';
-  const first=sec.querySelector('.card'), kc=document.getElementById('kill-card'); if(kc&&kc.parentNode===sec) sec.insertBefore(card,kc);   else sec.insertBefore(card, first?first.nextSibling:sec.firstChild);
+  const rc=document.getElementById('rel-card'); if(rc&&rc.parentNode===sec) sec.insertBefore(card,rc); else sec.appendChild(card);
   hpSecretInput(document.getElementById('vault-pw1')); hpSecretInput(document.getElementById('vault-pw2'));
   document.getElementById('vault-pw-wrap').addEventListener('submit',e=>e.preventDefault());
   const E=id=>document.getElementById(id), msg=t=>{ E('vault-msg').textContent=t||''; };
@@ -201,5 +201,5 @@ function hpVaultNag(){
   if(!ID) return;
   try{ if(typeof hpPaperState==='function'&&hpPaperState()==='todo'){ hpPaperNag(); return; } }catch(e){}
   if(hpVaultOn()){ try{ if(typeof hpPaperNag==='function') hpPaperNag(); }catch(e){} return; }
-  hpBanner(T('bn_vault'),()=>{ try{ document.getElementById('t-id').click(); const c=document.getElementById('vault-card'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'center'}); }catch(e){} },'nag');
+  hpBanner(T('bn_vault'),()=>{ try{ if(typeof hpGoCard==='function') hpGoCard('vault-card'); else document.getElementById('t-id').click(); }catch(e){} },'nag');
 }

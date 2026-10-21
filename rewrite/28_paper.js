@@ -109,7 +109,7 @@ function hpPaperConfirm(text){
 }
 
 function hpPaperUiInit(){
-  const sec=document.getElementById('p-id'); if(!sec) return;
+  const sec=document.getElementById('p-sec')||document.getElementById('p-id');   if(!sec) return;
   if(!document.getElementById('paper-card')){
     const card=document.createElement('div'); card.className='card'; card.id='paper-card';
     card.innerHTML='<h2 data-i18n="pp_title"></h2><div id="paper-state" class="note"></div><div class="row" style="margin-top:8px"><button class="b pri" id="btn-paper"></button></div>';
@@ -138,7 +138,7 @@ function hpPaperUi(){
 }
 function hpPaperNag(){
   const st=hpPaperState(); if(st!=='todo'&&st!=='year') return;
-  hpBanner(T(st==='todo'?'bn_paper':'bn_paper_year'),()=>{ try{ document.getElementById('t-id').click(); const c=document.getElementById('paper-card'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'center'}); }catch(e){} },'nag');
+  hpBanner(T(st==='todo'?'bn_paper':'bn_paper_year'),()=>{ try{ if(typeof hpGoCard==='function') hpGoCard('paper-card'); else document.getElementById('t-id').click(); }catch(e){} },'nag');
 }
 
 const HP_PP_WAIT=72*3600e3;
@@ -308,7 +308,7 @@ function hpPaperFlow(step){
       card.appendChild(el('h2',null,T('pp4_h')));
       const gone=(typeof hpRkGone==='function'&&hpRkGone()), t=[T('pp4_ok'), T(n===41?'pp4_vault':(gone?'rk4_novault':'pp4_novault')), T('pp4_year')].concat(gone?[T('rk4_gone')]:[]).join('\n\n');
       const b=el('div','note',t); b.style.whiteSpace='pre-line'; card.appendChild(b);
-      if(n===40&&!hpVaultOn()) row.appendChild(btn(T('btn_pp4_vault'),true,'paper-tovault',()=>{ close(); try{ document.getElementById('t-id').click(); const c=document.getElementById('vault-card'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'center'}); }catch(e){} }));
+      if(n===40&&!hpVaultOn()) row.appendChild(btn(T('btn_pp4_vault'),true,'paper-tovault',()=>{ close(); try{ if(typeof hpGoCard==='function'){ hpGoCard('vault-card'); return; } document.getElementById('t-id').click(); const c=document.getElementById('vault-card'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'center'}); }catch(e){} }));
       row.appendChild(btn(T('btn_pp4_close'),!(n===40&&!hpVaultOn()),'paper-close',close));
     }
     card.appendChild(row);
