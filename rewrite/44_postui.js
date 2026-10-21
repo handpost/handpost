@@ -2354,3 +2354,201 @@ try{ if(typeof hpHlTick==='function'&&!hpHlTick.__rp){ const f=hpHlTick; hpHlTic
 
 try{ if(typeof hpMoveUi==='function'&&!hpMoveUi.__af){ const f=hpMoveUi; hpMoveUi=Object.assign(function(){ const v=f.apply(this,arguments); try{ if(typeof hpAfUi==='function') hpAfUi(); }catch(e){} return v; },f,{__af:1}); } }catch(e){}
 
+const HP_MG_TTL=86400e3, HP_MG_GAP=15*60e3, HP_MG_KEEP=3*86400e3, HP_MG_SKIP=3600e3, HP_MG_FIN=86400e3, HP_MG_RMGAP=60e3, HP_MG_TICK=5000, HP_MG_VISGAP=60e3;
+let HP_MG_BUSY=false, HP_MG_ERR='', HP_MG_PV=null, HP_MG_KEY='', HP_MG_SENT0=false;
+function hpMgHere(){ try{ return typeof location!=='undefined'&&/^(www\.)?handpost\.page$/.test(String(location.hostname||'')); }catch(e){ return false; } }
+function hpMgOld(){ try{ return typeof hpOgOld==='function'&&!!hpOgOld(); }catch(e){ return false; } }
+function hpMgUp(){ try{ return typeof POST!=='undefined'&&!!POST&&!!POST.up&&!POST.notOwner; }catch(e){ return false; } }
+function hpMgDevs(){ return (typeof ID!=='undefined'&&ID&&Array.isArray(ID.devs))?ID.devs:[]; }
+function hpMgD10(d){ return String(d||'').slice(0,10)+'…'; }
+
+function hpMgOnReq(r){
+  const L=(typeof HP_LINK!=='undefined')?HP_LINK:null, q=L&&L.req; if(!q||!r||q.dev!==r.fromDev||q.site!==undefined) return '';
+  let o=null; try{ o=JSON.parse(r.body); }catch(e){}
+  q.site=(o&&o.site==='handpost.page')?'handpost.page':''; q.mv=!!(q.site&&hpMgOld()&&hpIsMain());
+  if(q.mv){ hpLog('移る手順：新しい場所（handpost.page）の端末から連携の申し込みが届いた。追加すると、その端末が管理用の端末になる'); try{ hpLinkUi(); }catch(e){} }
+  return q.mv?'mv':(q.site||'-'); }
+function hpMgStart(q,h){
+  if(!ID||!hpIsMain()||!q||!q.dev) return false;
+  const me=String((typeof POST!=='undefined'&&POST&&POST.pub)||'');
+  const old=[me].concat(hpMgDevs().map(d=>d&&d.dev).filter(d=>d&&d!==q.dev)).filter((d,i,a)=>/^ed[0-9a-f]{64}$/.test(d)&&a.indexOf(d)===i).slice(0,8);
+  ID.ogMv={ dev:q.dev, label:String(q.label||'').slice(0,32), at:Date.now(), old:old, h:h?1:0, n:0, last:0 }; saveID();
+  hpLog('移る手順：新しい場所の端末を追加した。管理用の端末の切り替えと過去の手紙を送る（端末 '+hpMgD10(q.dev)+'）');
+  HP_MG_SENT0=true; Promise.resolve(hpMgOffer('追加した直後')).catch(()=>{}); try{ hpMgShow(); }catch(e){}
+  return true; }
+async function hpMgOffer(why){
+  const M=ID&&ID.ogMv; if(!M||M.stop||HP_MG_BUSY) return 0;
+  if(!hpIsMain()||(typeof hpKillMe==='function'&&hpKillMe())||!hpMgUp()) return 0;
+  if(!hpMgDevs().some(d=>d&&d.dev===M.dev)){ delete ID.ogMv; saveID(); hpLog('移る手順：切り替えの先の端末が一覧に無いので、送るのをやめた'); return 0; }
+  if(!hpPaperP()||!hpPaperFits()){ if(M.err!=='nopaper'){ M.err='nopaper'; saveID(); hpLog('移る手順：紙のバックアップが無いので、管理用の端末を自動で切り替えられない'); } return 0; }
+  HP_MG_BUSY=true;
+  try{
+    const ts=Date.now(), sig=await edSign(hpMvMsg(ID.address,M.dev,ts));
+    const body={ v:1, type:'mvoffer', ts:ts, sig:sig, paper:ID.paper, paperOk:Number(ID.paperOk)||0, invites:Array.isArray(ID.invites)?ID.invites:[], label:hpDevLabelGuess(), og:1, old:M.old, h:M.h?1:0 };
+    const n=await hpSibPut(body,[M.dev]);
+    if(n>0){ M.n=(Number(M.n)||0)+1; M.last=ts; delete M.err; saveID(); hpLog('移る手順：管理用の端末の切り替えを送った（端末 '+hpMgD10(M.dev)+'・'+M.n+' 回目）'); }
+    return n; }
+  catch(e){ hpLog('移る手順：管理用の端末の切り替えを送れない（'+((e&&e.message)||e)+'）'); return -1; }
+  finally{ HP_MG_BUSY=false; } }
+function hpMgSeen(){
+  const M=ID&&ID.ogMv; if(!M||M.stop||!hpIsMain()) return false; if(Date.now()-(Number(M.last)||0)<HP_MG_VISGAP) return false;
+  HP_MG_SENT0=false; Promise.resolve(hpMgTick()).catch(()=>{}); return true; }
+
+async function hpMgOfferIn(o,r){
+  const drop=w=>{ hpLog('移る手順：切り替えを捨てた（'+w+'）'); return true; };
+  if(!hpIsChild()) return drop('この端末はつないだ端末でない');
+  const L=ID.link; if(!L.main||r.fromDev!==L.main.dev) return drop('今の管理用の端末からでない');
+  if(hpMgOld()) return drop('この端末も前の場所にある');
+  const now=Date.now(), ts=Number(o.ts);
+  if(!(ts>0)||now-ts>HP_MG_TTL||ts>now+HP_MV_SKEW) return drop('期限切れ');
+  if(!(await hpMvSigOk({dev:L.dev,ts:ts,sig:o.sig}))) return drop('署名が合わない');
+  if(!/^[0-9a-f]{32}$/.test(String(o.paper||''))) return drop('形が違う');
+  let pub=''; try{ pub=hpPaperMaster(hpBytes(o.paper)).pub; }catch(e){}
+  if(pub!==ID.publicKey) return drop('紙がこのアカウントのものでない');
+  const old=(Array.isArray(o.old)?o.old:[]).filter((d,i,a)=>typeof d==='string'&&/^ed[0-9a-f]{64}$/.test(d)&&d!==L.dev&&a.indexOf(d)===i).slice(0,8);
+  HP_MV_IN={ ts:ts, sig:o.sig, paper:o.paper, paperOk:Number(o.paperOk)||0, invites:Array.isArray(o.invites)?o.invites:[], label:String(o.label||'').slice(0,32), exp:ts+HP_MG_TTL, og:1 };
+  const prev=ID.ogIn; ID.ogIn={ from:r.fromDev, at:(prev&&prev.from===r.fromDev&&Number(prev.at))||now, old:old, h:o.h?1:0, ts:ts }; saveID();
+  hpLog('移る手順：前の場所の管理用の端末から切り替えが届いた（前の場所の端末 '+old.length+' 台）');
+  try{ renderDevices(); }catch(e){}
+  Promise.resolve(hpMgTake('届いた')).catch(()=>{}); try{ hpMgShow(); }catch(e){}
+  return true; }
+async function hpMgTake(why){
+  const M=(typeof HP_MV_IN!=='undefined')?HP_MV_IN:null; if(!M||!M.og||!(M.exp>Date.now())||!ID||!hpIsChild()) return '';
+  if(!hpVaultOn()) return 'vault';
+  if(!hpMgUp()) return 'post';
+  if((typeof HP_MV_BUSY!=='undefined'&&HP_MV_BUSY)||HP_MG_BUSY) return 'busy';
+  if(HP_MG_ERR&&why==='見回り') return 'err';
+  const I=ID.ogIn||{}; HP_MG_BUSY=true; let ok=false;
+  try{ await hpMvTake(M); ok=true; HP_MG_ERR=''; }
+  catch(e){ HP_MG_ERR=(typeof hpErrShow==='function')?hpErrShow(e):String((e&&e.message)||e); hpLog('移る手順：管理用の端末に切り替えられない（'+((e&&e.message)||e)+'）'); }
+  finally{ HP_MG_BUSY=false; }
+  if(!ok){ try{ hpMgShow(); }catch(e){} return 'err'; }
+  ID.ogNew={ from:String(I.from||''), old:Array.isArray(I.old)?I.old:[], h:I.h?1:0, at:Date.now(), rm:0, hist:0, th:-1 }; delete ID.ogIn; saveID();
+  hpLog('移る手順：この端末が管理用の端末になった');
+  try{ hpMgShow(); }catch(e){}
+  return 'ok'; }
+function hpMgHistAt(dev){ try{ const H=ID&&ID.ogHist; return (dev&&H&&typeof H==='object'&&!Array.isArray(H))?(Number(H[dev])||0):0; }catch(e){ return 0; } }
+function hpMgHistNote(dev){
+  try{ if(!ID||!dev||(!ID.ogIn&&!ID.ogNew&&!(hpMgHere()&&hpIsChild()))) return false; const H=(ID.ogHist&&typeof ID.ogHist==='object'&&!Array.isArray(ID.ogHist))?ID.ogHist:{};
+    H[dev]=Date.now(); { const ks=Object.keys(H).filter(k=>k!==dev).sort((a,b)=>H[a]-H[b]); while(Object.keys(H).length>8&&ks.length) delete H[ks.shift()]; } ID.ogHist=H; const from=(ID.ogNew&&ID.ogNew.from)||(ID.ogIn&&ID.ogIn.from)||''; if(ID.ogNew&&ID.ogNew.from===dev) ID.ogNew.hist=H[dev]; saveID();
+    if(dev===from) hpLog('移る手順：前の場所の端末から過去の手紙を受け取り終えた'); try{ hpMgShow(); }catch(e){} return true; }catch(e){ return false; } }
+function hpMgHistOk(N){ return !!(N&&(!N.h||N.hist||N.skip||hpMgHistAt(N.from))); }
+async function hpMgThumbs(){ let n=0; try{ for(const c of contacts()){ for(const x of histLoad(c.address)){ const it=x&&(x.img||x.file); if(!it||!it.id) continue; let b=null; try{ b=await blobGet(it.id); }catch(e){} if(!b) n++; } } }catch(e){} return n; }
+async function hpMgRemove(){
+  const N=ID&&ID.ogNew; if(!N||N.rm||!hpIsMain()) return '';
+  if(!hpMgHistOk(N)) return 'hist';
+  if(!hpMgUp()) return 'post';
+  if(HP_MG_BUSY||(typeof HP_RM!=='undefined'&&HP_RM)) return 'busy';
+  if(N.rmTry&&Date.now()-N.rmTry<HP_MG_RMGAP) return 'wait';
+  const me=String((typeof POST!=='undefined'&&POST&&POST.pub)||''), left=(Array.isArray(N.old)?N.old:[]).filter(d=>d&&d!==me&&hpMgDevs().some(x=>x&&x.dev===d));
+  if(left.length){ HP_MG_BUSY=true;
+    try{ await hpDevRemove(left[0]); delete N.rmTry; saveID(); hpLog('移る手順：前の場所の端末を外した（端末 '+hpMgD10(left[0])+'・残り '+(left.length-1)+' 台）'); }
+    catch(e){ N.rmTry=Date.now(); saveID(); hpLog('移る手順：前の場所の端末を外せない（'+((e&&e.message)||e)+'。1 分後にもう一度）'); }
+    finally{ HP_MG_BUSY=false; }
+    try{ hpMgShow(); }catch(e){} return 'rm'; }
+  N.rm=Date.now(); saveID(); let th=0; try{ th=await hpMgThumbs(); }catch(e){} N.th=th; saveID();
+  hpLog('移る手順：前の場所の端末をすべて外した'+(th>0?'（写真・ファイル '+th+' 件は見本だけ）':''));
+  try{ hpMgShow(); }catch(e){} return 'done'; }
+function hpMgFin(){
+  const N=ID&&ID.ogNew; if(!N||!N.rm||N.fin||!HP_MG_PV) return false;
+  try{ if(HP_MG_PV.old||typeof POST==='undefined'||!POST||HP_MG_PV.url!==String(POST.url||'')) return false; }catch(e){ return false; }
+  N.fin=Date.now(); saveID(); hpLog('移る手順：郵便受けは新しい版。移り終えた'); try{ hpMgShow(); }catch(e){} return true; }
+async function hpMgTick(){
+  let r='';
+  try{ if(ID){
+    const M=ID.ogMv;
+    if(M&&hpIsMain()&&!M.stop){ const now=Date.now(); if(now-Number(M.at)>HP_MG_KEEP){ M.stop=1; saveID(); hpLog('移る手順：3 日たったので、切り替えを送るのをやめた'); }
+      else if(hpMgUp()&&(!HP_MG_SENT0||now-(Number(M.last)||0)>=HP_MG_GAP)){ const first=!HP_MG_SENT0; HP_MG_SENT0=true; await hpMgOffer(first?'開いたとき':'15 分ごと'); r='offer'; } }
+    if(typeof HP_MV_IN!=='undefined'&&HP_MV_IN&&HP_MV_IN.og){ const t=await hpMgTake('見回り'); if(t) r=r||('take '+t); }
+    if(ID.ogNew&&hpIsMain()){ const x=await hpMgRemove(); if(x) r=r||('rm '+x); hpMgFin(); } } }catch(e){}
+  try{ hpMgShow(); }catch(e){}
+  return r; }
+
+function hpMgView(){ try{ if(!ID) return ''; if(hpMgOld()) return (hpIsMain()||ID.ogDone)?'old':''; if(ID.ogIn&&hpIsChild()) return 'new';
+  const N=ID.ogNew; if(N&&!N.shut&&(!N.fin||Date.now()-N.fin<HP_MG_FIN)) return 'new'; return ''; }catch(e){ return ''; } }
+function hpMgHistOld(dev){
+  if(!dev) return {st:'todo',n:0};
+  let res=false, prog=false, n=0;
+  try{ const m=(typeof hpShMap==='function')?hpShMap():{}; res=!!m[dev]; }catch(e){}
+  try{ const P=(typeof hpSpLoad==='function')?hpSpLoad():{}; prog=!!(P[dev]&&P[dev].p&&typeof P[dev].p==='object'&&Object.keys(P[dev].p).length); }catch(e){}
+  try{ const x=(typeof HP_HIST_TX!=='undefined'&&HP_HIST_TX)?HP_HIST_TX[dev]:null; if(x&&x.st==='send'){ prog=true; n=Number(x.n)||0; } }catch(e){}
+  return (res||prog)?{st:'now',n:n}:{st:'done',n:0}; }
+function hpMgModel(v){
+  const S=[], st=(t,s,o)=>Object.assign({t:t,st:s,notes:[],btns:[]},o||{});
+  if(v==='old'){
+    const M=ID.ogMv, D=ID.ogDone, dev=(M&&M.dev)||(D&&D.to)||'', h=M?M.h:(D?D.h:1);
+    const s1=st(T('mg_s1_old'),(M||D)?'done':'now'); if(s1.st==='now'){ s1.notes.push(T('mg_n1_old')); s1.btns.push({a:'open',k:'btn_og_open',pri:1},{a:'link',k:'btn_link_start'}); }
+    const s3=st(T('mg_s3'),D?'done':(M?'now':'todo')); if(s3.st==='now') s3.notes.push(T(M.err==='nopaper'?'mg_n_nopaper':'mg_n3_old'));
+    let s4; if(!M&&!D) s4=st(T('mg_s4'),'todo'); else if(!h) s4=st(T('mg_s4'),'none'); else { const x=hpMgHistOld(dev); s4=st(T('mg_s4'),x.st); if(x.st==='now') s4.notes.push(x.n?TF('mg_n4_old_send',{n:x.n}):T('mg_n4_old_wait')); }
+    S.push(s1, st(T('mg_s2_old'),D?'done':'there'), s3, s4, st(T('mg_s5'),'there'), st(T('mg_s6'),'there'));
+    return {v:v, lead:T(D?'mg_lead_old_moved':'mg_lead_old'), steps:S, fin:false}; }
+  const I=ID.ogIn, N=ID.ogNew, from=(N&&N.from)||(I&&I.from)||'', vault=hpVaultOn();
+  const histOk=N?hpMgHistOk(N):!!(I&&(!I.h||hpMgHistAt(I.from)));
+  const s2=st(T('mg_s2_new'),vault?'done':'now'); if(s2.st==='now'){ s2.notes.push(T('mg_n2_new')); s2.btns.push({a:'vault',k:'btn_mg_vault',pri:1}); }
+  const s3=st(T('mg_s3_new'),N?'done':(vault?'now':'todo'));
+  if(s3.st==='now'){ if(HP_MG_ERR){ s3.notes.push(TF('mg_n3_err',{err:HP_MG_ERR})); s3.btns.push({a:'retry',k:'btn_mg_retry',pri:1}); } else s3.notes.push(T((typeof HP_MV_IN!=='undefined'&&HP_MV_IN&&HP_MV_IN.og)?'mg_n3_take':'mg_n3_wait')); }
+  const s4=st(T('mg_s4'),(N&&!N.h)||(I&&!I.h)?'none':(histOk?'done':'now'));
+  if(s4.st==='now'){ s4.notes.push(T('mg_n4_new')); if(N&&Date.now()-Number(N.at)>HP_MG_SKIP){ s4.notes.push(T('mg_n4_skip')); s4.btns.push({a:'skip',k:'btn_mg_skip'}); } }
+  const s5=st(T('mg_s5'),(N&&N.rm)?'done':((N&&histOk)?'now':'todo')); if(s5.st==='now') s5.notes.push(T('mg_n5_now')); if(s5.st==='done'&&N.th>0) s5.notes.push(TF('mg_n5_th',{n:N.th}));
+  let s6=st(T('mg_s6'),(N&&N.fin)?'done':((N&&N.rm)?'now':'todo'));
+  if(s6.st==='now'){ let cur=''; try{ cur=String((typeof POST!=='undefined'&&POST&&POST.url)||''); }catch(e){} if(HP_MG_PV&&HP_MG_PV.url===cur){ if(HP_MG_PV.old){ s6.notes.push(T('mg_n6_now')); s6.btns.push({a:'move',k:'btn_mg_move',pri:1}); } } else s6.notes.push(T('mg_n6_chk')); }
+  S.push(st(T('mg_s1_new'),'done'), s2, s3, s4, s5, s6);
+  const fin=!!(N&&N.fin); return {v:v, lead:T(fin?'mg_lead_fin':'mg_lead_new'), steps:S, fin:fin, btns:fin?[{a:'close',k:'btn_close'}]:[]}; }
+function hpMgAct(a){ try{
+  if(a==='open'){ try{ window.open((typeof HP_OG_URL!=='undefined'?HP_OG_URL:'https://handpost.page/'),'_blank','noopener'); }catch(e){} return a; }
+  if(a==='link'){ try{ if(typeof hpGoCard==='function') hpGoCard('dev-card'); }catch(e){} try{ const b=document.getElementById('btn-link-start'); if(b&&!b.disabled&&typeof hpLinkStartBtn==='function') hpLinkStartBtn(b); }catch(e){} return a; }
+  if(a==='vault'){ try{ if(typeof hpGoCard==='function') hpGoCard('vault-card'); }catch(e){} return a; }
+  if(a==='retry'){ HP_MG_ERR=''; Promise.resolve(hpMgTake('もう一度')).catch(()=>{}); hpMgShow(); return a; }
+  if(a==='skip'){ Promise.resolve(hpAsk({text:T('cf_mg_skip'),danger:true,ok:T('btn_mg_skip'),why:'待たずに進む'})).then(v=>{ if(v&&ID&&ID.ogNew){ ID.ogNew.skip=Date.now(); saveID(); hpLog('移る手順：待たずに進めた（過去の手紙を写し終えるのを待たない）'); hpMgShow(); } }).catch(()=>{}); return a; }
+  if(a==='move'){ if(typeof hpOvGo==='function') hpOvGo(); else if(typeof hpGoCard==='function') hpGoCard('post-move'); return a; }
+  if(a==='close'){ if(ID&&ID.ogNew){ ID.ogNew.shut=Date.now(); saveID(); } hpMgShow(); return a; }
+  }catch(e){} return ''; }
+function hpMgShow(){ try{
+  if(typeof document==='undefined'||!document||!document.body||!document.getElementById) return '';
+  const v=hpMgView(), og=document.getElementById('oldpg-note'); let n=document.getElementById('hp-mg');
+  if(!v){ if(n&&n.parentNode) n.parentNode.removeChild(n); if(og&&og.style&&og.style.display==='none') og.style.display=''; HP_MG_KEY=''; return 'off'; }
+  if(og&&og.style) og.style.display='none';
+  const m=hpMgModel(v), key=JSON.stringify(m);
+  if(!n){ n=document.createElement('div'); n.id='hp-mg'; n.style.cssText='flex:0 0 auto;margin:0 0 8px;padding:10px 12px;border:1px solid #35d1b7;border-radius:10px;background:#061a17;color:var(--ink,#e6edf6);font-size:13px;line-height:1.6';
+    try{ if(document.head&&!document.getElementById('hp-mg-css')){ const st=document.createElement('style'); st.id='hp-mg-css'; st.textContent='#p-chat:not(.list-mode)>#hp-mg{display:none}'; document.head.appendChild(st); } }catch(e){}
+    const pc=document.getElementById('p-chat'), bn=document.getElementById('banner');
+    if(pc) pc.insertBefore(n,pc.firstChild||null); else if(bn&&bn.parentNode) bn.parentNode.insertBefore(n,bn.nextSibling); else document.body.insertBefore(n,document.body.firstChild); HP_MG_KEY=''; }
+  if(key===HP_MG_KEY) return 'same';
+  HP_MG_KEY=key; n.textContent='';
+  const el=(tag,css,txt)=>{ const e=document.createElement(tag); if(css) e.style.cssText=css; if(txt!=null) e.textContent=txt; return e; };
+  const btn=(b)=>{ const x=el('button','margin:6px 8px 0 0'); x.className=b.pri?'b pri':'b'; x.type='button'; x.textContent=T(b.k); x.setAttribute&&x.setAttribute('data-mg',b.a); x.onclick=()=>hpMgAct(b.a); return x; };
+  n.appendChild(el('div','font-weight:700;color:#35d1b7',T('mg_title')));
+  n.appendChild(el('div','margin:2px 0 6px',m.lead));
+  const MK={done:['✓','#35d1b7'],now:['●','#e6edf6'],todo:['○','#8fa3b8'],there:['○','#8fa3b8'],none:['–','#8fa3b8']};
+  m.steps.forEach((s,i)=>{ const row=el('div','display:flex;gap:6px;align-items:flex-start;margin-top:2px'+(s.st==='now'?';font-weight:600':'')+((s.st==='todo'||s.st==='there'||s.st==='none')?';color:#8fa3b8':''));
+    const mk=MK[s.st]||MK.todo; row.appendChild(el('span','flex:0 0 auto;width:1.2em;text-align:center;color:'+mk[1],mk[0]));
+    row.appendChild(el('span','flex:1 1 auto',String.fromCharCode(0x2460+i)+' '+s.t+(s.st==='there'?' '+T('mg_there'):(s.st==='none'?' '+T('mg_none'):''))));
+    n.appendChild(row);
+    if(s.notes.length||s.btns.length){ const box=el('div','margin:2px 0 4px 1.8em;font-weight:400;color:var(--ink,#e6edf6)'); for(const t of s.notes) box.appendChild(el('div','white-space:normal',t)); if(s.btns.length){ const r=el('div',''); for(const b of s.btns) r.appendChild(btn(b)); box.appendChild(r); } n.appendChild(box); } });
+  if(m.btns&&m.btns.length){ const r=el('div','margin-top:6px'); for(const b of m.btns) r.appendChild(btn(b)); n.appendChild(r); }
+  return v; }catch(e){ return ''; } }
+function hpMgOgText(){ try{ if(typeof document==='undefined'||!document||!document.getElementById) return ''; const t=document.getElementById('oldpg-text'); if(!t) return '';
+  let k='og_text'; if(!ID){ let d=null; try{ d=localStorage.getItem('p2p_ogdone'); }catch(e){} if(d) k='og_done'; } else if(hpIsChild()&&!ID.ogDone) k='og_sub';
+  const s=T(k); if(t.textContent!==s) t.textContent=s; return k; }catch(e){ return ''; } }
+function hpMgLinkUi(){ try{ if(typeof document==='undefined'||!document||!document.getElementById) return ''; const w=document.getElementById('hp-link-warn'); if(!w||!w.parentNode) return '';
+  let m=document.getElementById('hp-link-mv'); const L=(typeof HP_LINK!=='undefined')?HP_LINK:null, q=L&&L.req, on=!!(q&&q.mv&&!L.busy);
+  if(!on){ if(m&&m.style) m.style.display='none'; return 'off'; }
+  if(!m){ m=document.createElement('div'); m.id='hp-link-mv'; m.className='note'; m.style.cssText='margin-top:6px;color:#35d1b7;font-size:13px'; w.parentNode.insertBefore(m,w.nextSibling||null); }
+  m.textContent=T('nt_link_mv'); m.style.display=''; return 'on'; }catch(e){ return ''; } }
+
+try{ if(typeof hpLinkOnReq==='function'&&!hpLinkOnReq.__mg){ const f=hpLinkOnReq; hpLinkOnReq=Object.assign(async function(r){ const v=await f.apply(this,arguments); try{ hpMgOnReq(r); }catch(e){} return v; },f,{__mg:1}); } }catch(e){}
+try{ if(typeof hpLinkApprove==='function'&&!hpLinkApprove.__mg){ const f=hpLinkApprove; hpLinkApprove=Object.assign(async function(){ const L=(typeof HP_LINK!=='undefined')?HP_LINK:null, q=L&&L.req, mv=!!(q&&q.mv&&hpIsMain()), h=!(L&&L.hist===false); const v=await f.apply(this,arguments); if(v===true&&mv){ try{ hpMgStart(q,h); }catch(e){} } return v; },f,{__mg:1}); } }catch(e){}
+try{ if(typeof hpLinkUi==='function'&&!hpLinkUi.__mg){ const f=hpLinkUi; hpLinkUi=Object.assign(function(){ const v=f.apply(this,arguments); try{ hpMgLinkUi(); }catch(e){} return v; },f,{__mg:1}); } }catch(e){}
+try{ if(typeof hpAsk==='function'&&!hpAsk.__mg){ const f=hpAsk; hpAsk=Object.assign(function(o){ try{ if(o&&typeof o==='object'&&o.text===T('ask_link')&&typeof HP_LINK!=='undefined'&&HP_LINK&&HP_LINK.req&&HP_LINK.req.mv) o=Object.assign({},o,{text:T('ask_link_mv')}); }catch(e){} return f.call(this,o); },f,{__mg:1}); } }catch(e){}
+try{ if(typeof hpMvOfferIn==='function'&&!hpMvOfferIn.__mg){ const f=hpMvOfferIn; hpMvOfferIn=Object.assign(async function(o,r){ if(o&&o.og===1) return await hpMgOfferIn(o,r); return await f.apply(this,arguments); },f,{__mg:1}); } }catch(e){}
+try{ if(typeof hpMvDemote==='function'&&!hpMvDemote.__mg){ const f=hpMvDemote; hpMvDemote=Object.assign(async function(main,s){ const M=ID&&ID.ogMv; const v=await f.apply(this,arguments);
+  try{ if(M&&ID&&main&&main.dev===M.dev){ ID.ogDone={ to:M.dev, label:M.label||'', at:Date.now(), h:M.h?1:0 }; delete ID.ogMv; saveID(); hpLog('移る手順：新しい場所の端末が管理用の端末になった（この端末はふつうの端末になった）'); } else if(M&&ID&&ID.ogMv){ delete ID.ogMv; saveID(); } }catch(e){}
+  try{ hpMgShow(); }catch(e){} return v; },f,{__mg:1}); } }catch(e){}
+try{ if(typeof hpMvBox==='function'&&!hpMvBox.__mg){ const f=hpMvBox; hpMvBox=Object.assign(function(card){ const M=(typeof HP_MV_IN!=='undefined')?HP_MV_IN:null; if(M&&M.og){ HP_MV_IN=null; try{ return f.apply(this,arguments); }finally{ if(HP_MV_IN===null) HP_MV_IN=M; } } return f.apply(this,arguments); },f,{__mg:1}); } }catch(e){}
+try{ if(typeof sibHistDone==='function'&&!sibHistDone.__mg){ const f=sibHistDone; sibHistDone=Object.assign(function(id,o){ const v=f.apply(this,arguments); try{ hpMgHistNote(id); }catch(e){} return v; },f,{__mg:1}); } }catch(e){}
+try{ if(typeof hpOvOnClaim==='function'&&!hpOvOnClaim.__mg){ const f=hpOvOnClaim; hpOvOnClaim=Object.assign(function(o){ try{ if(o&&o.ok==='claim'&&typeof POST!=='undefined'&&POST&&POST.url) HP_MG_PV={ url:String(POST.url), old:typeof o.pv!=='string', at:Date.now() }; }catch(e){} return f.apply(this,arguments); },f,{__mg:1}); } }catch(e){}
+try{ if(typeof hpOvDue==='function'&&!hpOvDue.__mg){ const f=hpOvDue; hpOvDue=Object.assign(function(){ if(hpMgView()) return false; return f.apply(this,arguments); },f,{__mg:1}); } }catch(e){}
+try{ if(typeof hpOgShow==='function'&&!hpOgShow.__mg){ const f=hpOgShow; hpOgShow=Object.assign(function(){ const v=f.apply(this,arguments); try{ hpMgOgText(); }catch(e){} try{ hpMgShow(); }catch(e){} return v; },f,{__mg:1}); } }catch(e){}
+try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){ setTimeout(()=>{ try{ Promise.resolve(hpMgTick()).catch(()=>{}); }catch(e){} },3000); setInterval(()=>{ try{ Promise.resolve(hpMgTick()).catch(()=>{}); }catch(e){} },HP_MG_TICK);
+  document.addEventListener('visibilitychange',()=>{ try{ if(document.visibilityState==='visible') hpMgSeen(); }catch(e){} }); try{ window.addEventListener('focus',()=>{ try{ hpMgSeen(); }catch(e){} }); }catch(e){} } }catch(e){}
+

@@ -854,7 +854,7 @@ async function hpLinkJoin(text, label){
   const kp=await hpDevKey(), dev=hpHex(kp.publicKey), pre=await hpPrekeyPub();
   if(card.devices[0]===dev) throw new Error(T('e_join_same'));
   label=String(label||hpDevLabelGuess()).slice(0,32);
-  await hpPut(card, JSON.stringify({ v:1, type:'link-req', proof:hpLinkProof(o.secret, card.id, dev, pre.x25519), label:label }), 'sig', { link:true });
+  await hpPut(card, JSON.stringify({ v:1, type:'link-req', proof:hpLinkProof(o.secret, card.id, dev, pre.x25519), label:label, site:(typeof hpMgHere==='function'&&hpMgHere())?'handpost.page':undefined }), 'sig', { link:true });
   if(HP_JOIN&&HP_JOIN.timer) clearInterval(HP_JOIN.timer);
   HP_JOIN={ id:card.id, master:card.master, mainDev:card.devices[0], dev:dev, label:label, secret:o.secret, exp:o.exp, sas:hpLinkSas(o.secret, card.id, card.devices[0], dev, pre.x25519), stash:[], timer:null };
   try{ localStorage.setItem('p2p_post', card.post[0]); }catch(e){}
@@ -1321,11 +1321,13 @@ async function hpOnRemoved(o){
   hpWipeSelf(); return true;
 }
 function hpWipeSelf(){
+  const mg=(typeof hpMgOld==='function')&&hpMgOld();
   try{ stopBg(); }catch(e){}
   try{ hpVaultForget(); }catch(e){}
   ID=null; EDPRIV=null; try{ REQUESTS.length=0; }catch(e){}
   const go=()=>{ try{ if(typeof location!=='undefined'&&location.reload) location.reload(); }catch(e){} };
-  let p=null; try{ p=alert(T('al_removed')); }catch(e){}
+  if(mg){ try{ localStorage.setItem('p2p_ogdone',String(Date.now())); }catch(e){} }
+  let p=null; try{ p=alert(T(mg?'al_removed_mg':'al_removed')); }catch(e){}
   if(p&&typeof p.then==='function') p.then(go,go); else go();
 }
 
