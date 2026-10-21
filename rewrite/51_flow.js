@@ -547,24 +547,205 @@ function hpAdWhy(r){ const w=String((r&&r.why)||'');
   if(w==='bad sig'||w==='bad claim') return T('ad_e_sig'); if(w==='killed') return T('ad_e_killed'); if(w==='down') return T('ad_e_down'); if(w==='noreply') return T('ad_e_noreply');
   if(w==='busy') return T('ad_checking'); if(w==='notsub') return T('ad_e_notsub');
   return TF('ad_e_other',{e:(r&&r.e)||w||'?'}); }
+async function hpAdGo(url,st,row){
+  st.style.color=''; st.textContent=T('ad_checking'); let r=null;
+  try{ r=await hpAdUse(url); }catch(e){ r={why:'other',e:String((e&&e.message)||e)}; }
+  if(r&&r.ok){ try{ if(row&&typeof hpAxKeep==='function') hpAxKeep(row); }catch(e){} st.style.color='var(--teal)'; st.textContent=TF('ad_ok',{h:String(url).trim().replace(/^wss:\/\//,'')})+(((typeof hpLeaseAcct==='function')&&hpLeaseAcct())?'':'\n'+T('ad_lease_nt')); }
+  else { st.style.color='var(--amber)'; st.textContent=hpAdWhy(r); }
+  return r; }
 function hpAdUi(c){
+
   try{ if(!c||!c.querySelector) return false; const on=typeof hpBfOn==='function'&&hpBfOn(); let row=c.querySelector('#bf-adopt');
     if(!on){ if(row&&row.parentNode) row.parentNode.removeChild(row); return false; }
     if(row) return true;
     row=hpFlEl('div',''); row.id='bf-adopt'; row.style.cssText='margin-top:8px';
     const f=hpFlEl('div',''); f.id='bf-adopt-form'; f.style.cssText='display:none;margin-top:8px';
-    const r1=hpFlEl('div','row'); r1.style.cssText='justify-content:flex-start'; const ob=hpFlBtn('btn_ad_open',()=>{ f.style.display=(f.style.display==='none')?'':'none'; }); ob.id='btn-ad-open'; r1.appendChild(ob); row.appendChild(r1);
+    const r1=hpFlEl('div','row'); r1.style.cssText='justify-content:flex-start'; const ob=hpFlBtn('btn_ad_open',()=>{ const show=f.style.display==='none'; f.style.display=show?'':'none'; if(show&&typeof hpAxOpen==='function') hpAxOpen(false); }); ob.id='btn-ad-open'; r1.appendChild(ob); row.appendChild(r1);
     const nt=hpFlEl('div','note',T('ad_note')); nt.style.cssText='white-space:pre-line;line-height:1.5'; f.appendChild(nt);
-    const inp=document.createElement('input'); inp.id='bf-adopt-url'; inp.type='text'; inp.placeholder=T('ad_ph'); inp.setAttribute('autocomplete','off'); inp.setAttribute('autocapitalize','off'); inp.setAttribute('spellcheck','false'); inp.style.cssText='width:100%;margin-top:6px'; f.appendChild(inp);
-    const st=hpFlEl('div','note',''); st.id='bf-adopt-st'; st.style.cssText='margin-top:6px;white-space:pre-line;line-height:1.5';
-    const r2=hpFlEl('div','row'); r2.style.cssText='margin-top:8px;justify-content:flex-start';
+    const ax=hpFlEl('div',''); ax.id='ax-box'; ax.style.cssText='margin-top:8px'; f.appendChild(ax);
+    const st=hpFlEl('div','note',''); st.id='bf-adopt-st'; st.style.cssText='margin-top:6px;white-space:pre-line;line-height:1.5'; f.appendChild(st);
+    const axn=hpFlEl('div',''); axn.id='ax-nt'; f.appendChild(axn);
+    const man=hpFlEl('div',''); man.id='bf-adopt-man'; man.style.cssText='display:none;margin-top:8px';
+    const mn=hpFlEl('div','note',T('ad_man_nt')); mn.style.cssText='white-space:pre-line;line-height:1.5'; man.appendChild(mn);
+    const inp=document.createElement('input'); inp.id='bf-adopt-url'; inp.type='text'; inp.placeholder=T('ad_ph'); inp.setAttribute('autocomplete','off'); inp.setAttribute('autocapitalize','off'); inp.setAttribute('spellcheck','false'); inp.style.cssText='width:100%;margin-top:6px'; man.appendChild(inp);
+    const r3=hpFlEl('div','row'); r3.style.cssText='margin-top:6px;justify-content:flex-start';
+    const r2=hpFlEl('div','row'); r2.style.cssText='margin-top:8px;justify-content:flex-start;flex-wrap:wrap;gap:8px';
     let ub=null, cb=null;
-    ub=hpFlBtn('btn_ad_use',async()=>{ ub.disabled=true; cb.disabled=true; st.style.color=''; st.textContent=T('ad_checking');
-        let r=null; try{ r=await hpAdUse(inp.value); }catch(e){ r={why:'other',e:String((e&&e.message)||e)}; } ub.disabled=false; cb.disabled=false;
-        if(r&&r.ok){ st.style.color='var(--teal)'; st.textContent=TF('ad_ok',{h:String(inp.value).trim().replace(/^wss:\/\//,'')})+(((typeof hpLeaseAcct==='function')&&hpLeaseAcct())?'':'\n'+T('ad_lease_nt')); }
-        else { st.style.color='var(--amber)'; st.textContent=hpAdWhy(r); } },true); ub.id='btn-ad-use';
-    cb=hpFlBtn('btn_ad_cancel',()=>{ f.style.display='none'; st.textContent=''; }); cb.id='btn-ad-cancel'; cb.style.cssText='margin-left:8px';
-    r2.appendChild(ub); r2.appendChild(cb); f.appendChild(r2); f.appendChild(st); row.appendChild(f);
-    c.appendChild(row); return true; }catch(e){ return false; } }
+    ub=hpFlBtn('btn_ad_use',async()=>{ ub.disabled=true; cb.disabled=true; try{ await hpAdGo(inp.value,st,null); } finally{ ub.disabled=false; cb.disabled=false; } },true); ub.id='btn-ad-use'; r3.appendChild(ub); man.appendChild(r3);
+    const rb=hpFlBtn('btn_ax_reload',()=>{ if(typeof hpAxOpen==='function') hpAxOpen(true); }); rb.id='btn-ax-reload';
+    const mb=hpFlBtn('btn_ax_man',()=>{ man.style.display=(man.style.display==='none')?'':'none'; }); mb.id='btn-ax-man';
+    cb=hpFlBtn('btn_ad_cancel',()=>{ f.style.display='none'; man.style.display='none'; st.textContent=''; }); cb.id='btn-ad-cancel';
+    r2.appendChild(rb); r2.appendChild(mb); r2.appendChild(cb); f.appendChild(r2); f.appendChild(man); row.appendChild(f);
+    c.appendChild(row); try{ if(typeof hpAxBind==='function') hpAxBind(ax,st,axn); }catch(e){} return true; }catch(e){ return false; } }
 hpBfDrawClosed=(function(f){ return function(c){ const r=f.apply(this,arguments); try{ hpAdUi(c); }catch(e){} return r; }; })(hpBfDrawClosed);
+
+const HP_AX_MIN=7, HP_AX_WARN=14, HP_AX_PAR=2, HP_AX_CONN=15000, HP_AX_FRESH=600e3, HP_AX_UPLOW=97, HP_AX_REPLOW=200;
+let HP_AX=null, HP_AX_RUN=null, HP_AX_CK=false, HP_AX_PB={}, HP_AX_EL=null, HP_AX_ST=null, HP_AX_NT=null, HP_AX_GO='', HP_AX_TT=null;
+function hpAxUrlOk(u){ return /^wss:\/\/[a-z0-9.-]+:[0-9]{2,5}$/i.test(String(u||''))&&(typeof hpC4PostOk!=='function'||hpC4PostOk(String(u))); }
+function hpAxHost(u){ return ((/^wss:\/\/([^:\/]+)/i.exec(String(u||''))||[])[1]||'').toLowerCase(); }
+function hpAxAid(a){ try{ a=String(a||''); if(!/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(a)) return ''; let n=0n; for(const ch of a){ const i=HP_B58.indexOf(ch); if(i<0) return ''; n=n*58n+BigInt(i); } let h=n.toString(16); while(h.length<50) h='0'+h; return h.length===50?h.slice(2,42).toUpperCase():''; }catch(e){ return ''; } }
+function hpAxDate(ms){ const d=new Date(ms), p=n=>String(n).padStart(2,'0'); return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+function hpAxAcct(a){ let n=''; try{ n=(typeof hpXmNameOf==='function')?hpXmNameOf(a):''; }catch(e){} return n?n+'（'+String(a).slice(0,6)+'…）':String(a).slice(0,8)+'…'; }
+async function hpAxLedger(acct,C,onProg){
+  const size=(C&&Number(C.size)>0)?Number(C.size):3600;
+  return hpXahauSess(async q=>{
+    const o=await q({command:'account_objects',account:acct,ledger_index:'validated'});
+    const tob=((o&&o.account_objects)||[]).filter(hpIsLeaseTok), inf={}, okh={}, acq={}; let marker=null, pages=0, n=0;
+    for(const t of tob) inf[String(t.index).toUpperCase()]={host:String(t.Issuer||''),buy:0,unit:0,hash:'',ext:{}};
+    const ks=Object.keys(inf);
+    if(ks.length){ do{ const x=await q(Object.assign({command:'account_tx',account:acct,limit:200},marker?{marker:marker}:{})); pages++;
+        for(const e of ((x&&x.transactions)||[])){ n++; const tx=(e&&(e.tx||e.tx_json))||{}; if(((e&&e.meta&&e.meta.TransactionResult)||'')!=='tesSUCCESS') continue;
+          const h=String(tx.hash||(e&&e.hash)||'').toUpperCase(), ty=hpHexStr(hpLgParam(tx,HP_LG_TYPE)), tk=String(tx.URITokenID||'').toUpperCase(), when=(Number(tx.date)+HP_LG_EPOCH)*1000;
+          if(tx.TransactionType==='URITokenBuy'&&tx.Account===acct&&inf[tk]&&!inf[tk].buy){ inf[tk].buy=when; inf[tk].unit=hpLgAmt(tx.Amount); inf[tk].hash=h; }
+          else if(tx.TransactionType==='Payment'&&tx.Account===acct&&ty==='evnExtendLease'){ const k=hpLgParam(tx,HP_LG_REF).toUpperCase(); if(inf[k]) inf[k].ext[h]=hpLgAmt(tx.Amount); }
+          else if(tx.TransactionType==='Payment'&&tx.Account!==acct&&ty==='evnExtendSuccess'){ okh[hpLgParam(tx,HP_LG_REF).toUpperCase()]=hpLgMom(tx)||1; }
+          else if(tx.TransactionType==='Payment'&&tx.Account!==acct&&ty==='evnAcquireSuccess'){ const ref=hpLgParam(tx,HP_LG_REF).toUpperCase(); if(ref&&!acq[ref]) acq[ref]=hpEvMemo0(tx).data; } }
+        marker=(x&&x.marker)||null; try{ if(onProg) onProg(n); }catch(e){}
+      } while(marker&&ks.some(k=>!inf[k].buy)&&pages<HP_LG_PAGES); }
+    const hosts={};
+    for(const k of ks){ const a=inf[k].host; if(!a||hosts[a]) continue; const H={dom:'',rep:null,aid:hpAxAid(a)}; hosts[a]=H;
+      try{ const ai=await q({command:'account_info',account:a,ledger_index:'validated'}); H.dom=hpHexStr((ai&&ai.account_data&&ai.account_data.Domain)||'').toLowerCase().replace(/[^a-z0-9.-]/g,''); }catch(e){}
+      try{ if(H.aid){ const key='45565203'+'0'.repeat(16)+H.aid, r=await q({command:'ledger_entry',hook_state:{account:HP_GOV,key:key,namespace_id:HP_EVN_NS},ledger_index:'validated'}), d=hpHostDecode(key,(r&&r.node&&r.node.HookStateData)||''); if(d&&d.rep!=null) H.rep=d.rep; } }catch(e){} }
+    const toks=[];
+    for(const k of ks){ const I=inf[k]; let paid=I.unit, mom=0; for(const h of Object.keys(I.ext)){ if(okh[h]){ paid+=I.ext[h]; if(okh[h]>mom) mom=okh[h]; } }
+      const nm=(I.buy&&I.unit>0)?Math.round(paid/I.unit):0; let exp=0;
+      if(nm>0) exp=I.buy+nm*size*1000; else if(mom>1&&C){ try{ exp=hpMomStart(mom,C); }catch(e){ exp=0; } }
+      toks.push({tok:k,host:I.host,dom:(hosts[I.host]&&hosts[I.host].dom)||'',buy:I.buy,exp:exp,acq:I.hash?(acq[I.hash]||''):''}); }
+    return {toks:toks,hosts:hosts,n:n}; },120000,30000); }
+function hpAxKnown(acct,single){
+  const out=[], add=u=>{ u=String(u||'').trim().replace(/\/+$/,''); if(hpAxUrlOk(u)&&out.indexOf(u)<0) out.push(u); };
+  try{ const m=(ID.acctByUrl&&typeof ID.acctByUrl==='object'&&!Array.isArray(ID.acctByUrl))?ID.acctByUrl:{}, loose=u=>{ u=String(u||''); if(m[u]?m[u]===acct:single) add(u); };
+    for(const u of Object.keys(m)) if(m[u]===acct) add(u);
+    if(typeof hpLeaseAcct==='function'&&hpLeaseAcct()===acct) add(hpPostUrl()); else loose(hpPostUrl());
+    try{ const o=(typeof hpOldGet==='function')?hpOldGet():null; if(o) loose(o.url); }catch(e){}
+    try{ if(ID.link&&ID.link.postOld) loose(ID.link.postOld.url); if(ID.leaseOld) loose(ID.leaseOld.url); }catch(e){}
+    for(const d of (typeof hpSibs==='function'?hpSibs():[])){ try{ loose(hpMcBoxOf(d.dev)); }catch(e){} } }catch(e){}
+  return out; }
+async function hpAxRows(acct,L,single){
+  const toks=L.toks.map(t=>Object.assign({},t,{url:'',src:''})), taken=u=>toks.some(x=>x.url===u);
+  let seeds=[]; try{ seeds=((typeof hpLsMs==='function')&&await hpLsMs(acct))||[]; }catch(e){ seeds=[]; }
+  for(const t of toks){ if(!t.acq) continue; for(const sd of seeds){ try{ const u=hpEvUrl(hpEvInfo(await hpEvOpen(hpHexStr(t.acq),sd))); if(hpAxUrlOk(u)&&!taken(u)){ t.url=u; t.src='key'; break; } }catch(e){} } }
+  try{ const lb=(ID.leaseByUrl&&typeof ID.leaseByUrl==='object')?ID.leaseByUrl:{}; for(const u of Object.keys(lb)){ const k=String(lb[u]||'').toUpperCase(), t=toks.find(x=>x.tok===k&&!x.url); if(t&&hpAxUrlOk(u)&&!taken(u)){ t.url=u; t.src='keep'; } } }catch(e){}
+  const G={}; for(const t of toks){ if(t.url||!t.dom) continue; (G[t.dom]=G[t.dom]||{t:[],u:[]}).t.push(t); }
+  for(const u of hpAxKnown(acct,single)){ if(taken(u)) continue; const g=G[hpAxHost(u)]; if(g&&g.u.indexOf(u)<0) g.u.push(u); }
+  const rows=[], amb=new Set();
+  for(const d of Object.keys(G)){ const g=G[d]; if(!g.u.length) continue;
+    if(g.t.length===1&&g.u.length===1){ g.t[0].url=g.u[0]; g.t[0].src='dom'; continue; }
+    const ex=g.t.map(t=>Number(t.exp)||0), mn=ex.every(x=>x>0)?Math.min(...ex):0;
+    for(const u of g.u) rows.push({acct:acct,url:u,tok:'',host:g.t[0].host,dom:d,exp:mn,buy:0,amb:g.t.length,src:'amb'});
+    for(let i=g.u.length;i<g.t.length;i++) rows.push({acct:acct,url:'',tok:'',host:g.t[0].host,dom:d,exp:0,buy:0,amb:g.t.length,src:''});
+    for(const t of g.t) amb.add(t.tok); }
+  for(const t of toks){ if(!amb.has(t.tok)) rows.push({acct:acct,url:t.url,tok:t.tok,host:t.host,dom:t.dom,exp:t.exp,buy:t.buy,amb:0,src:t.src}); }
+  return rows; }
+async function hpAxScan(){
+  const accts=(typeof hpMfAccts==='function')?hpMfAccts():[];
+  if(!accts.length){ HP_AX={st:'noacct',at:Date.now(),rows:[]}; hpAxDraw(); return HP_AX; }
+  HP_AX={st:'busy',at:Date.now(),rows:[],n:0,accts:accts}; hpAxDraw();
+  let C=null; try{ C=await hpMomCfg(); }catch(e){ C=null; }
+  const rows=[], hosts={}; let cnt=0, err='', okN=0;
+  for(const a of accts){ let L=null;
+    try{ L=await hpAxLedger(a,C,n=>{ if(HP_AX&&HP_AX.st==='busy'){ HP_AX.n=n; hpAxTick(); } }); }catch(e){ err=String((e&&e.message)||e).slice(0,80); continue; }
+    okN++; cnt+=L.toks.length; Object.assign(hosts,L.hosts); for(const r of await hpAxRows(a,L,accts.length===1)) rows.push(r); }
+  if(!okN){ HP_AX={st:'err',at:Date.now(),rows:[],why:err||'?'}; hpLog('借りている郵便受けを台帳から読めない（'+(err||'?')+'）'); hpAxDraw(); return HP_AX; }
+  HP_AX={st:'ok',at:Date.now(),rows:rows,cnt:cnt,hosts:hosts,accts:accts,part:err};
+  hpLog('借りている郵便受けを台帳から読んだ（札 '+cnt+' 枚・場所の分かるもの '+rows.filter(r=>r.url).length+'）');
+  hpAxDraw(); hpAxCheck().catch(()=>{}); return HP_AX; }
+function hpAxOpen(force){
+  try{ if(HP_AX_RUN) return HP_AX_RUN; const X=HP_AX;
+    if(!force&&X&&X.st==='ok'&&Date.now()-X.at<HP_AX_FRESH){ hpAxDraw(); hpAxCheck().catch(()=>{}); return Promise.resolve(X); }
+    if(force) HP_AX_PB={};
+    HP_AX_RUN=hpAxScan().catch(e=>{ HP_AX={st:'err',at:Date.now(),rows:[],why:String((e&&e.message)||e).slice(0,80)}; hpAxDraw(); return HP_AX; }).finally(()=>{ HP_AX_RUN=null; });
+    return HP_AX_RUN; }catch(e){ return Promise.resolve(null); } }
+function hpAxUsers(url){ const o={me:false,sibs:[]};
+  try{ o.me=String((typeof hpPostUrl==='function'&&hpPostUrl())||'')===url;
+    for(const d of (typeof hpSibs==='function'?hpSibs():[])){ if(!d||!d.devSig) continue; let b=''; try{ b=String((typeof hpMcBoxOf==='function'&&hpMcBoxOf(d.dev))||''); }catch(e){} if(b===url) o.sibs.push(d); } }catch(e){}
+  return o; }
+function hpAxLabel(d){ try{ if(typeof hpMvLabel==='function') return hpMvLabel(d.dev); if(typeof hpDevName==='function') return hpDevName(d.label); }catch(e){} return String((d&&(d.label||d.dev))||'').slice(0,12); }
+function hpAxWhy0(r,now){
+  if(!r.url) return 'unk'; const u=hpAxUsers(r.url); if(u.me) return 'cur'; if(u.sibs.length) return 'sib:'+hpAxLabel(u.sibs[0]);
+  if(!(Number(r.exp)>0)) return 'noexp'; if(Number(r.exp)-(now||Date.now())<HP_AX_MIN*864e5) return 'short'; return ''; }
+function hpAxWhy(r,now){ const w=hpAxWhy0(r,now); if(w) return w; const p=HP_AX_PB[r.url]; return (p&&p.st==='down')?'down':''; }
+function hpAxSort(rows,now){ const rank=r=>{ const w=hpAxWhy(r,now); return w===''?0:(w==='cur'||w.indexOf('sib:')===0)?1:w==='unk'?3:2; }, up=r=>{ const x=(r.host&&typeof HP_UP!=='undefined')?HP_UP[r.host]:null; return (x&&x.st==='ok')?Number(x.pct)||0:-1; };
+  return rows.slice().sort((a,b)=>(rank(a)-rank(b))||((Number(b.exp)||0)-(Number(a.exp)||0))||(up(b)-up(a))||String(a.url||a.dom).localeCompare(String(b.url||b.dom))); }
+async function hpAxProbe(url){
+  let c=null; const t0=Date.now();
+  try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url],kp); let up=false; try{ up=await hpWithin(c.connect(),HP_AX_CONN,'借りている郵便受けへのつなぎ'); }catch(e){ up=false; }
+    return up?{st:'ok',ms:Date.now()-t0}:{st:'down'}; }
+  catch(e){ return {st:'down',e:String((e&&e.message)||e).slice(0,80)}; }
+  finally{ if(c){ try{ await c.close(); }catch(e){} } } }
+function hpAxHostOf(a,H){ try{ const L=(typeof HP_HOSTS!=='undefined'&&HP_HOSTS&&Array.isArray(HP_HOSTS.hosts))?HP_HOSTS.hosts:[], h=L.find(x=>x&&x.addr===a); if(h&&h.aid) return h; }catch(e){} const aid=(H&&H.aid)||hpAxAid(a); return aid?{addr:a,aid:aid}:null; }
+async function hpAxCheck(){
+  if(HP_AX_CK) return; const X=HP_AX; if(!X||X.st!=='ok') return; HP_AX_CK=true; hpAxTick();
+  try{ const skip=new Set([String((typeof hpPostUrl==='function'&&hpPostUrl())||'')]);
+    try{ const o=(typeof hpOldGet==='function')?hpOldGet():null; if(o&&o.url) skip.add(o.url); }catch(e){} try{ for(const u of ((typeof hpFbUrls==='function'&&hpFbUrls())||[])) skip.add(u); }catch(e){}
+    const now=Date.now(), want=X.rows.filter(r=>r.url&&!skip.has(r.url)&&!hpAxWhy0(r,now)&&!(HP_AX_PB[r.url]&&HP_AX_PB[r.url].st!=='busy'&&now-HP_AX_PB[r.url].at<HP_AX_FRESH));
+    let i=0; const one=async()=>{ while(i<want.length){ const r=want[i++]; HP_AX_PB[r.url]={st:'busy',at:Date.now()}; hpAxTick(); let p=null; try{ p=await hpAxProbe(r.url); }catch(e){ p={st:'down'}; } HP_AX_PB[r.url]=Object.assign(p,{at:Date.now()}); hpAxTick(); } };
+    const P=[]; for(let k=0;k<HP_AX_PAR;k++) P.push(one());
+    const seen=new Set(); for(const r of X.rows){ if(!r.url||!r.host||seen.has(r.host)) continue; seen.add(r.host);
+      if(typeof hpUpHost!=='function'||typeof HP_UP==='undefined') break; const a=r.host, x=HP_UP[a]; if((typeof hpUpFresh==='function'&&hpUpFresh(x))||(x&&x.st==='busy')) continue;
+      const h=hpAxHostOf(a,X.hosts&&X.hosts[a]); if(!h) continue; HP_UP[a]={st:'busy',k:1,n:1,done:0,total:0}; hpAxTick();
+      try{ HP_UP[a]=await hpUpHost(h,(d,t)=>{ const u=HP_UP[a]; if(u&&u.st==='busy'){ u.done=d; u.total=t; } hpAxTick(); }); }
+      catch(e){ HP_UP[a]={st:'err',at:Date.now(),why:String((e&&e.message)||e)}; }
+      hpAxTick(); }
+    await Promise.all(P); }
+  finally{ HP_AX_CK=false; hpAxDraw(); } }
+function hpAxTick(){ if(HP_AX_TT) return; HP_AX_TT=setTimeout(()=>{ HP_AX_TT=null; hpAxDraw(); },250); }
+function hpAxBind(el,st,nt){ HP_AX_EL=el; HP_AX_ST=st; HP_AX_NT=nt||null; try{ if(HP_AX) hpAxDraw(); }catch(e){} return true; }
+async function hpAxGo(r){
+  if(HP_AX_GO||!HP_AX_ST||!r||!r.url) return null; HP_AX_GO=r.url; hpAxDraw();
+  try{ return await hpAdGo(r.url,HP_AX_ST,r); } finally{ HP_AX_GO=''; hpAxDraw(); } }
+function hpAxKeep(r){
+  try{ if(!r||!r.url||typeof ID==='undefined'||!ID) return false; if(r.acct&&typeof hpBmAcctKeep==='function') hpBmAcctKeep(r.url,r.acct);
+    const L=Object.assign({},(ID.lease&&typeof ID.lease==='object')?ID.lease:{}); if(r.acct) L.acct=r.acct; if(!L.at) L.at=Date.now();
+    if(r.tok&&!r.amb){ const m=(ID.leaseByUrl&&typeof ID.leaseByUrl==='object')?ID.leaseByUrl:{}; m[r.url]=r.tok; const ks=Object.keys(m); while(ks.length>8) delete m[ks.shift()]; ID.leaseByUrl=m;
+      L.tok=r.tok; if(r.host) L.host=r.host; if(Number(r.exp)>0) L.exp=Number(r.exp); }
+    ID.lease=L; saveID(); try{ if(typeof HP_LG_AT!=='undefined') HP_LG_AT=0; }catch(e){}
+    hpLog('使い始めた郵便受け（'+r.url+'）の借りた口座'+(L.tok&&r.tok?'と札（'+r.tok.slice(0,8)+'…・期限 '+(r.exp?hpAxDate(r.exp):'?')+'）':'')+'を控えた'); return true; }catch(e){ return false; } }
+function hpAxCss(){
+  try{ if(typeof document==='undefined'||typeof document.getElementById!=='function'||document.getElementById('ax-css')) return false; const st=document.createElement('style'); st.id='ax-css';
+    st.textContent='@media (max-width:640px){#ax-tbl{display:block}#ax-tbl tr:first-child{display:none}#ax-tbl tr{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;padding:8px 0;border-bottom:1px solid var(--line)}#ax-tbl td{border:0;padding:0;white-space:normal}#ax-tbl td:nth-child(1){flex:1 1 100%}#ax-tbl td:nth-child(1) span:first-child{word-break:break-all}#ax-tbl td:nth-child(2){flex:1 1 auto}#ax-tbl td:nth-child(7){order:1}#ax-tbl td:nth-child(n+3):nth-child(-n+6){order:2}#ax-tbl td div{display:inline-block;margin-left:6px;white-space:nowrap}#ax-tbl td[data-h]::before{content:attr(data-h);color:var(--dim);font-size:11px}}';
+    (document.head||document.body).appendChild(st); return true; }catch(e){ return false; } }
+function hpAxDraw(){
+  const box=HP_AX_EL; if(!box) return false;
+  try{ hpAxCss(); const X=HP_AX, now=Date.now(), nb=HP_AX_NT||box; box.textContent=''; if(HP_AX_NT) HP_AX_NT.textContent='';
+    const nt=(t,css,to)=>{ const d=hpFlEl('div','note',t); d.style.cssText='white-space:pre-line;line-height:1.5'+(css?';'+css:''); (to||box).appendChild(d); return d; };
+    if(!X||X.st==='busy'){ nt(TF('ax_busy',{n:(X&&X.n)||0})); try{ box.appendChild(hpUpGauge(30,true)); }catch(e){} return true; }
+    if(X.st==='noacct'){ nt(T('ax_noacct'),'color:var(--amber)'); return true; }
+    if(X.st==='err'){ nt(TF('ax_fail',{e:X.why||'?'}),'color:var(--amber)'); return true; }
+    if(!X.rows.length){ nt(T('ax_none')); return true; }
+    const k=X.rows.filter(r=>r.url).length; nt(TF('ax_count',{a:(X.accts||[]).map(hpAxAcct).join('・'),n:X.cnt,k:Math.min(k,X.cnt)}));
+    if(X.part) nt(TF('ax_fail',{e:X.part}),'color:var(--amber)');
+    const wrap=hpFlEl('div',''); wrap.style.cssText='overflow-x:auto;margin-top:6px'; const tb=document.createElement('table'); tb.className='paytb hstb'; tb.id='ax-tbl';
+    const hd=document.createElement('tr'); for(const h of ['ax_h_box','ax_h_left','ax_h_use','ax_h_conn','ax_h_up','ax_h_rep','']){ const th=document.createElement('th'); th.textContent=h?T(h):''; th.style.cssText='text-align:left'; hd.appendChild(th); } tb.appendChild(hd);
+    const td=(tr,txt,css,hk)=>{ const c=document.createElement('td'); c.style.cssText='text-align:left;vertical-align:top'+(css?';'+css:''); if(hk) c.setAttribute('data-h',T(hk)+T('ax_sep')); if(txt!=null) c.textContent=txt; tr.appendChild(c); return c; };
+    const sub=(c,txt)=>{ const d=hpFlEl('div','',txt); d.style.cssText='font-size:11px;color:var(--dim)'; c.appendChild(d); return d; };
+    let rec=false;
+    for(const r of hpAxSort(X.rows,now)){ const tr=document.createElement('tr'), why=hpAxWhy(r,now), pb=r.url?HP_AX_PB[r.url]:null, us=r.url?hpAxUsers(r.url):{me:false,sibs:[]};
+      if(r.url&&HP_AX_GO===r.url) tr.className='pick';
+
+      const c1=td(tr,null); { const m=hpFlEl('span','',r.url?r.url.replace(/^wss:\/\//,''):r.dom); m.style.cssText='font-family:ui-monospace,Menlo,Consolas,monospace;color:'+(r.url?'var(--teal)':'var(--dim)'); c1.appendChild(m);
+        if(!rec&&why===''&&pb&&pb.st==='ok'){ rec=true; const b=hpFlEl('span','',T('ax_rec')); b.style.cssText='margin-left:6px;font-size:11px;padding:0 6px;border:1px solid var(--teal);border-radius:8px;color:var(--teal)'; c1.appendChild(b); }
+        if(!r.url) sub(c1,T('ax_unk')); else if(r.amb) sub(c1,TF('ax_amb',{n:r.amb})); else if(r.buy) sub(c1,TF('ax_buy',{d:hpAxDate(r.buy).split(' ')[0]})); }
+
+      if(Number(r.exp)>0){ const left=Number(r.exp)-now, d=Math.ceil(left/864e5)  , col=left<HP_AX_MIN*864e5?'color:var(--red)':left<HP_AX_WARN*864e5?'color:var(--amber)':''; const c2=td(tr,left<864e5?T('ax_lt1'):TF('ax_days',{d:d}),'font-weight:600;'+col,'ax_h_left'); sub(c2,TF(r.amb?'ax_until_amb':'ax_until',{t:hpAxDate(Number(r.exp))})); }
+      else td(tr,'—','','ax_h_left');
+
+      if(!r.url) td(tr,'—','','ax_h_use'); else { const n=us.sibs.length; td(tr,us.me?(n?TF('ax_me_n',{n:n}):T('ax_me')):n?(n>1?TF('ax_sib_n',{d:hpAxLabel(us.sibs[0]),n:n-1}):hpAxLabel(us.sibs[0])):T('ax_nobody'),(us.me||n)?'':'color:var(--dim)','ax_h_use'); }
+
+      if(us.me){ const up=!!(typeof POST!=='undefined'&&POST&&POST.up); td(tr,up?T('ax_c_now'):'—',up?'color:var(--teal)':'','ax_h_conn'); }
+      else if(pb&&pb.st==='busy') td(tr,T('ax_c_busy'),'color:var(--dim)','ax_h_conn'); else if(pb&&pb.st==='ok') td(tr,T('ax_c_ok'),'color:var(--teal)','ax_h_conn'); else if(pb&&pb.st==='down') td(tr,T('ax_c_down'),'color:var(--amber)','ax_h_conn'); else td(tr,'—','','ax_h_conn');
+
+      { const x=(r.url&&r.host&&typeof HP_UP!=='undefined')?HP_UP[r.host]:null; if(x&&x.st==='busy') td(tr,TF('ax_up_busy',{p:x.total?Math.round(x.done/x.total*100):0}),'color:var(--dim)','ax_h_up'); else if(x&&x.st==='ok') td(tr,x.pct+'％',Number(x.pct)<HP_AX_UPLOW?'color:var(--amber)':'','ax_h_up'); else td(tr,'—','','ax_h_up'); }
+      { const H=(X.hosts&&r.host)?X.hosts[r.host]:null, rp=H&&H.rep!=null?Number(H.rep):null; td(tr,rp==null?'—':String(rp),rp!=null&&rp<HP_AX_REPLOW?'color:var(--amber)':'','ax_h_rep'); }
+
+      const c7=td(tr,null);
+      if(r.url&&HP_AX_GO===r.url){ c7.textContent=T('ax_c_busy'); c7.style.color='var(--dim)'; }
+      else if(why===''){ const b=hpFlBtn('btn_ad_use',()=>{ hpAxGo(r); },true); b.style.cssText='padding:2px 10px'; if(HP_AX_GO||(typeof HP_AD_BUSY!=='undefined'&&HP_AD_BUSY)) b.disabled=true; c7.appendChild(b); }
+      else { const t=why==='cur'?T('ax_r_cur'):why.indexOf('sib:')===0?TF('ax_r_sib',{n:why.slice(4)}):why==='short'?TF('ax_r_short',{d:HP_AX_MIN}):why==='noexp'?T('ax_r_noexp'):why==='down'?T('ax_r_down'):''; c7.textContent=t; c7.style.color='var(--dim)'; }
+      tb.appendChild(tr); }
+    wrap.appendChild(tb); box.appendChild(wrap);
+    if(HP_AX_CK) nt(T('ax_work'),'margin-top:6px');
+    if(X.rows.some(r=>!r.url)) nt(T('ax_unk_nt'),'margin-top:6px',nb);
+    nt(T('ax_watch_nt'),'margin-top:4px',nb);
+    return true; }catch(e){ return false; } }
 
