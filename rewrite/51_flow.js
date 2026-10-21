@@ -501,8 +501,7 @@ function hpAdCheck(url){
   try{ const u=String(url||'').trim();
     if(!/^wss:\/\/[a-z0-9.-]+:[0-9]{2,5}$/i.test(u)||(typeof hpC4PostOk==='function'&&!hpC4PostOk(u))) return 'url';
     if(u===String((typeof hpPostUrl==='function'&&hpPostUrl())||'')) return 'cur';
-    for(const d of (typeof hpSibs==='function'?hpSibs():[])){ if(!d||!d.devSig) continue;   let b=''; try{ b=String((typeof hpMcBoxOf==='function'&&hpMcBoxOf(d.dev))||''); }catch(e){} if(b===u) return 'sib:'+((typeof hpAxLabel==='function')?hpAxLabel(d):(d.label||String(d.dev||'').slice(0,10))); }
-    return ''; }catch(e){ return 'other'; } }
+    return '';   }catch(e){ return 'other'; } }
 async function hpAdProbe(url){
   let c=null; const out=[];
   try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url], kp);
@@ -517,6 +516,28 @@ async function hpAdProbe(url){
       if(o.err) return {why:String(o.err)}; }
     return {why:'noreply'};
   }catch(e){ return {why:'other', e:String((e&&e.message)||e).slice(0,80)}; }
+  finally{ if(c){ try{ await c.close(); }catch(e){} } } }
+
+async function hpAxFit(url,movers){ let c=null; const out=[];
+  try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url], kp);
+    c.on(HotPocket.events.contractOutput, r=>{ for(const x of ((r&&r.outputs)||[])){ try{ out.push(JSON.parse(hpText(x))); }catch(e){} } });
+    let up=false; try{ up=await hpWithin(c.connect(),HP_AD_CONN,'移す先の郵便受けへのつなぎ'); }catch(e){ up=false; }
+    if(!up) return {why:'down'};
+    const ask=async(o,name)=>{ await hpWithin(c.submitContractInput(JSON.stringify(o)),HP_SEND_WAIT,'移す先の郵便受けへの送り（'+name+'）');
+      const t0=Date.now(); while(Date.now()-t0<HP_AD_WAIT){ const i=out.findIndex(x=>x&&(x.ok===name||x.err)); if(i>=0) return out.splice(i,1)[0]; await sleep(250); }
+      return {err:'noreply'}; };
+    const cm=await hpWithin(hpClaimMsg(),HP_SEND_WAIT,'名乗りの中身'), cr=await ask(cm,'claim'); if(cr.err) return {why:String(cr.err)};
+    const g=await ask({op:'dget'},'dget'); if(g.err) return {why:String(g.err)};
+    const here=new Set((Array.isArray(g.devs)?g.devs:[]).map(d=>String((d&&d.dev)||'')).filter(Boolean)), sibs=(typeof hpSibs==='function'?hpSibs():[]).filter(d=>d&&d.dev&&d.devSig), mv=new Set(movers||[]);
+    let add=0; const skip=[];
+    for(const d of sibs){ if(here.has(d.dev)) continue;
+      const x=await ask({op:'adddev',dev:d.dev,devSig:d.devSig},'adddev');
+      if(x.err==='too many devices') return {why:'full',reg:here.size,s:sibs.length+1};
+      if(x.err){ if(mv.has(d.dev)) return {why:'mover',n:(typeof hpAxLabel==='function')?hpAxLabel(d):String(d.label||d.dev).slice(0,16),e:String(x.err)}; skip.push(String(x.err)); continue; }
+      here.add(d.dev); add++; }
+    if(skip.length) hpLog('移す先の郵便受け（'+url+'）に、自分のほかの端末 '+skip.length+' 台を足せなかった（'+skip.join('・')+'）。一緒に移る端末ではないので続ける');
+    return {ok:1,pv:String(cr.pv||''),reg:here.size,add:add}; }
+  catch(e){ return {why:'other',e:String((e&&e.message)||e).slice(0,80)}; }
   finally{ if(c){ try{ await c.close(); }catch(e){} } } }
 function hpAdSwitch(url){
   const old=String(hpPostUrl()||''), acct=(typeof hpLeaseAcct==='function')?hpLeaseAcct():'';
@@ -533,10 +554,10 @@ async function hpAdUse(url){
   HP_AD_BUSY=true; let lock=false;
   try{ for(let i=0;i<120&&((typeof HP_BX_BUSY!=='undefined'&&HP_BX_BUSY)||(typeof HP_FB_BUSY!=='undefined'&&HP_FB_BUSY));i++) await sleep(250);
     if(typeof HP_BX_BUSY!=='undefined'){ HP_BX_BUSY=true; lock=true; }
-    hpLog('前に借りた郵便受け（'+u+'）を確かめる（この端末の鍵でつないで名乗る）');
-    const r=await hpAdProbe(u);
+    hpLog('前に借りた郵便受け（'+u+'）を確かめる（この端末の鍵でつないで名乗り、自分の端末がみな登録できるかを見る）');
+    const r=await hpAxFit(u,[]);
     if(!r.ok){ hpLog('前に借りた郵便受け（'+u+'）は使えない（'+r.why+(r.e?' '+r.e:'')+'）。何も替えていない'); return r; }
-    hpLog('前に借りた郵便受け（'+u+'）に名乗れた（本体の版 '+(r.pv||'?')+'）');
+    hpLog('前に借りた郵便受け（'+u+'）に名乗れた（本体の版 '+(r.pv||'?')+'・登録 '+r.reg+' 台'+(r.add?'・足した '+r.add+' 台':'')+'）');
     if(lock){ HP_BX_BUSY=false; lock=false; }
     hpAdSwitch(u); return {ok:1, pv:r.pv};
   }catch(e){ return {why:'other', e:String((e&&e.message)||e).slice(0,80)}; }
@@ -546,6 +567,7 @@ function hpAdWhy(r){ const w=String((r&&r.why)||'');
   if(w==='owner exists') return T('ad_e_owner'); if(w==='removed') return T('ad_e_removed'); if(w==='too many devices') return T('ad_e_full');
   if(w==='bad sig'||w==='bad claim') return T('ad_e_sig'); if(w==='killed') return T('ad_e_killed'); if(w==='down') return T('ad_e_down'); if(w==='noreply') return T('ad_e_noreply');
   if(w==='busy') return T('ad_checking'); if(w==='notsub') return T('ad_e_notsub');
+  if(w==='full') return TF('ax_e_full',{n:Number(r.reg)||0,s:Number(r.s)||0}); if(w==='mover') return TF('ax_e_mover',{n:r.n||'?',e:r.e||'?'});
   if(w==='job') return T('ax_e_job'); if(w==='short') return TF('ax_r_short',{d:(typeof HP_AX_MIN!=='undefined')?HP_AX_MIN:7}); if(w==='over') return T('ax_r_over'); if(w==='noexp') return T('ax_r_noexp'); if(w==='notmain') return T('mv2_nomain');
   return TF('ad_e_other',{e:(r&&r.e)||w||'?'}); }
 async function hpAdGo(url,st,row){
@@ -581,6 +603,8 @@ function hpAdUi(c){
 hpBfDrawClosed=(function(f){ return function(c){ const r=f.apply(this,arguments); try{ hpAdUi(c); }catch(e){} return r; }; })(hpBfDrawClosed);
 
 const HP_AX_MIN=7, HP_AX_WARN=14, HP_AX_PAR=2, HP_AX_CONN=15000, HP_AX_FRESH=600e3, HP_AX_UPLOW=97, HP_AX_REPLOW=200;
+let HP_AX_ASK=25000, HP_AX_VER=12000;
+const HP_AX_OLD_A=Date.UTC(2026,9,4,9,48), HP_AX_OLD_B=Date.UTC(2026,9,12,3,30);
 let HP_AX=null, HP_AX_RUN=null, HP_AX_CK=false, HP_AX_PB={}, HP_AX_EL=null, HP_AX_ST=null, HP_AX_NT=null, HP_AX_GO='', HP_AX_TT=null, HP_AX_OPEN=false;
 function hpAxUrlOk(u){ return /^wss:\/\/[a-z0-9.-]+:[0-9]{2,5}$/i.test(String(u||''))&&(typeof hpC4PostOk!=='function'||hpC4PostOk(String(u))); }
 function hpAxHost(u){ return ((/^wss:\/\/([^:\/]+)/i.exec(String(u||''))||[])[1]||'').toLowerCase(); }
@@ -668,25 +692,43 @@ function hpAxLabel(d){
     if(!lb) return dev.slice(0,10)+'…'; if(/ · /.test(lb)) return (typeof hpDevName==='function')?hpDevName(lb):lb;
     let br=''; try{ br=(typeof hpBmBrowser==='function')?String(hpBmBrowser(false,dev)||''):''; }catch(e){} return br?TF('dv_name',{b:lb,o:br}):lb; }catch(e){ return String((d&&(d.label||d.dev))||'').slice(0,12); } }
 function hpAxWhy0(r,now){
-  if(!r.url) return 'unk'; const u=hpAxUsers(r.url); if(u.me) return 'cur'; if(u.sibs.length) return 'sib:'+hpAxLabel(u.sibs[0]);
+  if(!r.url) return 'unk'; const u=hpAxUsers(r.url); if(u.me) return 'cur';
   if(!(Number(r.exp)>0)) return 'noexp'; const lf=Number(r.exp)-(now||Date.now()); if(lf<=0) return 'over';   if(lf<HP_AX_MIN*864e5) return 'short'; return ''; }
-function hpAxWhy(r,now){ const w=hpAxWhy0(r,now); if(w) return w; const p=HP_AX_PB[r.url]; return (p&&p.st==='down')?'down':''; }
+function hpAxWhy(r,now){ const w=hpAxWhy0(r,now); if(w) return w; const p=HP_AX_PB[r.url]; if(p&&p.st==='down') return 'down'; const c=hpAxCap(r,p); return (c&&c.full)?'full':''; }
+function hpAxOld3(r){ const b=Number(r&&r.buy)||0; return b>=HP_AX_OLD_A&&b<HP_AX_OLD_B; }
+function hpAxCap(r,p){
+  try{ if(!p||!Array.isArray(p.reg)) return null; const n=p.reg.length, l=(p.pv||!hpAxOld3(r))?5:3, m=Math.max(0,l-n);
+    const k=(typeof hpSibs==='function'?hpSibs():[]).filter(d=>d&&d.dev&&d.devSig&&p.reg.indexOf(d.dev)<0).length;
+    return {n:n,l:l,m:m,k:k,full:k>m}; }catch(e){ return null; } }
 function hpAxSort(rows,now){ const rank=r=>{ const w=hpAxWhy(r,now); return w===''?0:(w==='cur'||w.indexOf('sib:')===0)?1:w==='unk'?3:2; }, up=r=>{ const x=(r.host&&typeof HP_UP!=='undefined')?HP_UP[r.host]:null; return (x&&x.st==='ok')?Number(x.pct)||0:-1; };
   return rows.slice().sort((a,b)=>(rank(a)-rank(b))||((Number(b.exp)||0)-(Number(a.exp)||0))||(up(b)-up(a))||String(a.url||a.dom).localeCompare(String(b.url||b.dom))); }
-async function hpAxProbe(url){
-  let c=null; const t0=Date.now();
-  try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url],kp); let up=false; try{ up=await hpWithin(c.connect(),HP_AX_CONN,'借りている郵便受けへのつなぎ'); }catch(e){ up=false; }
-    return up?{st:'ok',ms:Date.now()-t0}:{st:'down'}; }
+async function hpAxProbe(url,o){
+  let c=null; const t0=Date.now(), out=[];
+  try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url],kp);
+    try{ c.on(HotPocket.events.contractOutput,r=>{ for(const x of ((r&&r.outputs)||[])){ try{ out.push(JSON.parse(hpText(x))); }catch(e){} } }); }catch(e){}
+    let up=false; try{ up=await hpWithin(c.connect(),HP_AX_CONN,'借りている郵便受けへのつなぎ'); }catch(e){ up=false; }
+    if(!up) return {st:'down'};
+    const res={st:'ok',ms:Date.now()-t0};
+    const ask=async(q,name,ms)=>{ try{ await hpWithin(c.submitContractInput(JSON.stringify(q)),HP_SEND_WAIT,'借りている郵便受けへの問い（'+name+'）'); }catch(e){ return null; }
+      const t1=Date.now(); while(Date.now()-t1<ms){ const i=out.findIndex(x=>x&&(x.ok===name||x.err)); if(i>=0) return out.splice(i,1)[0]; await sleep(200); } return null; };
+    const g=await ask({op:'dget'},'dget',HP_AX_ASK);
+    if(g&&g.ok==='dget'&&Array.isArray(g.devs)) res.reg=g.devs.map(d=>String((d&&d.dev)||'')).filter(Boolean); else if(g&&g.err==='not owner') res.noreg=1;
+    if(res.reg&&o&&o.ver){ const v=await ask({op:'ver'},'ver',HP_AX_VER); if(v&&v.ok==='ver'&&typeof v.pv==='string'&&v.pv) res.pv=v.pv; }
+    return res; }
   catch(e){ return {st:'down',e:String((e&&e.message)||e).slice(0,80)}; }
   finally{ if(c){ try{ await c.close(); }catch(e){} } } }
 function hpAxHostOf(a,H){ try{ const L=(typeof HP_HOSTS!=='undefined'&&HP_HOSTS&&Array.isArray(HP_HOSTS.hosts))?HP_HOSTS.hosts:[], h=L.find(x=>x&&x.addr===a); if(h&&h.aid) return h; }catch(e){} const aid=(H&&H.aid)||hpAxAid(a); return aid?{addr:a,aid:aid}:null; }
 async function hpAxCheck(){
   if(HP_AX_CK) return; const X=HP_AX; if(!X||X.st!=='ok') return; HP_AX_CK=true; hpAxTick();
-  try{ const skip=new Set([String((typeof hpPostUrl==='function'&&hpPostUrl())||'')]);
-    try{ const o=(typeof hpOldGet==='function')?hpOldGet():null; if(o&&o.url) skip.add(o.url); }catch(e){} try{ for(const u of ((typeof hpFbUrls==='function'&&hpFbUrls())||[])) skip.add(u); }catch(e){}
-    const now=Date.now(), want=X.rows.filter(r=>r.url&&!skip.has(r.url)&&!hpAxWhy0(r,now)&&!(HP_AX_PB[r.url]&&HP_AX_PB[r.url].st!=='busy'&&now-HP_AX_PB[r.url].at<HP_AX_FRESH));
-    let i=0; const one=async()=>{ while(i<want.length){ const r=want[i++]; HP_AX_PB[r.url]={st:'busy',at:Date.now()}; hpAxTick(); let p=null; try{ p=await hpAxProbe(r.url); }catch(e){ p={st:'down'}; } HP_AX_PB[r.url]=Object.assign(p,{at:Date.now()}); hpAxTick(); } };
+  try{ const skip=new Set([String((typeof hpPostUrl==='function'&&hpPostUrl())||'')]), fb=new Set();
+    try{ const o=(typeof hpOldGet==='function')?hpOldGet():null; if(o&&o.url) skip.add(o.url); }catch(e){} try{ for(const u of ((typeof hpFbUrls==='function'&&hpFbUrls())||[])) fb.add(u); }catch(e){}
+    const now=Date.now(), due=r=>r.url&&!skip.has(r.url)&&!hpAxWhy0(r,now)&&!(HP_AX_PB[r.url]&&HP_AX_PB[r.url].st!=='busy'&&now-HP_AX_PB[r.url].at<HP_AX_FRESH), want=X.rows.filter(r=>due(r)&&!fb.has(r.url)), wantFb=X.rows.filter(r=>due(r)&&fb.has(r.url));
+    const probe=async r=>{ HP_AX_PB[r.url]={st:'busy',at:Date.now()}; hpAxTick(); let p=null; try{ p=await hpAxProbe(r.url,{ver:hpAxOld3(r)}); }catch(e){ p={st:'down'}; } HP_AX_PB[r.url]=Object.assign(p,{at:Date.now()}); hpAxTick(); };
+    let i=0; const one=async()=>{ while(i<want.length) await probe(want[i++]); };
     const P=[]; for(let k=0;k<HP_AX_PAR;k++) P.push(one());
+    P.push((async()=>{ const busy=()=>(typeof HP_BX_BUSY!=='undefined'&&HP_BX_BUSY)||(typeof HP_FB_BUSY!=='undefined'&&HP_FB_BUSY)||(typeof HP_OLD_BUSY!=='undefined'&&HP_OLD_BUSY);
+      for(const r of wantFb){ for(let j=0;j<240&&busy();j++) await sleep(250); if(busy()) continue;
+        let lock=false; try{ if(typeof HP_BX_BUSY!=='undefined'){ HP_BX_BUSY=true; lock=true; } await probe(r); } finally{ if(lock) HP_BX_BUSY=false; } } })());
     const seen=new Set(); for(const r of X.rows){ if(!r.url||!r.host||seen.has(r.host)) continue; seen.add(r.host);
       if(typeof hpUpHost!=='function'||typeof HP_UP==='undefined') break; const a=r.host, x=HP_UP[a]; if((typeof hpUpFresh==='function'&&hpUpFresh(x))||(x&&x.st==='busy')) continue;
       const h=hpAxHostOf(a,X.hosts&&X.hosts[a]); if(!h) continue; HP_UP[a]={st:'busy',k:1,n:1,done:0,total:0}; hpAxTick();
@@ -727,7 +769,7 @@ function hpAxDraw(){
     const sub=(c,txt)=>{ const d=hpFlEl('div','',txt); d.style.cssText='font-size:11px;color:var(--dim)'; c.appendChild(d); return d; };
     let rec=false; const main=(typeof hpIsMain==='function'&&hpIsMain()), rank=r=>{ const w=hpAxWhy(r,now); return w===''?0:(w==='cur'||w.indexOf('sib:')===0)?1:w==='unk'?3:2; };
     const all=hpAxSort(X.rows,now), vis=all.filter(r=>rank(r)<2), fold=all.filter(r=>rank(r)>=2);
-    const row=r=>{ const tr=document.createElement('tr'), why=hpAxWhy(r,now), pb=r.url?HP_AX_PB[r.url]:null, us=r.url?hpAxUsers(r.url):{me:false,sibs:[]};
+    const row=r=>{ const tr=document.createElement('tr'), why=hpAxWhy(r,now), pb=r.url?HP_AX_PB[r.url]:null, us=r.url?hpAxUsers(r.url):{me:false,sibs:[]}, cap=r.url?hpAxCap(r,pb):null;
       if(r.url&&HP_AX_GO===r.url) tr.className='pick';
 
       const c1=td(tr,null); { const m=hpFlEl('span','',r.url?r.url.replace(/^wss:\/\//,''):r.dom); m.style.cssText='font-family:ui-monospace,Menlo,Consolas,monospace;color:'+(r.url?'var(--teal)':'var(--dim)'); c1.appendChild(m);
@@ -737,7 +779,8 @@ function hpAxDraw(){
       if(Number(r.exp)>0){ const left=Number(r.exp)-now, d=Math.floor(left/864e5)  , col=left<HP_AX_MIN*864e5?'color:var(--red)':left<HP_AX_WARN*864e5?'color:var(--amber)':''; const c2=td(tr,left<=0?T('ax_over'):left<864e5?T('ax_lt1'):TF('ax_days',{d:d}),'font-weight:600;'+col,'ax_h_left'); sub(c2,TF(r.amb?'ax_until_amb':'ax_until',{t:hpAxDate(Number(r.exp))})); }
       else td(tr,'—','','ax_h_left');
 
-      if(!r.url) td(tr,'—','','ax_h_use'); else { const n=us.sibs.length; td(tr,us.me?(n?TF('ax_me_n',{n:n}):T('ax_me')):n?(n>1?TF('ax_sib_n',{d:hpAxLabel(us.sibs[0]),n:n-1}):hpAxLabel(us.sibs[0])):T('ax_nobody'),(us.me||n)?'':'color:var(--dim)','ax_h_use'); }
+      if(!r.url) td(tr,'—','','ax_h_use'); else { const n=us.sibs.length, c3=td(tr,us.me?(n?TF('ax_me_n',{n:n}):T('ax_me')):n?(n>1?TF('ax_sib_n',{d:hpAxLabel(us.sibs[0]),n:n-1}):hpAxLabel(us.sibs[0])):T('ax_nobody'),(us.me||n)?'':'color:var(--dim)','ax_h_use');
+        if(cap){ const d=sub(c3,TF('ax_reg',{n:cap.n,m:cap.m})); if(cap.full) d.style.color='var(--amber)'; } else if(pb&&pb.noreg) sub(c3,T('ax_reg_no')); }
 
       if(us.me){ const up=!!(typeof POST!=='undefined'&&POST&&POST.up); td(tr,up?T('ax_c_now'):'—',up?'color:var(--teal)':'','ax_h_conn'); }
       else if(pb&&pb.st==='busy') td(tr,T('ax_c_busy'),'color:var(--dim)','ax_h_conn'); else if(pb&&pb.st==='ok') td(tr,T('ax_c_ok'),'color:var(--teal)','ax_h_conn'); else if(pb&&pb.st==='down') td(tr,T('ax_c_down'),'color:var(--amber)','ax_h_conn'); else td(tr,'—','','ax_h_conn');
@@ -748,7 +791,7 @@ function hpAxDraw(){
       const c7=td(tr,null);
       if(r.url&&HP_AX_GO===r.url){ c7.textContent=T('ax_c_busy'); c7.style.color='var(--dim)'; }
       else if(why===''){ const b=hpFlBtn(main?'btn_ax_mv':'btn_ad_use',()=>{ hpAxGo(r); },true); b.style.cssText='padding:2px 10px'; if(HP_AX_GO||(typeof HP_AD_BUSY!=='undefined'&&HP_AD_BUSY)) b.disabled=true; c7.appendChild(b); }
-      else { const t=why==='cur'?T('ax_r_cur'):why.indexOf('sib:')===0?TF('ax_r_sib',{n:why.slice(4)}):why==='short'?TF('ax_r_short',{d:HP_AX_MIN}):why==='noexp'?T('ax_r_noexp'):why==='down'?T('ax_r_down'):why==='over'?T('ax_r_over'):''; c7.textContent=t; c7.style.color='var(--dim)'; }
+      else { const t=why==='cur'?T('ax_r_cur'):why.indexOf('sib:')===0?TF('ax_r_sib',{n:why.slice(4)}):why==='short'?TF('ax_r_short',{d:HP_AX_MIN}):why==='noexp'?T('ax_r_noexp'):why==='down'?T('ax_r_down'):why==='over'?T('ax_r_over'):(why==='full'&&cap)?TF('ax_r_full',{l:cap.l}):''; c7.textContent=t; c7.style.color='var(--dim)'; }
       tb.appendChild(tr); };
     for(const r of vis) row(r);
     if(fold.length){ const tr=document.createElement('tr'), c=document.createElement('td'); c.colSpan=7; c.style.cssText='text-align:left;padding-top:6px'; const b=hpFlBtn('btn_ax_less',()=>{ HP_AX_OPEN=!HP_AX_OPEN; hpAxDraw(); }); b.id='btn-ax-more'; if(!HP_AX_OPEN) b.textContent=TF('btn_ax_more',{n:fold.length}); b.style.cssText='padding:2px 10px'; c.appendChild(b); tr.appendChild(c); tb.appendChild(tr);
@@ -757,6 +800,7 @@ function hpAxDraw(){
     if(HP_AX_CK) nt(T('ax_work'),'margin-top:6px');
     if(HP_AX_OPEN&&fold.some(r=>!r.url)) nt(T('ax_unk_nt'),'margin-top:6px',nb);
     nt(T('ax_watch_nt'),'margin-top:4px',nb);
+    if(X.rows.some(r=>r.url&&hpAxCap(r,HP_AX_PB[r.url]))) nt(T('ax_cap_nt'),'margin-top:4px',nb);
     return true; }catch(e){ return false; } }
 
 const HP_LB_MAX=16, HP_LB_KEEP=864e5, HP_LB_NOEXP=40*864e5, HP_LB_GONE=60*864e5;
@@ -808,10 +852,12 @@ async function hpAxMoveMain(r){
   if(HP_AD_BUSY) return {why:'busy'}; HP_AD_BUSY=true; let lock=false;
   try{ for(let i=0;i<120&&((typeof HP_BX_BUSY!=='undefined'&&HP_BX_BUSY)||(typeof HP_FB_BUSY!=='undefined'&&HP_FB_BUSY));i++) await sleep(250);
     if(typeof HP_BX_BUSY!=='undefined'){ HP_BX_BUSY=true; lock=true; }
-    hpLog('契約中の郵便受け（'+url+'）へ移す前に確かめる（この端末の鍵でつないで名乗る）');
-    const p=await hpAdProbe(url); if(!p.ok){ hpLog('契約中の郵便受け（'+url+'）へは移せない（'+p.why+(p.e?' '+p.e:'')+'）。何も替えていない'); return p; }
+    const from=String(hpPostUrl()||''), fol=hpAxUsers(from).sibs.map(d=>d.dev);
+    hpLog('契約中の郵便受け（'+url+'）へ移す前に確かめる（この端末の鍵でつないで名乗り、自分の端末がみな登録できるかを見る。一緒に移る端末 '+fol.length+' 台）');
+    const p=await hpAxFit(url,fol); if(!p.ok){ hpLog('契約中の郵便受け（'+url+'）へは移せない（'+p.why+(p.e?' '+p.e:'')+(p.why==='full'?'・登録 '+p.reg+' 台・自分の端末 '+p.s+' 台':'')+'）。何も替えていない'); return p; }
+    hpLog('契約中の郵便受け（'+url+'）に名乗れた（本体の版 '+(p.pv||'?')+'・登録 '+p.reg+' 台'+(p.add?'・足した '+p.add+' 台':'')+'）');
     if(lock){ HP_BX_BUSY=false; lock=false; }
-    const from=String(hpPostUrl()||''), J={move:{from:from,lease:Object.assign({},(ID.lease&&typeof ID.lease==='object')?ID.lease:{})},acct:r.acct||'',tok:r.tok||'',host:r.host||''};
+    const J={move:{from:from,lease:Object.assign({},(ID.lease&&typeof ID.lease==='object')?ID.lease:{})},acct:r.acct||'',tok:r.tok||'',host:r.host||''};
     let mv=null; try{ mv=await hpMoveBefore(J,url); }catch(e){ mv={n:0,why:String((e&&e.message)||e)}; }
     try{ if(typeof POST!=='undefined'&&POST&&POST.up&&!POST.notOwner&&POST.url===from&&typeof hpSend==='function') await hpWithin(hpSend({op:'lease',exp:0}),HP_SEND_WAIT,'前の郵便受けの期限を消す'); }catch(e){}
     try{ stopBg(); }catch(e){} try{ localStorage.setItem('p2p_post',url); }catch(e){}
@@ -822,18 +868,20 @@ async function hpAxMoveMain(r){
     saveID(); try{ if(typeof HP_LG_AT!=='undefined') HP_LG_AT=0; }catch(e){}
     hpLog('契約中の郵便受け（'+url+'）へ移した（借りずに。前の郵便受け '+from+' は期限まで見回る・転居届 '+((mv&&mv.n)||0)+' 台・名刺 '+c+' 人）');
     setTimeout(()=>{ try{ startBg(); }catch(e){} },1500);
-    return {ok:1,n:(mv&&mv.n)||0,c:c,why2:(mv&&mv.why)||''}; }
+    return {ok:1,n:(mv&&mv.n)||0,f:fol.length,c:c,why2:(mv&&mv.why)||''};   }
   catch(e){ return {why:'other',e:String((e&&e.message)||e).slice(0,80)}; }
   finally{ if(lock) HP_BX_BUSY=false; HP_AD_BUSY=false; } }
 async function hpAxMoveGo(r){
   const st=HP_AX_ST; if(!st||!r||!r.url||HP_AX_GO) return null;
-  const from=String(hpPostUrl()||''), us=hpAxUsers(from), n=us.sibs.length, oe=(typeof hpLeaseExp==='function')?Number(hpLeaseExp())||0:0;
-  let yes=false; try{ yes=await hpAsk({title:T('btn_ax_move'),text:oe?TF('ax_mv_ask',{h:r.url.replace(/^wss:\/\//,''),n:n,o:from.replace(/^wss:\/\//,''),t:hpAxDate(oe)}):TF('ax_mv_ask_nt',{h:r.url.replace(/^wss:\/\//,''),n:n,o:from.replace(/^wss:\/\//,'')}),ok:T('btn_ax_mv'),why:'契約中の郵便受けへ移す'}); }catch(e){ yes=false; }
+  const from=String(hpPostUrl()||''), us=hpAxUsers(from), n=us.sibs.length, oe=(typeof hpLeaseExp==='function')?Number(hpLeaseExp())||0:0, tu=hpAxUsers(r.url), h=r.url.replace(/^wss:\/\//,'');
+  const share=tu.sibs.length?TF('ax_mv_ask_share',{h:h,d:tu.sibs.map(d=>hpAxLabel(d)).join('・')}):'';
+  const o0=from.replace(/^wss:\/\//,''), q=n?(oe?TF('ax_mv_ask',{h:h,n:n,o:o0,t:hpAxDate(oe)}):TF('ax_mv_ask_nt',{h:h,n:n,o:o0})):(oe?TF('ax_mv_ask1',{h:h,o:o0,t:hpAxDate(oe)}):TF('ax_mv_ask1_nt',{h:h,o:o0}));
+  let yes=false; try{ yes=await hpAsk({title:T('btn_ax_move'),text:q+share,ok:T('btn_ax_mv'),why:'契約中の郵便受けへ移す'}); }catch(e){ yes=false; }
   if(!yes) return null;
   HP_AX_GO=r.url; hpAxDraw(); st.style.color=''; st.textContent=T('ad_checking'); let x=null;
   try{ x=await hpAxMoveMain(r); }catch(e){ x={why:'other',e:String((e&&e.message)||e)}; }
   finally{ HP_AX_GO=''; }
-  if(x&&x.ok){ st.style.color='var(--teal)'; st.textContent=TF('ax_mv_ok',{h:r.url.replace(/^wss:\/\//,''),n:x.n})+(x.why2?'\n'+TF('mv2_nosub',{why:x.why2}):''); }
+  if(x&&x.ok){ const f=(x.f!==undefined)?x.f:x.n; st.style.color='var(--teal)'; st.textContent=(f?TF('ax_mv_ok',{h:h,n:f}):TF('ax_mv_ok1',{h:h}))+(x.why2?'\n'+TF('mv2_nosub',{why:x.why2}):''); }
   else { st.style.color='var(--amber)'; st.textContent=hpAdWhy(x); }
   hpAxDraw(); return x; }
 
@@ -856,4 +904,22 @@ function hpAxMoveUi(){ try{ if(typeof document==='undefined'||typeof document.ge
 function hpAxWrapMoveUi(){ try{ if(typeof hpMoveUi==='function'&&!hpMoveUi.__ax){ const f=hpMoveUi; hpMoveUi=Object.assign(function(){ const v=f.apply(this,arguments); try{ hpAxMoveUi(); }catch(e){} return v; },f,{__ax:1}); return true; } }catch(e){} return false; }
 
 if(!hpAxWrapMoveUi()){ try{ if(typeof document!=='undefined'&&typeof document.addEventListener==='function') document.addEventListener('DOMContentLoaded',()=>{ hpAxWrapMoveUi(); try{ hpAxMoveUi(); }catch(e){} }); }catch(e){} }
+
+function hpAxFollow(o,cur){
+  try{ const url=String((o&&o.url)||''), ts=Number(o&&o.ts);
+    if(typeof hpPmUrlOk!=='function'||!hpPmUrlOk(url)||url===cur||typeof ID==='undefined'||!ID||!ID.link||Number(ID.link.postTs)!==ts||ID.boxOwn!==cur||ID.boxJob||String((typeof hpPostUrl==='function'&&hpPostUrl())||'')!==cur) return false;
+    const now=Date.now(), L=(ID.lease&&typeof ID.lease==='object')?ID.lease:{}, t=String(L.tok||'').toUpperCase(), lb=(ID.leaseByUrl&&typeof ID.leaseByUrl==='object')?String(ID.leaseByUrl[cur]||'').toUpperCase():'', e=(t&&lb===t)?(Number(L.exp)||0):0;
+    ID.link.postOld=Object.assign({url:cur,at:now,last:now},e>0?{exp:e}:{}); delete ID.boxOwn; delete ID.boxDevs; saveID();
+    try{ localStorage.setItem('p2p_post',url); }catch(e2){}
+    hpLog('転居届を受け取った。この端末の郵便受け（'+cur+'）はアカウントを作った端末と一緒に使っていたので、一緒に '+url+' へ移って、つなぎ直す（前の郵便受けは期限まで見回る）');
+    try{ if(typeof hpToast==='function') hpToast(T('mv2_in')); }catch(e2){}
+    setTimeout(()=>{ try{ stopBg(); }catch(e2){} setTimeout(()=>{ try{ startBg(); }catch(e2){} },1500); },4000);
+    return true; }catch(e){ return false; } }
+try{ if(typeof hpMoveIn==='function'&&!hpMoveIn.__fo){ const f=hpMoveIn; hpMoveIn=Object.assign(async function(o,r){
+    let cur='', share=false;
+    try{ cur=String((typeof hpPostUrl==='function'&&hpPostUrl())||''); const m=ID&&ID.link&&ID.link.main&&ID.link.main.dev, b=(m&&typeof hpMcBoxRec==='function')?hpMcBoxRec(m):null;
+      share=!!(cur&&b&&b.url===cur&&ID.boxOwn===cur&&!ID.boxJob); }catch(e){}
+    const v=await f.apply(this,arguments);
+    try{ if(v===true&&share) hpAxFollow(o,cur); }catch(e){}
+    return v; },f,{__fo:1}); } }catch(e){}
 
