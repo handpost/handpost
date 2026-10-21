@@ -5,7 +5,7 @@ const te=new TextEncoder(), td=new TextDecoder();
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 const HP_LOG_LINES=[], HP_LOG_MAX=3000;
-function log(m){const el=$('#log');const t=new Date().toLocaleTimeString('ja-JP');HP_LOG_LINES.push(`[${t}] ${m}\n`);if(HP_LOG_LINES.length>HP_LOG_MAX)HP_LOG_LINES.shift();const stick=!(el.clientHeight>0)||el.scrollHeight-el.scrollTop-el.clientHeight<40;el.textContent=HP_LOG_LINES.join('');if(stick)el.scrollTop=el.scrollHeight;}
+function log(m){if(typeof hpLogTr==='function')m=hpLogTr(m); const el=$('#log');const t=new Date().toLocaleTimeString('ja-JP');HP_LOG_LINES.push(`[${t}] ${m}\n`);if(HP_LOG_LINES.length>HP_LOG_MAX)HP_LOG_LINES.shift();const stick=!(el.clientHeight>0)||el.scrollHeight-el.scrollTop-el.clientHeight<40;el.textContent=HP_LOG_LINES.join('');if(stick)el.scrollTop=el.scrollHeight;}
 function hpLogText(){return HP_LOG_LINES.join('');}
 function hpLogClear(){HP_LOG_LINES.length=0;$('#log').textContent='';}
 function bytesToHex(u){return [...u].map(b=>b.toString(16).padStart(2,'0')).join('');}
