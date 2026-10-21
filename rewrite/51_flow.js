@@ -302,11 +302,11 @@ async function hpUpRead(aid,from,onProg){ const C=await hpMomCfg(); const KEY='4
     anchors.sort((x,y)=>x.t-y.t);
     const idxAt=T=>{ let k=anchors.findIndex(x=>x.t>=T); if(k<1) k=(k===0)?1:anchors.length-1; const a=anchors[k-1], b=anchors[k]; return Math.round(a.i+(T-a.t)*(b.i-a.i)/(b.t-a.t)); };
     const times=[]; for(let T=from;T<t0;T+=HP_UP_EVERY) times.push(T); times.push(t0);
-    const lhbs=new Set(); let reads=0, fails=0, consec=0;
+    const lhbs=new Set(), reps=[]; let reads=0, fails=0, consec=0;
     for(let s=0;s<times.length;s+=HP_UP_PAR){ await Promise.all(times.slice(s,s+HP_UP_PAR).map(async T=>{ for(let k=0;k<2;k++){ try{ const r=await q({command:'ledger_entry',hook_state:{account:HP_GOV,key:KEY,namespace_id:HP_EVN_NS},ledger_index:idxAt(T)}); const d=String((r&&r.node&&r.node.HookStateData)||''); if(d.length<200) throw new Error('form');
-        const v=hpHexLE(d,92,8); if(v>0) lhbs.add(v); reads++; consec=0; return; }catch(e){ if(k===1||/NotFound|form|closed/.test(String((e&&e.message)||e))){ fails++; consec++; return; } await new Promise(r=>setTimeout(r,800)); } } }));
+        const v=hpHexLE(d,92,8); if(v>0) lhbs.add(v); if(d.length>=252){ const rv=parseInt(d.substr(250,2),16); if(rv>=0&&rv<=255) reps.push([T,rv]); }   reads++; consec=0; return; }catch(e){ if(k===1||/NotFound|form|closed/.test(String((e&&e.message)||e))){ fails++; consec++; return; } await new Promise(r=>setTimeout(r,800)); } } }));
       if(consec>=HP_UP_PAR*2) throw new Error('read '+fails); try{ if(onProg) onProg(Math.min(s+HP_UP_PAR,times.length),times.length); }catch(e){} }
-    return {t0:t0,cur:cur,lhbs:[...lhbs],reads:reads,fails:fails,oldest:oldest?oldest.t:0,C:C}; },HP_UP_SESS); }
+    return {t0:t0,cur:cur,lhbs:[...lhbs],reps:reps,reads:reads,fails:fails,oldest:oldest?oldest.t:0,C:C}; },HP_UP_SESS); }
 function hpUpMerge(R,old){ const C=R.C, cur=R.cur, N=Math.round(HP_UP_DAYS*86400/C.size), first=cur-N, seen=new Set(R.lhbs.map(t=>hpMomNow(C,t*1000)));
   const fromM=R.readFrom!==undefined?R.readFrom:first; let bits=''; for(let m=first;m<cur;m++){ if(m<fromM){ bits+=(old&&old.bits&&m>=old.first&&m<old.cur)?old.bits[m-old.first]:'?'; } else if(R.oldest&&hpMomStart(m,C)/1000<R.oldest) bits+='?'; else bits+=seen.has(m)?'1':'0'; }
   return {first:first,cur:cur,bits:bits}; }
@@ -314,11 +314,11 @@ function hpUpSum(B,C){ const n=B.bits.length; let have=0, unread=0, gaps=[], run
   for(let k=0;k<n;k++){ const c=B.bits[k]; if(c==='?'){ unread++; continue; } if(c==='1'){ have++; if(run){ gaps.push([B.first+k-run,run]); run=0; } } else run++; } if(run) gaps.push([B.cur-run,run]);
   const N=n-unread, last=gaps.length?gaps[gaps.length-1]:null; return {pct:N>0?Math.round(have/N*1000)/10:0,have:have,n:N,gaps:gaps,last:last?{t:hpMomStart(last[0],C),h:Math.round(last[1]*C.size/3600*10)/10}:null}; }
 async function hpUpHost(h,onProg){ const addr=h.addr, k='up:'+addr; let old=null; try{ old=await HP_HS_CACHE.get(k); }catch(e){} const C0=await hpMomCfg(); const nowM=hpMomNow(C0);
-  let from=0, readFrom; if(old&&old.bits&&Number(old.cur)>0&&nowM-old.cur<HP_UP_DAYS*86400/C0.size){ readFrom=old.cur-1; from=hpMomStart(readFrom,C0)/1000-HP_UP_EVERY; } else old=null;
-  const t0=Date.now(), R=await hpUpRead(h.aid,from,onProg); if(readFrom!==undefined) R.readFrom=readFrom; const B=hpUpMerge(R,old), S=hpUpSum(B,R.C);
-  try{ await HP_HS_CACHE.put(k,{at:R.t0*1000,first:B.first,cur:B.cur,bits:B.bits}); }catch(e){}
+  let from=0, readFrom; if(old&&old.bits&&typeof old.reps==='string'&&Number(old.cur)>0&&nowM-old.cur<HP_UP_DAYS*86400/C0.size){   readFrom=old.cur-1; from=hpMomStart(readFrom,C0)/1000-HP_UP_EVERY; } else old=null;
+  const t0=Date.now(), R=await hpUpRead(h.aid,from,onProg); if(readFrom!==undefined) R.readFrom=readFrom; const B=hpUpMerge(R,old), S=hpUpSum(B,R.C), RP=(typeof hpRpMerge==='function')?hpRpMerge(R,old,B):null;
+  try{ await HP_HS_CACHE.put(k,Object.assign({at:R.t0*1000,first:B.first,cur:B.cur,bits:B.bits},RP?{reps:RP.reps,rnow:RP.now}:{})); }catch(e){}
   try{ log(TL('lg_up_ok',{dom:hpUpName(h),u:S.pct,r:R.reads,s:Math.round((Date.now()-t0)/1000),f:R.fails,o:old?'続き':'全部'})); }catch(e){}
-  return Object.assign({st:'ok',at:Date.now(),reads:R.reads,fails:R.fails,cont:!!old},S); }
+  return Object.assign({st:'ok',at:Date.now(),reads:R.reads,fails:R.fails,cont:!!old},S,RP?{rp:{first:B.first,reps:RP.reps,now:RP.now,base:R.C.base,trans:R.C.trans,size:R.C.size}}:{}); }
 function hpUpName(h){ try{ return (typeof hpHostName==='function')?hpHostName(h.addr):(h.desc||h.addr); }catch(e){ return h.addr; } }
 function hpUpTick(){ const now=Date.now(); if(now-HP_UP_TICK<400) return false; HP_UP_TICK=now; try{ hpStTick(); }catch(e){} return true; }
 function hpUpFresh(x){ return !!(x&&x.st==='ok'&&Date.now()-x.at<HP_UP_STALE); }
@@ -788,7 +788,7 @@ function hpAxDraw(){
       else if(pb&&pb.st==='busy') td(tr,T('ax_c_busy'),'color:var(--dim)','ax_h_conn'); else if(pb&&pb.st==='ok') td(tr,T('ax_c_ok'),'color:var(--teal)','ax_h_conn'); else if(pb&&pb.st==='down') td(tr,T('ax_c_down'),'color:var(--amber)','ax_h_conn'); else td(tr,'—','','ax_h_conn');
 
       { const x=(r.url&&r.host&&typeof HP_UP!=='undefined')?HP_UP[r.host]:null; if(x&&x.st==='busy') td(tr,TF('ax_up_busy',{p:x.total?Math.round(x.done/x.total*100):0}),'color:var(--dim)','ax_h_up'); else if(x&&x.st==='ok') td(tr,x.pct+'％',Number(x.pct)<HP_AX_UPLOW?'color:var(--amber)':'','ax_h_up'); else td(tr,'—','','ax_h_up'); }
-      { const H=(X.hosts&&r.host)?X.hosts[r.host]:null, rp=H&&H.rep!=null?Number(H.rep):null; td(tr,rp==null?'—':String(rp),rp!=null&&rp<HP_AX_REPLOW?'color:var(--amber)':'','ax_h_rep'); }
+      { const H=(X.hosts&&r.host)?X.hosts[r.host]:null, rp=H&&H.rep!=null?Number(H.rep):null; const c6=td(tr,rp==null?'—':String(rp),rp!=null&&rp<HP_AX_REPLOW?'color:var(--amber)':'','ax_h_rep'); try{ if(typeof hpRpAxCell==='function') hpRpAxCell(c6,r); }catch(e){}   }
 
       const c7=td(tr,null);
       if(r.url&&HP_AX_GO===r.url){ c7.textContent=T('ax_c_busy'); c7.style.color='var(--dim)'; }
@@ -932,4 +932,89 @@ function hpAxUpg(r){
     if(r.url===cur){ const c=HP_AX_CPV; return (c&&c.url===cur)?(c.pv?'new':'old'):''; }
     const p=(typeof HP_AX_PB!=='undefined'&&HP_AX_PB)?HP_AX_PB[r.url]:null; return (p&&(p.upg==='new'||p.upg==='old'))?p.upg:''; }catch(e){ return ''; } }
 try{ if(typeof hpLinkOnReply==='function'&&!hpLinkOnReply.__ug){ const f=hpLinkOnReply; hpLinkOnReply=Object.assign(function(o){ try{ if(o&&o.ok==='claim'&&typeof POST!=='undefined'&&POST&&POST.url) HP_AX_CPV={url:String(POST.url),pv:(typeof o.pv==='string')?o.pv:'',at:Date.now()}; }catch(e){} return f.apply(this,arguments); },f,{__ug:1}); } }catch(e){}
+
+const HP_RP_LOW=200, HP_RP_LONG_H=72, HP_RP_OK_PCT=90, HP_RP_DIP_N=3, HP_RP_GAP=60e3, HP_RP_RETRY=1800e3, HP_RP_EVERY=6*3600e3; const HP_RP_KIND={none:'rp_k_none',ok:'rp_k_ok',dip:'rp_k_dip',often:'rp_k_often',now:'rp_k_now',long:'rp_k_long'}; let HP_RP_LAST={}, HP_RP_BUSY='', HP_RP_AT={}, HP_RP_NEXT=0;
+function hpRpMerge(R,old,B){
+  const map={}; let now=-1, nowT=-Infinity;
+  for(const x of ((R&&R.reps)||[])){ const t=Number(x[0]), v=Number(x[1]); if(!(v>=0&&v<=255)) continue; const m=hpMomNow(R.C,t*1000); if(map[m]===undefined||v<map[m]) map[m]=v; if(t>=nowT){ nowT=t; now=v; } }
+  const ok=!!(old&&typeof old.reps==='string'&&old.reps.length===2*(Number(old.cur)-Number(old.first)));
+  let s=''; for(let m=B.first;m<B.cur;m++){ let v=map[m]; if(v===undefined&&ok&&m>=old.first&&m<old.cur){ const h=old.reps.substr((m-old.first)*2,2); if(h!=='--') v=parseInt(h,16); } s+=(v===undefined)?'--':v.toString(16).padStart(2,'0'); }
+  if(now<0&&ok&&Number(old.rnow)>=0) now=Number(old.rnow);
+  return {reps:s,now:now}; }
+function hpRpData(a){ try{ const x=(a&&typeof HP_UP!=='undefined'&&HP_UP)?HP_UP[a]:null; return (x&&x.rp&&typeof x.rp.reps==='string')?x.rp:((a&&HP_RP_LAST[a])||null); }catch(e){ return null; } }
+function hpRpVals(rp){ const s=String((rp&&rp.reps)||''), n=Math.floor(s.length/2), v=[]; for(let i=0;i<n;i++){ const h=s.substr(i*2,2); v.push(h==='--'?-1:parseInt(h,16)); } return v; }
+function hpRpCfg(rp){ return {base:Number(rp.base),trans:Number(rp.trans),size:Number(rp.size)||3600}; }
+function hpRpSum(rp,now){
+  now=now||Date.now(); const o={kind:'none',now:-1,known:0,pct:0,runs:0,longH:0,low:false,since:0,sinceH:0,part:0}; if(!rp||typeof rp.reps!=='string') return o;
+  const C=hpRpCfg(rp), hr=C.size/3600, v=hpRpVals(rp), N=v.length; if(Number(rp.now)>=0) v.push(Number(rp.now));
+  let known=0, hi=0, runs=0, run=0, longest=0, inLow=false, startI=-1, hiB=0, knB=0;
+  for(let i=0;i<v.length;i++){ const x=v[i]; if(x<0) continue; known++; if(x>=HP_RP_LOW){ hi++; if(inLow){ inLow=false; if(run>longest) longest=run; } } else { if(!inLow){ inLow=true; runs++; run=0; startI=i; hiB=hi; knB=known-1; } run++; } }
+  if(inLow&&run>longest) longest=run;
+  let cur=-1; for(let i=v.length-1;i>=0;i--){ if(v[i]>=0){ cur=v[i]; break; } }
+  o.now=cur; o.known=known; o.runs=runs; o.longH=Math.round(longest*hr); o.pct=known?Math.round(hi/known*1000)/10:0; o.part=(known&&known<0.9*(N+1))?Math.max(1,Math.round(known*hr/24)):0;
+  if(!known) return o; o.low=cur<HP_RP_LOW;
+  if(o.low){ o.since=hpMomStart(Number(rp.first)+startI,C); const h=(now-o.since)/3600e3, pb=knB?hiB/knB*100:100; o.sinceH=Math.max(0,Math.round(h)); o.kind=h>=HP_RP_LONG_H?'long':pb>=HP_RP_OK_PCT?'now':'often'; }
+  else o.kind=!runs?'ok':(o.pct>=HP_RP_OK_PCT&&runs<=HP_RP_DIP_N)?'dip':'often';
+  return o; }
+function hpRpDays(rp,now){
+  now=now||Date.now(); const days=[], d0=new Date(now); d0.setHours(0,0,0,0); for(let i=29;i>=0;i--){ const t=new Date(d0.getTime()); t.setDate(d0.getDate()-i); days.push({t:t.getTime(),min:-1,max:-1,n:0}); }
+  if(!rp||typeof rp.reps!=='string') return days; const C=hpRpCfg(rp);
+  const put=(t,v)=>{ if(!(v>=0)) return; for(let k=days.length-1;k>=0;k--){ if(t>=days[k].t){ const D=days[k]; if(!D.n||v<D.min) D.min=v; if(!D.n||v>D.max) D.max=v; D.n++; return; } } };
+  hpRpVals(rp).forEach((v,i)=>put(hpMomStart(Number(rp.first)+i,C),v)); if(Number(rp.now)>=0) put(now,Number(rp.now)); return days; }
+function hpRpMd(t){ const d=new Date(Number(t)||0); return (d.getMonth()+1)+'/'+d.getDate(); }
+function hpRpLine(S){ if(!S||S.kind==='none') return T('hl_up_none'); let t=TF('rp_now',{r:S.now})+'・'+T(HP_RP_KIND[S.kind]||'rp_k_none'); if(S.low&&S.since) t+=TF('rp_since',{d:hpRpMd(S.since)}); else if(S.runs) t+=TF('rp_runs',{n:S.runs}); return t; }
+function hpRpFacts(S){ return TF('rp_facts',{p:S.pct})+(S.runs?TF('rp_facts_low',{n:S.runs,h:S.longH}):'')+(S.part?TF('rp_part',{n:S.part}):''); }
+function hpRpEsc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function hpRpBarsSvg(days,x,y,w,h){
+  const n=Math.max(1,days.length), bw=w/n, f=v=>y+h-Math.max(0,Math.min(255,v))/255*h, L=f(HP_RP_LOW).toFixed(1), o=[];
+  days.forEach((d,i)=>{ const x0=(x+i*bw+bw*0.15).toFixed(1), ww=Math.max(0.8,bw*0.7).toFixed(1); if(!(d.n>0)){ o.push('<rect x="'+x0+'" y="'+(y+h-1).toFixed(1)+'" width="'+ww+'" height="1" fill="#3a4f6e"/>'); return; }
+    const top=Math.min(f(d.min),y+h-1.5); o.push('<rect x="'+x0+'" y="'+top.toFixed(1)+'" width="'+ww+'" height="'+(y+h-top).toFixed(1)+'" fill="'+(d.min<HP_RP_LOW?'#f5b85c':'#35d1b7')+'"/>'); });
+  o.push('<line x1="'+x.toFixed(1)+'" y1="'+L+'" x2="'+(x+w).toFixed(1)+'" y2="'+L+'" stroke="#e6edf6" stroke-opacity="0.5" stroke-width="0.7" stroke-dasharray="2 2"/>');
+  return '<g class="rp-bars">'+o.join('')+'</g>'; }
+function hpRpChartSvg(rp,now){
+  now=now||Date.now(); const W=340, H=160, X0=34, X1=W-8, Y0=8, Y1=H-24, C=hpRpCfg(rp), v=hpRpVals(rp), t0=hpMomStart(Number(rp.first),C), span=Math.max(1,now-t0);
+  const sx=t=>X0+(Math.max(t0,Math.min(now,t))-t0)/span*(X1-X0), sy=x=>Y1-Math.max(0,Math.min(255,x))/255*(Y1-Y0), P=p=>sx(p[0]).toFixed(1)+','+sy(p[1]).toFixed(1), o=[];
+  o.push('<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+hpRpEsc(T('rp_h'))+'" style="display:block;max-width:560px">');
+  for(const g of [0,100,200,255]){ const y=sy(g), lo=g===HP_RP_LOW; o.push('<line x1="'+X0+'" y1="'+y.toFixed(1)+'" x2="'+X1+'" y2="'+y.toFixed(1)+'" stroke="'+(lo?'#f5b85c':'#2a3a57')+'" stroke-width="'+(lo?1:0.6)+'"'+(lo?' stroke-dasharray="4 3"':'')+'/><text x="'+(X0-4)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="end" font-size="10" fill="#8aa0bd">'+g+'</text>'); }
+  const pts=v.map((x,i)=>x<0?null:[hpMomStart(Number(rp.first)+i,C)+C.size*500,x]); if(Number(rp.now)>=0) pts.push([now,Number(rp.now)]);
+  const line=(seg,col,wd)=>{ if(seg.length>1) o.push('<polyline fill="none" stroke="'+col+'" stroke-width="'+wd+'" stroke-linejoin="round" points="'+seg.map(P).join(' ')+'"/>'); else if(seg.length===1) o.push('<circle cx="'+sx(seg[0][0]).toFixed(1)+'" cy="'+sy(seg[0][1]).toFixed(1)+'" r="1.6" fill="'+col+'"/>'); };
+  let seg=[]; for(const p of pts){ if(!p){ line(seg,'#35d1b7',1.4); seg=[]; continue; } seg.push(p); } line(seg,'#35d1b7',1.4);
+  seg=[]; for(const p of pts){ if(p&&p[1]<HP_RP_LOW){ seg.push(p); continue; } line(seg,'#f5b85c',2); seg=[]; } line(seg,'#f5b85c',2);
+  const d0=new Date(now); d0.setHours(0,0,0,0); for(let k=4;k>=0;k--){ const t=new Date(d0.getTime()); t.setDate(d0.getDate()-k*7); const tt=t.getTime(); if(tt<t0) continue; const x=sx(tt).toFixed(1); o.push('<line x1="'+x+'" y1="'+Y1+'" x2="'+x+'" y2="'+(Y1+3)+'" stroke="#5d6f8c"/><text x="'+x+'" y="'+(Y1+15)+'" text-anchor="middle" font-size="10" fill="#8aa0bd">'+hpRpMd(tt)+'</text>'); }
+  o.push('</svg>'); return o.join(''); }
+function hpRpAddrOf(url){
+  try{ url=String(url||''); if(!url) return ''; const ok=a=>/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(String(a||''));
+    if(typeof hpPostUrl==='function'&&url===String(hpPostUrl()||'')&&typeof hpHlHostAddr==='function'){ const a=hpHlHostAddr(); if(ok(a)) return a; }
+    const L=(typeof hpLbGet==='function')?hpLbGet():{}; if(L[url]&&ok(L[url].h)) return String(L[url].h);
+    if(typeof HP_AX!=='undefined'&&HP_AX&&Array.isArray(HP_AX.rows)){ const r=HP_AX.rows.find(x=>x&&x.url===url&&ok(x.host)); if(r) return String(r.host); }
+    return ''; }catch(e){ return ''; } }
+function hpRpCurOf(a){
+  try{ if(typeof HP_HOSTS!=='undefined'&&HP_HOSTS&&Array.isArray(HP_HOSTS.hosts)){ const h=HP_HOSTS.hosts.find(x=>x&&x.addr===a); if(h&&h.rep!=null) return Number(h.rep); } }catch(e){}
+  try{ if(typeof HP_AX!=='undefined'&&HP_AX&&HP_AX.hosts&&HP_AX.hosts[a]&&HP_AX.hosts[a].rep!=null) return Number(HP_AX.hosts[a].rep); }catch(e){} return -1; }
+function hpRpBoxLines(b,bw,L){
+  try{ const a=hpRpAddrOf(b&&b.url); if(!a||!Array.isArray(L)) return L; const rp=hpRpData(a), S=rp?hpRpSum(rp):null, r=(S&&S.now>=0)?S.now:hpRpCurOf(a), x=(typeof HP_UP!=='undefined'&&HP_UP)?HP_UP[a]:null, tw=bw-24;
+    const t=r>=0?TF('bm_rep',{r:r}):T(((x&&x.st==='busy')||HP_RP_BUSY===a)?'bm_rep_busy':'bm_rep_none');
+    L.push({t:(typeof hpBmCut==='function')?hpBmCut(t,11,tw):t,fs:11,fw:700,fill:(r>=0&&r<HP_RP_LOW)?'#f5b85c':'#8aa0bd',rp:a});
+    if(rp){ L.push({bars:hpRpDays(rp)}); L.push({gap:true}); } return L; }catch(e){ return L; } }
+function hpRpHlItem(now){
+  const a=(typeof hpHlHostAddr==='function')?hpHlHostAddr():''; if(!a) return null; const rp=hpRpData(a), x=(typeof HP_UP!=='undefined'&&HP_UP)?HP_UP[a]:null;
+  if(!rp){ const busy=!!((x&&x.st==='busy')||(typeof HP_HL_UP_BUSY!=='undefined'&&HP_HL_UP_BUSY)); return {k:'rep',st:'na',t:T(busy?'hl_up_busy':'hl_up_none')}; }
+  const S=hpRpSum(rp,now); return {k:'rep',st:S.kind==='none'?'na':S.low?'bad':'ok',t:hpRpLine(S)}; }
+function hpRpMini(rp,w,h){ return '<svg viewBox="0 0 '+w+' '+(h+2)+'" width="'+w+'" height="'+(h+2)+'" style="display:block">'+hpRpBarsSvg(hpRpDays(rp),0,1,w,h)+'</svg>'; }
+function hpRpKick(now){
+  now=now||Date.now(); if(now<HP_RP_NEXT) return false; HP_RP_NEXT=now+10e3;
+  if(HP_RP_BUSY||typeof hpUpHost!=='function'||typeof HP_UP==='undefined'||!HP_UP) return false;
+  if((typeof HP_UP_RUN!=='undefined'&&HP_UP_RUN)||(typeof HP_HL_UP_BUSY!=='undefined'&&HP_HL_UP_BUSY)||(typeof HP_AX_CK!=='undefined'&&HP_AX_CK)) return false;
+  let M=null; try{ M=(typeof hpBmModel==='function')?hpBmModel():null; }catch(e){} if(!M||!Array.isArray(M.boxes)) return false;
+  const cur=String((typeof hpPostUrl==='function'&&hpPostUrl())||'');
+  const own=(typeof hpHlHostAddr==='function')?hpHlHostAddr():'';
+  for(const b of M.boxes){ if(!b||(b.url===cur&&own)) continue; const a=hpRpAddrOf(b.url); if(!a) continue; const x=HP_UP[a];
+    if(x&&x.st==='busy') continue; if(x&&x.st==='ok'&&x.rp&&now-Number(x.at)<HP_RP_EVERY) continue; if(HP_RP_AT[a]&&now-HP_RP_AT[a]<((x&&x.st==='err')?HP_RP_RETRY:HP_RP_GAP)) continue;
+    const aid=(typeof hpAxAid==='function')?hpAxAid(a):''; if(!aid) continue;
+    HP_RP_BUSY=a; HP_RP_AT[a]=now;
+    (async()=>{ try{ const r=await hpUpHost({addr:a,aid:aid}); if(r&&r.st==='ok') HP_UP[a]=r; }catch(e){ HP_UP[a]={st:'err',at:Date.now(),why:String((e&&e.message)||e)}; try{ hpLog('評価の移り変わりを読めない '+a.slice(0,8)+'… '+HP_UP[a].why); }catch(_){} }
+      finally{ HP_RP_BUSY=''; HP_RP_NEXT=0; try{ if(typeof hpBmUi==='function') hpBmUi(); }catch(_){} } })();
+    return true; }
+  HP_RP_NEXT=now+300e3; return false; }
+try{ if(typeof hpUpHost==='function'&&!hpUpHost.__rp){ const f=hpUpHost; hpUpHost=Object.assign(async function(h){ const r=await f.apply(this,arguments); try{ if(r&&r.rp&&h&&h.addr) HP_RP_LAST[h.addr]=r.rp; }catch(e){} return r; },f,{__rp:1}); } }catch(e){}
 

@@ -272,14 +272,14 @@ function hpPxSt(){ if(typeof ID==='undefined'||!ID) return {}; if(!ID.px||typeof
 function hpPxAcctWatch(now){
   try{ if(typeof ID==='undefined'||!ID) return false; const a=((typeof hpLeaseAcct==='function')&&hpLeaseAcct())||'', x=((typeof hpXmAcct==='function')&&hpXmAcct())||'', k=a+'|'+x, P=hpPxSt();
     if(P.acct===undefined){ P.acct=k; saveID(); return false; }
-    if(P.acct!==k){ P.acct=k; if(a||x){ P.regAt=now||Date.now(); hpLog('借りた口座・支払う口座が替わった。値段は 6 時間取り寄せない'); } saveID(); return true; } return false; }catch(e){ return false; } }
+    if(P.acct!==k){ P.acct=k; if(a||x){ P.regAt=now||Date.now(); hpLog('借りた口座・支払う口座が替わった。値段はしばらく取り寄せない');   } saveID(); return true; } return false; }catch(e){ return false; } }
 function hpPxQuietUntil(now){ now=now||Date.now(); const P=hpPxSt(), ev=Math.max(Number(P.evAt)||0,Number(P.regAt)||0); return (ev&&now<ev+HP_PX_QUIET)?ev+HP_PX_QUIET:0; }
 function hpPxOps(){ try{ return !!((typeof HP_RENT_BUSY!=='undefined'&&HP_RENT_BUSY)||(typeof HP_RENT_J!=='undefined'&&HP_RENT_J)||(typeof HP_OB_RE!=='undefined'&&HP_OB_RE)||(typeof HP_MOVE!=='undefined'&&HP_MOVE)||(typeof ID!=='undefined'&&ID&&(ID.rentJob||ID.moveJob))); }catch(e){ return false; } }
 function hpPayWhen(t){ const d=new Date(Number(t)), p=n=>String(n).padStart(2,'0'); return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
 async function hpPxGet(why){
   if(HP_PX_BUSY) return false; if(!HP_PX_FETCH){ hpPaySt(T('pay_px_none'),true); return false; } const cur=hpPayCur(); HP_PX_BUSY=true; hpPayBtns(); hpPaySt(TF('pay_px_busy',{c:cur.toUpperCase()}));
   try{ const r=await hpPxRange(cur); const P=hpPxSt(); P.last=Date.now(); P.fail=0; try{ saveID(); }catch(e){}
-    hpLog('値段を取り寄せた（'+(why==='auto'?'毎日の取り寄せ':'押した')+'・'+cur.toUpperCase()+'・'+r.n+' 日分）'); hpPayDrawAll(); hpPaySt(TF('pay_px_got',{c:cur.toUpperCase(),n:r.n})); return true; }
+    hpLog('値段を取り寄せた（'+(why==='auto'?'自動の取り寄せ':'押した')+'・'+cur.toUpperCase()+'・'+r.n+' 日分）'); hpPayDrawAll(); hpPaySt(TF('pay_px_got',{c:cur.toUpperCase(),n:r.n})); return true; }
   catch(e){ const w=String((e&&e.message)||e); hpLog('値段を取り寄せられない（'+w+'）'); hpPaySt(TF('pay_px_err',{why:w}),true); return false; }
   finally{ HP_PX_BUSY=false; hpPayBtns(); } }
 async function hpPxPress(){
@@ -287,9 +287,9 @@ async function hpPxPress(){
   if(!HP_PAY||now-(Number(HP_PAY.at)||0)>10*60e3){ try{ await hpPayRead(true); }catch(e){} }
   const u=hpPxQuietUntil(Date.now()); if(u){ hpPaySt(TF('pay_px_wait',{t:hpPayWhen(u)})); hpPayBtns(); return false; }
   if(hpPxOps()){ hpPaySt(T('pay_px_ops')); return false; }
-  const P=hpPxSt(); if(!P.on){ P.on=1; P.auto=1; P.onAt=now; try{ saveID(); }catch(e){} hpLog('値段の取り寄せを始めた（押した。このあとは 1 日 1 回、毎日ずらした時刻に取る）'); }
+  const P=hpPxSt(); if(!P.on){ P.on=1; P.auto=1; P.onAt=now; try{ saveID(); }catch(e){} hpLog('値段の取り寄せを始めた（押した。このあとは自動で取る）'); }
   return hpPxGet('button'); }
-function hpPxAutoSet(on){ const P=hpPxSt(); if(!P.on) return false; P.auto=on?1:0; try{ saveID(); }catch(e){} hpLog(on?'値段の毎日の取り寄せを入れた':'値段の毎日の取り寄せを切った'); hpPayBtns(); return true; }
+function hpPxAutoSet(on){ const P=hpPxSt(); if(!P.on) return false; P.auto=on?1:0; try{ saveID(); }catch(e){} hpLog(on?'値段の自動の取り寄せを入れた':'値段の自動の取り寄せを切った'); hpPayBtns(); return true; }
 async function hpPxTick(now){
   try{ if(typeof ID==='undefined'||!ID||HP_PX_BUSY) return ''; now=now||Date.now(); hpPxAcctWatch(now); const P=hpPxSt();
     if(!P.on||P.auto===0||!((typeof hpLeaseAcct==='function')&&hpLeaseAcct())) return 'off';
