@@ -697,11 +697,12 @@ function hpAxWhy0(r,now){
 function hpAxWhy(r,now){ const w=hpAxWhy0(r,now); if(w) return w; const p=HP_AX_PB[r.url]; if(p&&p.st==='down') return 'down'; const c=hpAxCap(r,p); return (c&&c.full)?'full':''; }
 function hpAxOld3(r){ const b=Number(r&&r.buy)||0; return b>=HP_AX_OLD_A&&b<HP_AX_OLD_B; }
 function hpAxCap(r,p){
-  try{ if(!p||!Array.isArray(p.reg)) return null; const n=p.reg.length, l=(p.pv||!hpAxOld3(r))?5:3, m=Math.max(0,l-n);
+  try{ if(!p||!Array.isArray(p.reg)) return null; const n=p.reg.length, l=(p.pv||p.upg==='new'||!hpAxOld3(r))?5:3, m=Math.max(0,l-n);
     const k=(typeof hpSibs==='function'?hpSibs():[]).filter(d=>d&&d.dev&&d.devSig&&p.reg.indexOf(d.dev)<0).length;
     return {n:n,l:l,m:m,k:k,full:k>m}; }catch(e){ return null; } }
 function hpAxSort(rows,now){ const rank=r=>{ const w=hpAxWhy(r,now); return w===''?0:(w==='cur'||w.indexOf('sib:')===0)?1:w==='unk'?3:2; }, up=r=>{ const x=(r.host&&typeof HP_UP!=='undefined')?HP_UP[r.host]:null; return (x&&x.st==='ok')?Number(x.pct)||0:-1; };
-  return rows.slice().sort((a,b)=>(rank(a)-rank(b))||((Number(b.exp)||0)-(Number(a.exp)||0))||(up(b)-up(a))||String(a.url||a.dom).localeCompare(String(b.url||b.dom))); }
+  const ov=r=>(typeof hpAxUpg==='function'&&hpAxUpg(r)==='old')?1:0;
+  return rows.slice().sort((a,b)=>(rank(a)-rank(b))||(ov(a)-ov(b))||((Number(b.exp)||0)-(Number(a.exp)||0))||(up(b)-up(a))||String(a.url||a.dom).localeCompare(String(b.url||b.dom))); }
 async function hpAxProbe(url,o){
   let c=null; const t0=Date.now(), out=[];
   try{ const kp=await hpDevKey(); c=await HotPocket.createClient([url],kp);
@@ -713,7 +714,7 @@ async function hpAxProbe(url,o){
       const t1=Date.now(); while(Date.now()-t1<ms){ const i=out.findIndex(x=>x&&(x.ok===name||x.err)); if(i>=0) return out.splice(i,1)[0]; await sleep(200); } return null; };
     const g=await ask({op:'dget'},'dget',HP_AX_ASK);
     if(g&&g.ok==='dget'&&Array.isArray(g.devs)) res.reg=g.devs.map(d=>String((d&&d.dev)||'')).filter(Boolean); else if(g&&g.err==='not owner') res.noreg=1;
-    if(res.reg&&o&&o.ver){ const v=await ask({op:'ver'},'ver',HP_AX_VER); if(v&&v.ok==='ver'&&typeof v.pv==='string'&&v.pv) res.pv=v.pv; }
+    if((res.reg||res.noreg)&&o&&o.ver){ const v=await ask({op:'ver'},'ver',HP_AX_VER); if(v&&v.ok==='ver'&&typeof v.pv==='string'&&v.pv){ res.pv=v.pv; res.upg='new'; } else res.upg=(v&&v.err)?'new':'old'; }
     return res; }
   catch(e){ return {st:'down',e:String((e&&e.message)||e).slice(0,80)}; }
   finally{ if(c){ try{ await c.close(); }catch(e){} } } }
@@ -723,7 +724,7 @@ async function hpAxCheck(){
   try{ const skip=new Set([String((typeof hpPostUrl==='function'&&hpPostUrl())||'')]), fb=new Set();
     try{ const o=(typeof hpOldGet==='function')?hpOldGet():null; if(o&&o.url) skip.add(o.url); }catch(e){} try{ for(const u of ((typeof hpFbUrls==='function'&&hpFbUrls())||[])) fb.add(u); }catch(e){}
     const now=Date.now(), due=r=>r.url&&!skip.has(r.url)&&!hpAxWhy0(r,now)&&!(HP_AX_PB[r.url]&&HP_AX_PB[r.url].st!=='busy'&&now-HP_AX_PB[r.url].at<HP_AX_FRESH), want=X.rows.filter(r=>due(r)&&!fb.has(r.url)), wantFb=X.rows.filter(r=>due(r)&&fb.has(r.url));
-    const probe=async r=>{ HP_AX_PB[r.url]={st:'busy',at:Date.now()}; hpAxTick(); let p=null; try{ p=await hpAxProbe(r.url,{ver:hpAxOld3(r)}); }catch(e){ p={st:'down'}; } HP_AX_PB[r.url]=Object.assign(p,{at:Date.now()}); hpAxTick(); };
+    const probe=async r=>{ HP_AX_PB[r.url]={st:'busy',at:Date.now()}; hpAxTick(); let p=null; try{ p=await hpAxProbe(r.url,{ver:true});   }catch(e){ p={st:'down'}; } HP_AX_PB[r.url]=Object.assign(p,{at:Date.now()}); hpAxTick(); };
     let i=0; const one=async()=>{ while(i<want.length) await probe(want[i++]); };
     const P=[]; for(let k=0;k<HP_AX_PAR;k++) P.push(one());
     P.push((async()=>{ const busy=()=>(typeof HP_BX_BUSY!=='undefined'&&HP_BX_BUSY)||(typeof HP_FB_BUSY!=='undefined'&&HP_FB_BUSY)||(typeof HP_OLD_BUSY!=='undefined'&&HP_OLD_BUSY);
@@ -767,14 +768,15 @@ function hpAxDraw(){
     const hd=document.createElement('tr'); for(const h of ['ax_h_box','ax_h_left','ax_h_use','ax_h_conn','ax_h_up','ax_h_rep','']){ const th=document.createElement('th'); th.textContent=h?T(h):''; th.style.cssText='text-align:left'; hd.appendChild(th); } tb.appendChild(hd);
     const td=(tr,txt,css,hk)=>{ const c=document.createElement('td'); c.style.cssText='text-align:left;vertical-align:top'+(css?';'+css:''); if(hk) c.setAttribute('data-h',T(hk)+T('ax_sep')); if(txt!=null) c.textContent=txt; tr.appendChild(c); return c; };
     const sub=(c,txt)=>{ const d=hpFlEl('div','',txt); d.style.cssText='font-size:11px;color:var(--dim)'; c.appendChild(d); return d; };
-    let rec=false; const main=(typeof hpIsMain==='function'&&hpIsMain()), rank=r=>{ const w=hpAxWhy(r,now); return w===''?0:(w==='cur'||w.indexOf('sib:')===0)?1:w==='unk'?3:2; };
+    let rec=false, oldShown=false; const main=(typeof hpIsMain==='function'&&hpIsMain()), rank=r=>{ const w=hpAxWhy(r,now); return w===''?0:(w==='cur'||w.indexOf('sib:')===0)?1:w==='unk'?3:2; };
     const all=hpAxSort(X.rows,now), vis=all.filter(r=>rank(r)<2), fold=all.filter(r=>rank(r)>=2);
     const row=r=>{ const tr=document.createElement('tr'), why=hpAxWhy(r,now), pb=r.url?HP_AX_PB[r.url]:null, us=r.url?hpAxUsers(r.url):{me:false,sibs:[]}, cap=r.url?hpAxCap(r,pb):null;
       if(r.url&&HP_AX_GO===r.url) tr.className='pick';
 
       const c1=td(tr,null); { const m=hpFlEl('span','',r.url?r.url.replace(/^wss:\/\//,''):r.dom); m.style.cssText='font-family:ui-monospace,Menlo,Consolas,monospace;color:'+(r.url?'var(--teal)':'var(--dim)'); c1.appendChild(m);
-        if(!rec&&why===''&&pb&&pb.st==='ok'){ rec=true; const b=hpFlEl('span','',T('ax_rec')); b.style.cssText='margin-left:6px;font-size:11px;padding:0 6px;border:1px solid var(--teal);border-radius:8px;color:var(--teal)'; c1.appendChild(b); }
-        if(!r.url) sub(c1,T('ax_unk')); else if(r.amb) sub(c1,TF('ax_amb',{n:r.amb})); else if(r.buy) sub(c1,TF('ax_buy',{d:hpAxDate(r.buy).split(' ')[0]})); }
+        if(!rec&&why===''&&pb&&pb.st==='ok'&&!(typeof hpAxUpg==='function'&&hpAxUpg(r)==='old')){   rec=true; const b=hpFlEl('span','',T('ax_rec')); b.style.cssText='margin-left:6px;font-size:11px;padding:0 6px;border:1px solid var(--teal);border-radius:8px;color:var(--teal)'; c1.appendChild(b); }
+        if(!r.url) sub(c1,T('ax_unk')); else if(r.amb) sub(c1,TF('ax_amb',{n:r.amb})); else if(r.buy) sub(c1,TF('ax_buy',{d:hpAxDate(r.buy).split(' ')[0]}));
+        { const ug=(typeof hpAxUpg==='function')?hpAxUpg(r):''; if(ug){ const d=sub(c1,T(ug==='new'?'ax_upg_new':'ax_upg_old')); d.style.color=ug==='old'?'var(--amber)':'var(--teal)'; if(ug==='old') oldShown=true; } } }
 
       if(Number(r.exp)>0){ const left=Number(r.exp)-now, d=Math.floor(left/864e5)  , col=left<HP_AX_MIN*864e5?'color:var(--red)':left<HP_AX_WARN*864e5?'color:var(--amber)':''; const c2=td(tr,left<=0?T('ax_over'):left<864e5?T('ax_lt1'):TF('ax_days',{d:d}),'font-weight:600;'+col,'ax_h_left'); sub(c2,TF(r.amb?'ax_until_amb':'ax_until',{t:hpAxDate(Number(r.exp))})); }
       else td(tr,'—','','ax_h_left');
@@ -801,6 +803,7 @@ function hpAxDraw(){
     if(HP_AX_OPEN&&fold.some(r=>!r.url)) nt(T('ax_unk_nt'),'margin-top:6px',nb);
     nt(T('ax_watch_nt'),'margin-top:4px',nb);
     if(X.rows.some(r=>r.url&&hpAxCap(r,HP_AX_PB[r.url]))) nt(T('ax_cap_nt'),'margin-top:4px',nb);
+    if(oldShown) nt(T('ax_upg_nt'),'margin-top:4px',nb);
     return true; }catch(e){ return false; } }
 
 const HP_LB_MAX=16, HP_LB_KEEP=864e5, HP_LB_NOEXP=40*864e5, HP_LB_GONE=60*864e5;
@@ -922,4 +925,11 @@ try{ if(typeof hpMoveIn==='function'&&!hpMoveIn.__fo){ const f=hpMoveIn; hpMoveI
     const v=await f.apply(this,arguments);
     try{ if(v===true&&share) hpAxFollow(o,cur); }catch(e){}
     return v; },f,{__fo:1}); } }catch(e){}
+
+let HP_AX_CPV=null;
+function hpAxUpg(r){
+  try{ if(!r||!r.url) return ''; const cur=String((typeof hpPostUrl==='function'&&hpPostUrl())||'');
+    if(r.url===cur){ const c=HP_AX_CPV; return (c&&c.url===cur)?(c.pv?'new':'old'):''; }
+    const p=(typeof HP_AX_PB!=='undefined'&&HP_AX_PB)?HP_AX_PB[r.url]:null; return (p&&(p.upg==='new'||p.upg==='old'))?p.upg:''; }catch(e){ return ''; } }
+try{ if(typeof hpLinkOnReply==='function'&&!hpLinkOnReply.__ug){ const f=hpLinkOnReply; hpLinkOnReply=Object.assign(function(o){ try{ if(o&&o.ok==='claim'&&typeof POST!=='undefined'&&POST&&POST.url) HP_AX_CPV={url:String(POST.url),pv:(typeof o.pv==='string')?o.pv:'',at:Date.now()}; }catch(e){} return f.apply(this,arguments); },f,{__ug:1}); } }catch(e){}
 
