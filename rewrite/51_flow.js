@@ -993,14 +993,19 @@ function hpRpCurOf(a){
   try{ if(typeof HP_AX!=='undefined'&&HP_AX&&HP_AX.hosts&&HP_AX.hosts[a]&&HP_AX.hosts[a].rep!=null) return Number(HP_AX.hosts[a].rep); }catch(e){} return -1; }
 function hpRpBoxLines(b,bw,L){
   try{ const a=hpRpAddrOf(b&&b.url); if(!a||!Array.isArray(L)) return L; const rp=hpRpData(a), S=rp?hpRpSum(rp):null, r=(S&&S.now>=0)?S.now:hpRpCurOf(a), x=(typeof HP_UP!=='undefined'&&HP_UP)?HP_UP[a]:null, tw=bw-24;
-    const t=r>=0?TF('bm_rep',{r:r}):T(((x&&x.st==='busy')||HP_RP_BUSY===a)?'bm_rep_busy':'bm_rep_none');
+    const own=(typeof hpHlHostAddr==='function')?hpHlHostAddr():'', busy=!!((x&&x.st==='busy')||HP_RP_BUSY===a||(own===a&&typeof HP_HL_UP_BUSY!=='undefined'&&HP_HL_UP_BUSY));
+    const t=r>=0?TF('bm_rep',{r:r}):T(busy?'bm_rep_busy':'bm_rep_none');
     L.push({t:(typeof hpBmCut==='function')?hpBmCut(t,11,tw):t,fs:11,fw:700,fill:(r>=0&&r<HP_RP_LOW)?'#f5b85c':'#8aa0bd',rp:a});
-    if(rp){ L.push({bars:hpRpDays(rp)}); L.push({gap:true}); } return L; }catch(e){ return L; } }
+    if(rp){ L.push({bars:hpRpDays(rp)}); L.push({gap:true}); L.push({gap:true}); }   return L; }catch(e){ return L; } }
 function hpRpHlItem(now){
   const a=(typeof hpHlHostAddr==='function')?hpHlHostAddr():''; if(!a) return null; const rp=hpRpData(a), x=(typeof HP_UP!=='undefined'&&HP_UP)?HP_UP[a]:null;
   if(!rp){ const busy=!!((x&&x.st==='busy')||(typeof HP_HL_UP_BUSY!=='undefined'&&HP_HL_UP_BUSY)); return {k:'rep',st:'na',t:T(busy?'hl_up_busy':'hl_up_none')}; }
   const S=hpRpSum(rp,now); return {k:'rep',st:S.kind==='none'?'na':S.low?'bad':'ok',t:hpRpLine(S)}; }
 function hpRpMini(rp,w,h){ return '<svg viewBox="0 0 '+w+' '+(h+2)+'" width="'+w+'" height="'+(h+2)+'" style="display:block">'+hpRpBarsSvg(hpRpDays(rp),0,1,w,h)+'</svg>'; }
+
+function hpRpBarsLab(days,x,y,w,h){ const G=16, LH=10, x0=x+G, cw=Math.max(10,w-G), ch=Math.max(8,h-LH), f=v=>y+ch-Math.max(0,Math.min(255,v))/255*ch, tx=(px,py,v,a)=>'<text x="'+px.toFixed(1)+'" y="'+py.toFixed(1)+'" font-size="8" fill="#8aa0bd" text-anchor="'+a+'">'+hpRpEsc(v)+'</text>';
+  return '<g class="rp-scale"><title>'+hpRpEsc(T('rp_bars_t'))+'</title>'+hpRpBarsSvg(days,x0,y,cw,ch)+tx(x0-2,f(HP_RP_LOW)+3,'200','end')+tx(x0-2,y+ch,'0','end')+tx(x0,y+ch+LH-1,(days&&days.length)?hpRpMd(days[0].t):'','start')+tx(x0+cw,y+ch+LH-1,T('rp_today'),'end')+'</g>'; }
+function hpRpMiniLab(rp,w,h){ return '<svg viewBox="0 0 '+w+' '+(h+2)+'" width="'+w+'" height="'+(h+2)+'" style="display:block">'+hpRpBarsLab(hpRpDays(rp),0,1,w,h)+'</svg>'; }
 function hpRpKick(now){
   now=now||Date.now(); if(now<HP_RP_NEXT) return false; HP_RP_NEXT=now+10e3;
   if(HP_RP_BUSY||typeof hpUpHost!=='function'||typeof HP_UP==='undefined'||!HP_UP) return false;
