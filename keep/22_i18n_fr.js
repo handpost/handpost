@@ -1118,6 +1118,7 @@ I18N.fr={
   chg_bk36f14:"- Quand vous n'êtes pas connecté directement à votre ami, les photos et fichiers passent maintenant tout de suite par la boîte aux lettres. Il n'est plus nécessaire d'appuyer sur [Envoyer par la boîte aux lettres].\n- Une photo entre maintenant dans la boîte aux lettres en une seule lettre et arrive plus vite, une fois la boîte aux lettres de votre ami mise à jour.",
   chg_bk36f15:"- Les bulles de photo affichent maintenant la taille de la photo (Ko).",
   chg_bk36f16:"- Handpost compare désormais aussi sa version avec l'enregistrement écrit dans le registre Xahau (≡ → Sécurité, Version de Handpost).",
+  chg_bk36f17:"- Le programme de la boîte aux lettres a été mis à jour pour préparer l'envoi de grandes photos et de vidéos. La quantité que votre boîte aux lettres peut contenir est maintenant fixée automatiquement selon l'hôte loué.",
   rell_ok:"Correspond aussi à l'enregistrement du registre Xahau (version {n}).",
   rell_wait:"Nouvelle version. En attente de son enregistrement dans le registre Xahau (version {n}).",
   rell_late:"Cette version (version {n}) n'est toujours pas enregistrée dans le registre Xahau 2 heures après sa publication. Elle n'est peut-être pas authentique. Prévenez le développeur.",

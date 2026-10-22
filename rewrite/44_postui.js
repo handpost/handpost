@@ -2726,7 +2726,7 @@ function hpHelpMount(){ try{ if(typeof document==='undefined'||!document||!docum
   const s=document.createElement('section'); s.id='p-help'; main.appendChild(s); return 'made'; }catch(e){ return ''; } }
 try{ if(typeof document!=='undefined'&&document&&document.getElementById){ if(document.readyState==='loading'&&document.addEventListener) document.addEventListener('DOMContentLoaded',()=>{ hpHelpMount(); }); else hpHelpMount(); } }catch(e){}
 
-const HP_CHG=[['bk36f16','chg_bk36f16'],['bk36f15','chg_bk36f15'],['bk36f14','chg_bk36f14'],['bk36f13','chg_bk36f13'],['bk36f12','chg_bk36f12'],['bk36f11','chg_bk36f11'],['bk36f10','chg_bk36f10'],['bk36f8','chg_bk36f8'],['bk36f7','chg_bk36f7']], HP_CHG_MAX=3, HP_CHG_K='p2p_chgseen';
+const HP_CHG=[['bk36f17','chg_bk36f17'],['bk36f16','chg_bk36f16'],['bk36f15','chg_bk36f15'],['bk36f14','chg_bk36f14'],['bk36f13','chg_bk36f13'],['bk36f12','chg_bk36f12'],['bk36f11','chg_bk36f11'],['bk36f10','chg_bk36f10'],['bk36f8','chg_bk36f8'],['bk36f7','chg_bk36f7']], HP_CHG_MAX=3, HP_CHG_K='p2p_chgseen';
 function hpChgSeen(){ try{ return String(localStorage.getItem(HP_CHG_K)||''); }catch(e){ return ''; } }
 function hpChgList(seen){ const i=HP_CHG.findIndex(x=>x[0]===seen); if(!seen) return HP_CHG.slice(0,1); if(i<0) return HP_CHG.slice(0,HP_CHG_MAX); return HP_CHG.slice(0,Math.min(i,HP_CHG_MAX)); }
 function hpChgClose(){ try{ localStorage.setItem(HP_CHG_K,HP_CHG[0][0]); }catch(e){} try{ const n=document.getElementById('hp-chg'); if(n&&n.parentNode) n.parentNode.removeChild(n); }catch(e){} return true; }
@@ -2884,4 +2884,20 @@ function hpRellUi(){ try{ if(typeof document==='undefined'||!document.getElement
   d.style.color=(HP_RELL.st==='late'||HP_RELL.st==='bad')?'var(--red)':HP_RELL.st==='wait'?'var(--amber)':HP_RELL.st==='ok'?'var(--teal)':'var(--dim)'; return true; }catch(e){ return false; } }
 try{ if(typeof hpRelCheck==='function'&&!hpRelCheck.__rell){ const f=hpRelCheck; hpRelCheck=async function(){ const st=await f.apply(this,arguments); try{ if(HP_RELL_ACCT) setTimeout(()=>{ hpRellCheck(false).catch(()=>{}); },0); }catch(e){} return st; }; Object.assign(hpRelCheck,f,{__rell:1}); } }catch(e){}
 try{ if(typeof hpRelUi==='function'&&!hpRelUi.__rell){ const f=hpRelUi; hpRelUi=function(){ const r=f.apply(this,arguments); try{ hpRellUi(); }catch(e){} return r; }; Object.assign(hpRelUi,f,{__rell:1}); } }catch(e){}
+
+const HP_CAP_RATE=0.4, HP_CAP_DEF=600*1048576, HP_CAP_MIN=50*1048576; let HP_CAP_KICK=null, HP_CAP_PEND=null;
+function hpCapFor(diskI){ const d=Number(diskI)||0; if(!(d>0)) return HP_CAP_DEF; return Math.max(HP_CAP_MIN,Math.floor(d*1048576*HP_CAP_RATE)); }
+async function hpCapHostOf(url){ let host=''; try{ host=new URL(String(url||'').replace(/^wss:/,'https:')).hostname.toLowerCase(); }catch(e){ return 0; } if(!host) return 0;
+  let hosts=null; const dom=new Map(); try{ if(typeof HP_HS_DOM!=='undefined') for(const [a,d] of HP_HS_DOM) dom.set(a,d); }catch(e){}
+  try{ if(typeof HP_HOSTS!=='undefined'&&HP_HOSTS&&!HP_HOSTS.empty&&Array.isArray(HP_HOSTS.hosts)) hosts=HP_HOSTS.hosts; }catch(e){}
+  if(!hosts){ try{ const c=(typeof HP_HS_CACHE!=='undefined'&&HP_HS_CACHE)?await HP_HS_CACHE.get('hosts'):null; if(c&&Array.isArray(c.hosts)){ hosts=c.hosts; for(const [a,d] of (c.dom||[])) if(!dom.has(a)) dom.set(a,d); } }catch(e){ hosts=null; } }
+  for(const h of (hosts||[])){ const d=String(dom.get(h.addr)||h.desc||'').toLowerCase(); if(d&&(d===host||host.endsWith('.'+d))) return Number(h.diskI)||0; } return 0; }
+async function hpCapKick(){ try{ if(typeof POST==='undefined'||!POST||!POST.up||!POST.client||POST.notOwner||!POST.claimedId||!POST.url) return 0; if(HP_CAP_KICK===POST.client) return 0; HP_CAP_KICK=POST.client;
+  const url=String(POST.url), di=await hpCapHostOf(url), cap=hpCapFor(di); const done=(ID&&ID.postCap&&typeof ID.postCap==='object')?Number(ID.postCap[url])||0:0; if(done===cap) return 0;
+  HP_CAP_PEND={url:url,cap:cap,di:di}; hpSend({op:'config',capacity:cap}).catch(()=>{ HP_CAP_KICK=null; HP_CAP_PEND=null; }); return 1; }catch(e){ return 0; } }
+function hpCapOnReply(o){ try{ const P=HP_CAP_PEND; if(!o||o.ok!=='config'||!P||Number(o.capacity)!==P.cap) return false; HP_CAP_PEND=null;
+  if(!ID.postCap||typeof ID.postCap!=='object'||Array.isArray(ID.postCap)) ID.postCap={}; const ks=Object.keys(ID.postCap); if(ks.length>=8&&!(P.url in ID.postCap)) delete ID.postCap[ks[0]]; ID.postCap[P.url]=P.cap; saveID();
+  hpLog('郵便受けに置ける量を '+Math.round(P.cap/1048576)+' MB にした（'+(P.di?'ホストのインスタンス 1 つあたりのディスク '+(Math.round(P.di/1024*10)/10)+' GB の 4 割':'ホストの一覧に無いので決まった量')+'）'); return true; }catch(e){ return false; } }
+try{ if(typeof hpLinkOnReply==='function'&&!hpLinkOnReply.__cap){ const f=hpLinkOnReply; hpLinkOnReply=function(o){ const r=f.apply(this,arguments); try{ hpCapOnReply(o); }catch(e){} return r; }; Object.assign(hpLinkOnReply,f,{__cap:1}); } }catch(e){}
+try{ if(typeof document!=='undefined'&&typeof setInterval==='function'&&typeof window!=='undefined'){ setInterval(()=>{ hpCapKick().catch(()=>{}); },5000); } }catch(e){}
 

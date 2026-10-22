@@ -1118,6 +1118,7 @@ I18N.de={
   chg_bk36f14:"- Wenn Sie nicht direkt mit Ihrem Freund verbunden sind, werden Fotos und Dateien jetzt sofort über das Postfach gesendet. Sie müssen nicht mehr auf [Über das Postfach senden] tippen.\n- Ein Foto kommt jetzt als ein einziger Brief ins Postfach und ist schneller da, sobald das Postfach Ihres Freundes aktualisiert ist.",
   chg_bk36f15:"- Fotos in Nachrichten zeigen jetzt die Größe des Fotos (KB).",
   chg_bk36f16:"- Handpost vergleicht seine Version jetzt auch mit dem Versionseintrag im Xahau-Ledger (≡ → Sicherheit, Handpost-Version).",
+  chg_bk36f17:"- Das Postfach-Programm wurde aktualisiert, um das Senden großer Fotos und Videos vorzubereiten. Wie viel Ihr Postfach aufnehmen kann, wird jetzt automatisch passend zum gemieteten Host festgelegt.",
   rell_ok:"Stimmt auch mit dem Eintrag im Xahau-Ledger überein (Version {n}).",
   rell_wait:"Neue Version. Sie wird noch im Xahau-Ledger eingetragen (Version {n}).",
   rell_late:"Diese Version (Version {n}) ist 2 Stunden nach der Veröffentlichung noch nicht im Xahau-Ledger eingetragen. Sie ist möglicherweise nicht echt. Bitte informieren Sie den Entwickler.",

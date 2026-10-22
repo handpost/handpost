@@ -1118,6 +1118,7 @@ I18N.pl={
   chg_bk36f14:"- Gdy nie masz bezpośredniego połączenia z przyjacielem, zdjęcia i pliki są teraz od razu wysyłane przez skrzynkę. Nie trzeba już naciskać [Wyślij przez skrzynkę].\n- Zdjęcie trafia teraz do skrzynki jako jeden list i dociera szybciej, gdy skrzynka przyjaciela zostanie zaktualizowana.",
   chg_bk36f15:"- Przy zdjęciach w wiadomościach widać teraz rozmiar zdjęcia (KB).",
   chg_bk36f16:"- Handpost porównuje teraz swoją wersję także z zapisem w rejestrze Xahau (≡ → Bezpieczeństwo, Wersja Handpost).",
+  chg_bk36f17:"- Program skrzynki został zaktualizowany, aby przygotować wysyłanie dużych zdjęć i filmów. Ilość, jaką może pomieścić skrzynka, jest teraz ustalana automatycznie według wynajętego hosta.",
   rell_ok:"Zgadza się także z zapisem w rejestrze Xahau (wersja {n}).",
   rell_wait:"To nowa wersja. Czeka na zapis w rejestrze Xahau (wersja {n}).",
   rell_late:"Ta wersja (wersja {n}) 2 godziny po wydaniu nadal nie jest zapisana w rejestrze Xahau. Może nie być prawdziwa. Powiadom twórcę.",
