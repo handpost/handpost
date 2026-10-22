@@ -2664,7 +2664,7 @@ try{ if(typeof hpMoveUi==='function'&&!hpMoveUi.__f7){ const f=hpMoveUi; hpMoveU
 
 const HP_HELP=[
   ['hl_g0',[['hl_q0','hl_a0'],['hl_q12','hl_a12'] ]], ['hl_g1',[['hl_q1','hl_a1'],['hl_q2','hl_a2'],['hl_q3','hl_a3'],['hl_q4','hl_a4'],['hl_q5','hl_a5']]],
-  ['hl_g2',[['hl_q6','hl_a6'],['hl_q7','hl_a7']]], ['hl_g3',[['hl_q8','hl_a8'],['hl_q9','hl_a9']]], ['hl_g4',[['hl_q10','hl_a10'],['hl_q11','hl_a11']]], ['hl_g5',[['hl_q13','hl_a13']]]  ];
+  ['hl_g2',[['hl_q6','hl_a6'],['hl_q7','hl_a7']]],   ['hl_g4',[['hl_q10','hl_a10'],['hl_q11','hl_a11']]], ['hl_g5',[['hl_q13','hl_a13']]]  ];
 function hpHelpEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function hpHelpFig1(){
   const t=(k,x,y,o)=>'<text x="'+x+'" y="'+y+'" font-size="'+((o&&o.fs)||11)+'" fill="'+((o&&o.c)||'#e6edf6')+'" text-anchor="'+((o&&o.a)||'middle')+'"'+((o&&o.w)?' font-weight="700"':'')+' data-i18n="'+k+'">'+hpHelpEsc(T(k))+'</text>';
@@ -2726,7 +2726,7 @@ function hpHelpMount(){ try{ if(typeof document==='undefined'||!document||!docum
   const s=document.createElement('section'); s.id='p-help'; main.appendChild(s); return 'made'; }catch(e){ return ''; } }
 try{ if(typeof document!=='undefined'&&document&&document.getElementById){ if(document.readyState==='loading'&&document.addEventListener) document.addEventListener('DOMContentLoaded',()=>{ hpHelpMount(); }); else hpHelpMount(); } }catch(e){}
 
-const HP_CHG=[['bk36f11','chg_bk36f11'],['bk36f10','chg_bk36f10'],['bk36f8','chg_bk36f8'],['bk36f7','chg_bk36f7']], HP_CHG_MAX=3, HP_CHG_K='p2p_chgseen';
+const HP_CHG=[['bk36f12','chg_bk36f12'],['bk36f11','chg_bk36f11'],['bk36f10','chg_bk36f10'],['bk36f8','chg_bk36f8'],['bk36f7','chg_bk36f7']], HP_CHG_MAX=3, HP_CHG_K='p2p_chgseen';
 function hpChgSeen(){ try{ return String(localStorage.getItem(HP_CHG_K)||''); }catch(e){ return ''; } }
 function hpChgList(seen){ const i=HP_CHG.findIndex(x=>x[0]===seen); if(!seen) return HP_CHG.slice(0,1); if(i<0) return HP_CHG.slice(0,HP_CHG_MAX); return HP_CHG.slice(0,Math.min(i,HP_CHG_MAX)); }
 function hpChgClose(){ try{ localStorage.setItem(HP_CHG_K,HP_CHG[0][0]); }catch(e){} try{ const n=document.getElementById('hp-chg'); if(n&&n.parentNode) n.parentNode.removeChild(n); }catch(e){} return true; }
