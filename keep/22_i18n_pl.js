@@ -1114,6 +1114,7 @@ I18N.pl={
   og_text:"Handpost przeniósł się na handpost.page. Ta strona będzie jeszcze przez jakiś czas działać, ale przejdź na nowy adres. Jak to zrobić: na tej stronie ≡ → Konto → [Połącz nowe urządzenie] → [Kopiuj tekst połączenia] → otwórz nowy adres i wklej tekst w sekcji „Połącz to urządzenie” → gdy pojawi się 6 cyfr, wróć na tę stronę i naciśnij [Dodaj]. Książka adresowa zostanie skopiowana na nowy adres od razu, a dawne listy – po ok. 2 minutach, o ile ta strona pozostanie otwarta.",
   btn_og_open:"Otwórz handpost.page",
   chg_bk36f12:"- W Pomocy pytanie o zgubiony telefon wyjaśnia teraz, co da się przywrócić, a pozycje niepotrzebne większości osób zostały usunięte.",
+  chg_bk36f13:"- W liście można teraz przejść do nowej linii. Na komputerze Shift+Enter to nowa linia, a Enter wysyła. Na telefonie klawisz Enter przechodzi do nowej linii, a [Wyślij] wysyła.",
   chg_title:"Handpost został zaktualizowany (wydanie {n})",
   chg_title0:"Handpost został zaktualizowany",
   btn_chg_help:"Otwórz pomoc",

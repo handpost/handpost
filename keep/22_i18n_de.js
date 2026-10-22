@@ -1114,6 +1114,7 @@ I18N.de={
   og_text:"Handpost ist nach handpost.page umgezogen. Diese Seite funktioniert noch eine Weile, aber bitte wechseln Sie an die neue Adresse. So geht’s: auf dieser Seite ≡ → Konto → [Neues Gerät verknüpfen] → [Linktext kopieren] → die neue Adresse öffnen und den Text unter „Dieses Gerät verknüpfen“ einfügen → wenn die 6 Ziffern erscheinen, zu dieser Seite zurückkehren und [Hinzufügen] drücken. Ihr Adressbuch wird sofort an die neue Adresse übertragen, Ihre früheren Briefe etwa 2 Minuten später, solange diese Seite geöffnet bleibt.",
   btn_og_open:"handpost.page öffnen",
   chg_bk36f12:"- In der Hilfe erklärt die Frage zum verlorenen Handy jetzt, wie viel sich wiederherstellen lässt; Punkte, die die meisten nicht brauchen, wurden entfernt.",
+  chg_bk36f13:"- In einem Brief können Sie jetzt eine neue Zeile beginnen. Am Computer: Umschalt+Eingabe für eine neue Zeile, Eingabe zum Senden. Am Handy beginnt die Eingabetaste eine neue Zeile, und [Senden] sendet.",
   chg_title:"Handpost wurde aktualisiert (Version {n})",
   chg_title0:"Handpost wurde aktualisiert",
   btn_chg_help:"Hilfe öffnen",

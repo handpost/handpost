@@ -22,8 +22,14 @@ for(const [t,p] of Object.entries(TABS)){
 $('#btn-call').onclick=()=>startCall(false);
 
 $('#btn-hang').onclick=()=>{addStat(TL('sys_hangup'));hangup();};
-$('#btn-send').onclick=sendChat;
-$('#text').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
+
+const HP_TEXT_MAX=160;
+function hpTouchKb(){ try{ return !!(typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(pointer:coarse)').matches&&!window.matchMedia('(any-pointer:fine)').matches); }catch(e){ return false; } }
+function hpTextFit(){ try{ const t=document.getElementById('text'); if(!t||!t.style) return 0; t.style.height='auto'; const sh=t.scrollHeight||0, h=Math.min(sh,HP_TEXT_MAX); t.style.height=h>0?h+'px':''; t.style.overflowY=sh>HP_TEXT_MAX?'auto':'hidden'; return h; }catch(e){ return 0; } }
+function hpSendBtn(){ let p; try{ p=sendChat(); }catch(e){} return Promise.resolve(p).catch(()=>{}).then(()=>{ hpTextFit(); }); }
+function hpTextKey(e){ if(!e||e.key!=='Enter') return 'no'; if(e.isComposing||e.keyCode===229) return 'ime'; if(e.shiftKey) return 'nl'; if(hpTouchKb()&&!(e.ctrlKey||e.metaKey)) return 'nl'; if(e.preventDefault) e.preventDefault(); hpSendBtn(); return 'send'; }
+$('#btn-send').onclick=()=>{ hpSendBtn(); };
+$('#text').addEventListener('keydown',hpTextKey); $('#text').addEventListener('input',hpTextFit);
 
 $('#btn-set-name').onclick=()=>setMyName($('#name-input').value);
 $('#name-input').addEventListener('keydown',e=>{ if(e.key==='Enter')setMyName($('#name-input').value); });

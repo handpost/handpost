@@ -314,10 +314,13 @@ a{color:var(--teal)}
 .nic{font-size:12px}
 .name-edit-row{display:flex;gap:8px;margin-top:8px} .name-edit-row #name-input{flex:0 1 16em;width:16em;min-width:0;max-width:100%}  .name-edit-row #btn-set-name{white-space:nowrap;flex:0 0 auto}
 
-#cbox{flex:1;min-width:0;display:flex;align-items:center;margin:0 2px;background:#1b2740;border:1px solid var(--line);border-radius:12px}
+#cbox{flex:1;min-width:0;display:flex;align-items:flex-end;margin:0 2px;background:#1b2740;border:1px solid var(--line);border-radius:12px}
 #cbox:focus-within{border-color:var(--teal)}
 #composer #cbox input{flex:1;min-width:0;margin:0;border:none;background:transparent;outline:none}
-#cbox #btn-img{flex:0 0 auto;margin:0 0 0 4px;padding:6px 10px;border:none;background:none;color:var(--dim);border-radius:8px}
+
+#composer{align-items:flex-end}
+#composer #cbox textarea{flex:1;min-width:0;margin:0;border:none;background:transparent;outline:none;min-height:0;max-height:160px;resize:none;overflow-y:hidden;font-family:inherit;line-height:1.4;display:block}
+#cbox #btn-img{flex:0 0 auto;margin:0 0 5px 4px;padding:6px 10px;border:none;background:none;color:var(--dim);border-radius:8px}
 #cbox #btn-img:hover{color:var(--teal)}
 
 #hp-sbox{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:16px;background:#17233c;overflow:hidden}
@@ -432,7 +435,7 @@ a{color:var(--teal)}
   <div id="msgs"></div>
   </div>
   <div id="composer">
-    <div id="cbox"><button class="b" id="btn-img" title="Attach" data-i18n-title="tip_attach">&#43;</button><input type="text" id="text" placeholder="メッセージ" data-i18n-ph="ph_msg" disabled></div><input type="file" id="img-file" multiple style="display:none">
+    <div id="cbox"><button class="b" id="btn-img" title="Attach" data-i18n-title="tip_attach">&#43;</button><textarea id="text" rows="1" placeholder="メッセージ" data-i18n-ph="ph_msg" disabled></textarea></div><input type="file" id="img-file" multiple style="display:none">
     <button class="b pri" id="btn-send" disabled data-i18n="btn_send">送信</button>
   </div>
 </section>
@@ -645,10 +648,10 @@ a{color:var(--teal)}
 <script src="rewrite/17_rtc.js?v=e9ce74eba869"></script>
 <script src="rewrite/18_bgloop.js?v=fab98b915c5a"></script>
 <script src="keep/19_draft.js?v=f6f94869ca05"></script>
-<script src="keep/22_i18n.js?v=c5d9227274ee"></script>
-<script src="keep/22_i18n_fr.js?v=96d0f33c5fe6"></script>
-<script src="keep/22_i18n_de.js?v=368d3645b048"></script>
-<script src="keep/22_i18n_pl.js?v=d21532413478"></script>
+<script src="keep/22_i18n.js?v=aaa20f1f1c91"></script>
+<script src="keep/22_i18n_fr.js?v=4ee23e1d135b"></script>
+<script src="keep/22_i18n_de.js?v=9a6819e574c0"></script>
+<script src="keep/22_i18n_pl.js?v=b9097a4d970a"></script>
 <script src="keep/23_ui.js?v=fe17a2974308"></script>
 <script src="keep/24_qr.js?v=60fba8abce21"></script>
 <script src="rewrite/27_vault.js?v=b003f1b52248"></script>
@@ -675,8 +678,8 @@ a{color:var(--teal)}
 <script src="rewrite/47_rootkey.js?v=ce5d9843d373"></script>
 <script src="rewrite/46_roster.js?v=7fcf862c11f5"></script>
 <script src="rewrite/45_invface.js?v=daef1738f436"></script>
-<script src="rewrite/44_postui.js?v=da1fc9de6c7a"></script>
-<script src="rewrite/25_wiring.js?v=5935583af7ff"></script>
+<script src="rewrite/44_postui.js?v=0d43b13e553e"></script>
+<script src="rewrite/25_wiring.js?v=0448b203a517"></script>
 <script src="keep/26_sound.js?v=dd1c7e5d5ba6"></script>
 </body>
 </html>

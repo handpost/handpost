@@ -1114,6 +1114,7 @@ I18N.fr={
   og_text:"Handpost a déménagé sur handpost.page. Cette page fonctionne encore quelque temps, mais veuillez passer à la nouvelle adresse. Comment\u00a0: sur cette page, ≡ → Compte → [Lier un nouvel appareil] → [Copier le texte du lien] → ouvrez la nouvelle adresse et collez le texte sous «\u00a0Lier cet appareil\u00a0» → quand les 6 chiffres s'affichent, revenez sur cette page et appuyez sur [Ajouter]. Votre carnet d'adresses est copié tout de suite vers la nouvelle adresse, et vos anciennes lettres environ 2 minutes plus tard si cette page reste ouverte.",
   btn_og_open:"Ouvrir handpost.page",
   chg_bk36f12:"- Dans l'aide, la question sur le téléphone perdu explique maintenant ce qui peut être restauré, et les éléments inutiles pour la plupart des gens ont été retirés.",
+  chg_bk36f13:"- Vous pouvez maintenant aller à la ligne dans une lettre. Sur ordinateur, Maj+Entrée pour aller à la ligne et Entrée pour envoyer. Sur téléphone, la touche Retour va à la ligne et [Envoyer] envoie.",
   chg_title:"Handpost a été mis à jour (version {n})",
   chg_title0:"Handpost a été mis à jour",
   btn_chg_help:"Ouvrir l'aide",
