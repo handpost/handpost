@@ -1116,6 +1116,7 @@ I18N.de={
   chg_bk36f12:"- In der Hilfe erklärt die Frage zum verlorenen Handy jetzt, wie viel sich wiederherstellen lässt; Punkte, die die meisten nicht brauchen, wurden entfernt.",
   chg_bk36f13:"- In einem Brief können Sie jetzt eine neue Zeile beginnen. Am Computer: Umschalt+Eingabe für eine neue Zeile, Eingabe zum Senden. Am Handy beginnt die Eingabetaste eine neue Zeile, und [Senden] sendet.",
   chg_bk36f14:"- Wenn Sie nicht direkt mit Ihrem Freund verbunden sind, werden Fotos und Dateien jetzt sofort über das Postfach gesendet. Sie müssen nicht mehr auf [Über das Postfach senden] tippen.\n- Ein Foto kommt jetzt als ein einziger Brief ins Postfach und ist schneller da, sobald das Postfach Ihres Freundes aktualisiert ist.",
+  chg_bk36f15:"- Fotos in Nachrichten zeigen jetzt die Größe des Fotos (KB).",
   chg_title:"Handpost wurde aktualisiert (Version {n})",
   chg_title0:"Handpost wurde aktualisiert",
   btn_chg_help:"Hilfe öffnen",

@@ -1116,6 +1116,7 @@ I18N.fr={
   chg_bk36f12:"- Dans l'aide, la question sur le téléphone perdu explique maintenant ce qui peut être restauré, et les éléments inutiles pour la plupart des gens ont été retirés.",
   chg_bk36f13:"- Vous pouvez maintenant aller à la ligne dans une lettre. Sur ordinateur, Maj+Entrée pour aller à la ligne et Entrée pour envoyer. Sur téléphone, la touche Retour va à la ligne et [Envoyer] envoie.",
   chg_bk36f14:"- Quand vous n'êtes pas connecté directement à votre ami, les photos et fichiers passent maintenant tout de suite par la boîte aux lettres. Il n'est plus nécessaire d'appuyer sur [Envoyer par la boîte aux lettres].\n- Une photo entre maintenant dans la boîte aux lettres en une seule lettre et arrive plus vite, une fois la boîte aux lettres de votre ami mise à jour.",
+  chg_bk36f15:"- Les bulles de photo affichent maintenant la taille de la photo (Ko).",
   chg_title:"Handpost a été mis à jour (version {n})",
   chg_title0:"Handpost a été mis à jour",
   btn_chg_help:"Ouvrir l'aide",

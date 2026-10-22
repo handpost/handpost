@@ -1116,6 +1116,7 @@ I18N.pl={
   chg_bk36f12:"- W Pomocy pytanie o zgubiony telefon wyjaśnia teraz, co da się przywrócić, a pozycje niepotrzebne większości osób zostały usunięte.",
   chg_bk36f13:"- W liście można teraz przejść do nowej linii. Na komputerze Shift+Enter to nowa linia, a Enter wysyła. Na telefonie klawisz Enter przechodzi do nowej linii, a [Wyślij] wysyła.",
   chg_bk36f14:"- Gdy nie masz bezpośredniego połączenia z przyjacielem, zdjęcia i pliki są teraz od razu wysyłane przez skrzynkę. Nie trzeba już naciskać [Wyślij przez skrzynkę].\n- Zdjęcie trafia teraz do skrzynki jako jeden list i dociera szybciej, gdy skrzynka przyjaciela zostanie zaktualizowana.",
+  chg_bk36f15:"- Przy zdjęciach w wiadomościach widać teraz rozmiar zdjęcia (KB).",
   chg_title:"Handpost został zaktualizowany (wydanie {n})",
   chg_title0:"Handpost został zaktualizowany",
   btn_chg_help:"Otwórz pomoc",
