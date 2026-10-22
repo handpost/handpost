@@ -49,6 +49,7 @@ async function sendImage(file){
   if(CURPEER!==peer){ CURPEER=peer; histRender(peer); }
   histAdd(peer,'s','',ts,1,img); addMsgAt('self','',myName()||T('me'),ts,0,1,0,img);
   if(rtcLineTo(peer)){ imgQueueSend(peer,{ts,img}); }
+  else if(typeof hpMbAuto==='function'&&hpMbAuto(peer,ts,'')){ }
   else if(rtcBusyFor(peer)){ rtcMediaWait(peer,ts); }
   else { if(!rtcCallMaybe(peer)){ try{ if(typeof hpDecorate==='function') hpDecorate(peer); }catch(e){} } }
 }
@@ -126,6 +127,7 @@ async function sendFile(file){
   if(CURPEER!==peer){ CURPEER=peer; histRender(peer); }
   histAdd(peer,'s','',ts,1,null,meta); addMsgAt('self','',myName()||T('me'),ts,0,1,0,null,meta);
   if(rtcLineTo(peer)){ fileQueueSend(peer,{ts,file:meta}); }
+  else if(typeof hpMbAuto==='function'&&hpMbAuto(peer,ts,'')){ }
   else if(rtcBusyFor(peer)){ rtcMediaWait(peer,ts); }
   else { if(!rtcCallMaybe(peer)){ try{ if(typeof hpDecorate==='function') hpDecorate(peer); }catch(e){} } }
 }

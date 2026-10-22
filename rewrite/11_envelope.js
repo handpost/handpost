@@ -70,7 +70,7 @@ function hp5PreOk(dev, x, notAfter, sig, at){
   }catch(e){ return false; }
 }
 
-async function hpSeal(card, body, kind, link){
+async function hpSeal(card, body, kind, link, max){
   const s=hp5S(); kind=(kind==='sig'?'sig':'msg');
   if(!card||!Array.isArray(card.devices)||!card.devices.length||!Array.isArray(card.prekeys)) throw new Error('カードにプレキーが無い');
   const now=Date.now(), me=link?{ pre:(await hp5Prekeys())[0] }:await hp5Me(), mine=me.pre; if(link) me.dev=mine.dev;
@@ -95,7 +95,7 @@ async function hpSeal(card, body, kind, link){
     const n2=s.randombytes_buf(24);
     const wrap=hp5B64(hp5Cat(n2, s.crypto_aead_xchacha20poly1305_ietf_encrypt(hp5Cat(kmsg, mac), hp5U('handpost-v5-wrap:'+id), null, n2, kwrap)));
     const letter=JSON.stringify({ v:5, kind:kind, keyId:d.keyId, eph:hp5B64(eph.publicKey), wrap:wrap, blob:blob });
-    if(letter.length>HP5_MAX) throw new Error('長すぎる（1 通 '+letter.length+' 文字、上限 '+HP5_MAX+'）');
+    const lim=(Number(max)>HP5_MAX)?Number(max):HP5_MAX; if(letter.length>lim) throw new Error('長すぎる（1 通 '+letter.length+' 文字、上限 '+lim+'）');
     return { dev:d.dev, blob:letter };
   });
   return { id:id, kind:kind, letters:letters };
