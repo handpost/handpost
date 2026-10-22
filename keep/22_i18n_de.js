@@ -1122,6 +1122,7 @@ I18N.de={
   chg_bk36f18:"- Fotos und Dateien bis 100 MB (zum Beispiel Videos) können jetzt auch über das Postfach gesendet werden.\n- Wenn der Speicher nicht reicht, wird nur eine Vorschau behalten und angezeigt, dass es noch nicht empfangen wurde. Mit [Empfangen] können Sie es später empfangen.\n- Briefe, die nicht ankommen, werden nicht mehr nach 7 Tagen aufgegeben. Sie werden erneut gesendet, bis sie ankommen.\n- Videos lassen sich direkt in der Nachricht abspielen (welche Formate gehen, hängt vom Gerät ab).",
   chg_bk36f19:"- Wenn Sie mehrere Briefe oder Fotos nacheinander senden, wird die Verbindung zum Postfach jetzt länger weiterverwendet. Kopien an Ihre anderen Geräte bleiben seltener hängen.",
   chg_bk36f20:"- Der Hinweis nach einer Aktualisierung von Handpost ist im Briefbildschirm jetzt auf eine Zeile eingeklappt. Mit [Änderungen ansehen] öffnen Sie ihn.\n- Über das Postfach gesendete Fotos und Dateien erscheinen jetzt auch in den Briefen auf Ihren anderen Geräten (frühere werden ebenfalls kopiert).\n- Der Hinweis bietet jetzt [Bisherige Änderungen ansehen] statt [Hilfe öffnen]. Alle bisherigen Änderungen finden Sie jederzeit unter Handpost-Version im Bereich Sicherheit.",
+  chg_bk36f21:"- Beim Kopieren von über das Postfach gesendeten Fotos und Dateien auf Ihre anderen Geräte werden jetzt auch ältere ohne Zeitgrenze kopiert (vorher 30 Tage).",
   chg_log_h:"Bisherige Änderungen ({n})",
   btn_chg_log:"Bisherige Änderungen ansehen",
   chg_more:"Änderungen ansehen ({n})",

@@ -1122,6 +1122,7 @@ I18N.pl={
   chg_bk36f18:"- Zdjęcia i pliki do 100 MB (na przykład filmy) można teraz wysyłać także przez skrzynkę.\n- Gdy brakuje miejsca, zostaje tylko podgląd z informacją, że jeszcze nie odebrano. Możesz odebrać później przyciskiem [Odbierz].\n- Listy, które nie dotarły, nie są już porzucane po 7 dniach. Są wysyłane ponownie, aż dotrą.\n- Filmy można odtwarzać w dymku wiadomości (obsługiwane formaty zależą od urządzenia).",
   chg_bk36f19:"- Gdy wysyłasz kilka listów lub zdjęć po kolei, połączenie ze skrzynką jest teraz dłużej używane ponownie. Kopie na inne urządzenia rzadziej się zatrzymują.",
   chg_bk36f20:"- Powiadomienie o aktualizacji Handpost jest teraz zwinięte do jednej linii na ekranie listów. Otwórz je przyciskiem [Zobacz zmiany].\n- Zdjęcia i pliki wysłane przez skrzynkę pojawiają się teraz także w listach na Twoich innych urządzeniach (wcześniejsze też są kopiowane).\n- Powiadomienie ma teraz przycisk [Zobacz wcześniejsze zmiany] zamiast [Otwórz pomoc]. Wszystkie zmiany możesz zawsze przeczytać w Bezpieczeństwo, pod Wersja Handpost.",
+  chg_bk36f21:"- Przy kopiowaniu na inne urządzenia zdjęć i plików wysłanych przez skrzynkę kopiowane są teraz także starsze, bez limitu czasu (wcześniej 30 dni).",
   chg_log_h:"Wcześniejsze zmiany ({n})",
   btn_chg_log:"Zobacz wcześniejsze zmiany",
   chg_more:"Zobacz zmiany ({n})",

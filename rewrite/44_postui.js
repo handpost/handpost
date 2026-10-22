@@ -2726,7 +2726,7 @@ function hpHelpMount(){ try{ if(typeof document==='undefined'||!document||!docum
   const s=document.createElement('section'); s.id='p-help'; main.appendChild(s); return 'made'; }catch(e){ return ''; } }
 try{ if(typeof document!=='undefined'&&document&&document.getElementById){ if(document.readyState==='loading'&&document.addEventListener) document.addEventListener('DOMContentLoaded',()=>{ hpHelpMount(); }); else hpHelpMount(); } }catch(e){}
 
-const HP_CHG=[['bk36f20','chg_bk36f20'],['bk36f19','chg_bk36f19'],['bk36f18','chg_bk36f18'],['bk36f17','chg_bk36f17'],['bk36f16','chg_bk36f16'],['bk36f15','chg_bk36f15'],['bk36f14','chg_bk36f14'],['bk36f13','chg_bk36f13'],['bk36f12','chg_bk36f12'],['bk36f11','chg_bk36f11'],['bk36f10','chg_bk36f10'],['bk36f8','chg_bk36f8'],['bk36f7','chg_bk36f7']], HP_CHG_MAX=3, HP_CHG_K='p2p_chgseen';
+const HP_CHG=[['bk36f21','chg_bk36f21'],['bk36f20','chg_bk36f20'],['bk36f19','chg_bk36f19'],['bk36f18','chg_bk36f18'],['bk36f17','chg_bk36f17'],['bk36f16','chg_bk36f16'],['bk36f15','chg_bk36f15'],['bk36f14','chg_bk36f14'],['bk36f13','chg_bk36f13'],['bk36f12','chg_bk36f12'],['bk36f11','chg_bk36f11'],['bk36f10','chg_bk36f10'],['bk36f8','chg_bk36f8'],['bk36f7','chg_bk36f7']], HP_CHG_MAX=3, HP_CHG_K='p2p_chgseen';
 function hpChgSeen(){ try{ return String(localStorage.getItem(HP_CHG_K)||''); }catch(e){ return ''; } }
 function hpChgList(seen){ const i=HP_CHG.findIndex(x=>x[0]===seen); if(!seen) return HP_CHG.slice(0,1); if(i<0) return HP_CHG.slice(0,HP_CHG_MAX); return HP_CHG.slice(0,Math.min(i,HP_CHG_MAX)); }
 function hpChgClose(){ try{ localStorage.setItem(HP_CHG_K,HP_CHG[0][0]); }catch(e){} try{ const n=document.getElementById('hp-chg'); if(n&&n.parentNode) n.parentNode.removeChild(n); }catch(e){} return true; }
@@ -3087,10 +3087,10 @@ try{ if(typeof hpChgShow==='function'&&!hpChgShow.__fold){ const f=hpChgShow; hp
 
 function hpMbMirror(peer, ts){ try{ if(typeof sibMirrorTs==='function'){ sibMirrorTs(peer,ts,'s'); return true; } }catch(e){} return false; }
 try{ if(typeof hpMbSend2==='function'&&!hpMbSend2.__mir){ const f=hpMbSend2; hpMbSend2=async function(peer, ts){ const r=await f.apply(this,arguments); try{ if(r==='ok') hpMbMirror(peer,ts); }catch(e){} return r; }; Object.assign(hpMbSend2,f,{__mir:1}); } }catch(e){}
-function hpMbMirrorOld(){ try{ if(typeof ID==='undefined'||!ID||!Array.isArray(ID.contacts)) return 0; try{ if(localStorage.getItem('p2p_mbmir1')) return 0; }catch(e){ return 0; }
+function hpMbMirrorOld(){ try{ if(typeof ID==='undefined'||!ID||!Array.isArray(ID.contacts)) return 0; try{ if(localStorage.getItem('p2p_mbmir2')) return 0; }catch(e){ return 0; }
   let sibs=[]; try{ sibs=(typeof hpSibs==='function')?hpSibs():[]; }catch(e){ sibs=[]; } if(!sibs.length) return 0;
-  const now=Date.now(); let n=0; for(const c of ID.contacts){ const peer=c&&c.address; if(!peer) continue; for(const m of histLoad(peer)){ if(m&&m.d==='s'&&m.mb===1&&(m.img||m.file)&&!m.x&&now-m.ts<30*86400e3){ if(typeof hpSmAdd==='function'&&hpSmAdd(peer,m.ts)) n++; } } }
-  try{ localStorage.setItem('p2p_mbmir1',String(now)); }catch(e){} if(n){ try{ hpLog('郵便受けで送った写真・ファイル '+n+' 通の写しを、自分のほかの端末へ送る（前の分）'); }catch(e){} try{ if(typeof hpSmFlush==='function') Promise.resolve(hpSmFlush('前の写真')).catch(()=>{}); }catch(e){} } return n; }catch(e){ return 0; } }
+  const now=Date.now(); let n=0; for(const c of ID.contacts){ const peer=c&&c.address; if(!peer) continue; for(const m of histLoad(peer)){ if(m&&m.d==='s'&&m.mb===1&&(m.img||m.file)&&!m.x){ if(typeof hpSmAdd==='function'&&hpSmAdd(peer,m.ts)) n++; } } }
+  try{ localStorage.setItem('p2p_mbmir2',String(now)); }catch(e){} if(n){ try{ hpLog('郵便受けで送った写真・ファイル '+n+' 通の写しを、自分のほかの端末へ送る（前の分）'); }catch(e){} try{ if(typeof hpSmFlush==='function') Promise.resolve(hpSmFlush('前の写真')).catch(()=>{}); }catch(e){} } return n; }catch(e){ return 0; } }
 try{ if(typeof window!=='undefined'&&typeof document!=='undefined'&&typeof setTimeout==='function') setTimeout(()=>{ try{ hpMbMirrorOld(); }catch(e){} },30e3); }catch(e){}
 
 let HP_CHG_LOG_OPEN=false;
