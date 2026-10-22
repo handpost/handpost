@@ -286,11 +286,12 @@ async function hpPxPress(){
   if(!HP_PAY||now-(Number(HP_PAY.at)||0)>10*60e3){ try{ await hpPayRead(true); }catch(e){} }
   const u=hpPxQuietUntil(Date.now()); if(u){ hpPaySt(TF('pay_px_wait',{t:hpPayWhen(u)})); hpPayBtns(); return false; }
   if(hpPxOps()){ hpPaySt(T('pay_px_ops')); return false; }
-  const P=hpPxSt(); if(!P.on){ P.on=1; P.auto=1; P.onAt=now; try{ saveID(); }catch(e){} hpLog('値段の取り寄せを始めた（押した。このあとは自動で取る）'); }
+  const P=hpPxSt(); if(!P.on){ P.on=1; P.auto=0; P.av=2; P.onAt=now; try{ saveID(); }catch(e){} hpLog('値段の取り寄せを始めた（押した。自動の取り寄せは、印を入れたときだけ）'); }
   return hpPxGet('button'); }
-function hpPxAutoSet(on){ const P=hpPxSt(); if(!P.on) return false; P.auto=on?1:0; try{ saveID(); }catch(e){} hpLog(on?'値段の自動の取り寄せを入れた':'値段の自動の取り寄せを切った'); hpPayBtns(); return true; }
+function hpPxMig(){ try{ const P=hpPxSt(); if(P.on&&P.av!==2){ P.av=2; if(P.auto!==0){ P.auto=0; hpLog('値段の自動の取り寄せを切った（印を入れたときだけ取り寄せるように替わった）'); } try{ saveID(); }catch(e){} return true; } }catch(e){} return false; }
+function hpPxAutoSet(on){ const P=hpPxSt(); if(!P.on) return false; P.auto=on?1:0; P.av=2; try{ saveID(); }catch(e){} hpLog(on?'値段の自動の取り寄せを入れた':'値段の自動の取り寄せを切った'); hpPayBtns(); return true; }
 async function hpPxTick(now){
-  try{ if(typeof ID==='undefined'||!ID||HP_PX_BUSY) return ''; now=now||Date.now(); hpPxAcctWatch(now); const P=hpPxSt();
+  try{ if(typeof ID==='undefined'||!ID||HP_PX_BUSY) return ''; now=now||Date.now(); hpPxAcctWatch(now); hpPxMig(); const P=hpPxSt();
     if(!P.on||P.auto===0||!((typeof hpLeaseAcct==='function')&&hpLeaseAcct())) return 'off';
     if(Number(P.last)&&now-Number(P.last)<HP_PX_MINGAP) return 'done';
     const day=Math.floor(now/864e5); let pl=P.plan; if(!pl||pl.day!==day){ pl=P.plan={day:day,at:day*864e5+Math.floor(Math.random()*864e5),n:0}; saveID(); }
@@ -343,7 +344,7 @@ function hpPayMonDraw(){
   return M.length; }
 function hpPayDrawAll(){ let n=-1; try{ n=hpPayDraw(); }catch(e){} try{ hpPayMonDraw(); }catch(e){} try{ hpPayCurUi(); hpPayBtns(); }catch(e){} return n; }
 function hpPayBtns(){
-  try{ if(typeof document==='undefined'||!document.getElementById) return ''; const b=document.getElementById('btn-pay-px'), nt=document.getElementById('pay-px-nt'), ar=document.getElementById('pay-auto-row'), ac=document.getElementById('pay-px-auto'), P=hpPxSt(), u=hpPxQuietUntil();
+  try{ if(typeof document==='undefined'||!document.getElementById) return ''; const b=document.getElementById('btn-pay-px'), nt=document.getElementById('pay-px-nt'), ar=document.getElementById('pay-auto-row'), ac=document.getElementById('pay-px-auto'); hpPxMig(); const P=hpPxSt(), u=hpPxQuietUntil();
     if(b) b.disabled=!!(HP_PX_BUSY||u);
     if(nt) nt.textContent=u?TF('pay_px_wait',{t:hpPayWhen(u)}):(P.on?'':T('pay_px_first'));
     if(ar&&ar.style) ar.style.display=P.on?'':'none'; if(ac) ac.checked=!!(P.on&&P.auto!==0);
