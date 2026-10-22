@@ -2726,7 +2726,7 @@ function hpHelpMount(){ try{ if(typeof document==='undefined'||!document||!docum
   const s=document.createElement('section'); s.id='p-help'; main.appendChild(s); return 'made'; }catch(e){ return ''; } }
 try{ if(typeof document!=='undefined'&&document&&document.getElementById){ if(document.readyState==='loading'&&document.addEventListener) document.addEventListener('DOMContentLoaded',()=>{ hpHelpMount(); }); else hpHelpMount(); } }catch(e){}
 
-const HP_CHG=[['bk36f15','chg_bk36f15'],['bk36f14','chg_bk36f14'],['bk36f13','chg_bk36f13'],['bk36f12','chg_bk36f12'],['bk36f11','chg_bk36f11'],['bk36f10','chg_bk36f10'],['bk36f8','chg_bk36f8'],['bk36f7','chg_bk36f7']], HP_CHG_MAX=3, HP_CHG_K='p2p_chgseen';
+const HP_CHG=[['bk36f16','chg_bk36f16'],['bk36f15','chg_bk36f15'],['bk36f14','chg_bk36f14'],['bk36f13','chg_bk36f13'],['bk36f12','chg_bk36f12'],['bk36f11','chg_bk36f11'],['bk36f10','chg_bk36f10'],['bk36f8','chg_bk36f8'],['bk36f7','chg_bk36f7']], HP_CHG_MAX=3, HP_CHG_K='p2p_chgseen';
 function hpChgSeen(){ try{ return String(localStorage.getItem(HP_CHG_K)||''); }catch(e){ return ''; } }
 function hpChgList(seen){ const i=HP_CHG.findIndex(x=>x[0]===seen); if(!seen) return HP_CHG.slice(0,1); if(i<0) return HP_CHG.slice(0,HP_CHG_MAX); return HP_CHG.slice(0,Math.min(i,HP_CHG_MAX)); }
 function hpChgClose(){ try{ localStorage.setItem(HP_CHG_K,HP_CHG[0][0]); }catch(e){} try{ const n=document.getElementById('hp-chg'); if(n&&n.parentNode) n.parentNode.removeChild(n); }catch(e){} return true; }
@@ -2849,4 +2849,39 @@ function hpPhSize(d, img){ try{ const n=Number(img&&img.size)||0; if(!d||!n||!d.
   const s=document.createElement('span'); s.className='phs'; s.textContent=fmtSize(n); d.insertBefore(s,t); return true; }catch(e){ return false; } }
 try{ if(typeof addMsgAt==='function'&&!addMsgAt.__phs){ const f=addMsgAt; addMsgAt=function(kind,text,who,ts,voided,pend,rd,img,file){ const r=f.apply(this,arguments);
   try{ if(img&&img.thumb){ const ms=document.getElementById('msgs'), d=ms&&ms.lastElementChild; if(d&&d.dataset&&d.dataset.ts===String(ts)) hpPhSize(d,img); } }catch(e){} return r; }; Object.assign(addMsgAt,f,{__phs:1}); } }catch(e){}
+
+const HP_RELL_ACCT='rNQvCvSmbt8fL78nHq9GKu9Cg6z2q3uG98';
+const HP_RELL_TYPE='handpost-release', HP_RELL_LATE=2*3600e3, HP_RELL_EVERY=30*60e3, HP_RELL_WAITEVERY=10*60e3, HP_RELL_KEY='hp_rell_seen';
+let HP_RELL={st:'',n:0,at:0,why:''}, HP_RELL_BUSY=false;
+function hpRellParse(txs, acct){ const out=new Map();
+  for(const x of (Array.isArray(txs)?txs:[])){ try{ const tx=(x&&(x.tx||x.tx_json))||{}, meta=(x&&x.meta)||{};
+    if(tx.Account!==acct||tx.TransactionType!=='AccountSet'||x.validated===false) continue; if(meta.TransactionResult&&meta.TransactionResult!=='tesSUCCESS') continue;
+    for(const m of (Array.isArray(tx.Memos)?tx.Memos:[])){ const M=(m&&m.Memo)||{}; if(hpHexStr(M.MemoType)!==HP_RELL_TYPE) continue; let j=null; try{ j=JSON.parse(hpHexStr(M.MemoData)); }catch(e){ j=null; }
+      if(!j||j.v!==1||!Number.isInteger(j.n)||j.n<1||!/^[0-9a-f]{64}$/.test(String(j.s||''))) continue; const L=out.get(j.n)||[]; if(L.indexOf(j.s)<0) L.push(j.s); out.set(j.n,L); } }catch(e){} }
+  return out; }
+function hpRellJudge(recs, n, fp, seen, now){
+  if(!n||!/^[0-9a-f]{16,64}$/.test(String(fp||''))) return 'skip'; const f=String(fp).slice(0,16), L=recs.get(n);
+  if(L) return (L.length===1&&L[0].slice(0,16)===f)?'ok':'bad';
+  let max=0; for(const k of recs.keys()) if(k>max) max=k;
+  if(n>max) return (now-seen<HP_RELL_LATE)?'wait':'late'; return 'late'; }
+function hpRellSeen(n, now){ let o=null; try{ o=JSON.parse(localStorage.getItem(HP_RELL_KEY)||'null'); }catch(e){ o=null; } if(o&&o.n===n&&Number(o.at)>0) return Number(o.at); try{ localStorage.setItem(HP_RELL_KEY,JSON.stringify({n:n,at:now})); }catch(e){} return now; }
+async function hpRellCheck(force){
+  if(!HP_RELL_ACCT||HP_RELL_BUSY) return HP_RELL.st; const R=(typeof HP_REL!=='undefined'&&HP_REL)||{};
+  if(!(R.st==='ok'||R.st==='old')||!R.n||!R.fp) return HP_RELL.st;
+  const now=Date.now(), gap=HP_RELL.st==='wait'?HP_RELL_WAITEVERY:HP_RELL_EVERY; if(!force&&HP_RELL.n===R.n&&HP_RELL.st&&HP_RELL.st!=='err'&&now-HP_RELL.at<gap) return HP_RELL.st;
+  HP_RELL_BUSY=true; let st='err', why='';
+  try{ const txs=await hpXahauSess(async q=>{ const r=await q({command:'account_tx',account:HP_RELL_ACCT,limit:100}); return (r&&r.transactions)||[]; },20000,15000);
+    st=hpRellJudge(hpRellParse(txs,HP_RELL_ACCT),R.n,R.fp,hpRellSeen(R.n,now),now); }
+  catch(e){ st='err'; why=String((e&&e.message)||e).slice(0,60); }
+  const was=HP_RELL.st; HP_RELL={st:st,n:R.n,at:now,why:why}; HP_RELL_BUSY=false;
+  if(st!==was){ try{ hpLog('台帳の版の記録：'+st+'（第 '+R.n+' 版・照合番号 '+String(R.fp).slice(0,8)+'）'+(why?' '+why:'')); }catch(e){} }
+  try{ if((st==='late'||st==='bad')&&was!==st&&typeof hpBanner==='function') hpBanner(hpRellMsg()); }catch(e){}
+  try{ hpRellUi(); }catch(e){} return st; }
+function hpRellMsg(){ const S=HP_RELL; return S.st==='ok'?TF('rell_ok',{n:S.n}):S.st==='wait'?TF('rell_wait',{n:S.n}):S.st==='late'?TF('rell_late',{n:S.n}):S.st==='bad'?TF('rell_bad',{n:S.n}):S.st==='err'?TF('rell_err',{e:S.why||'?'}):''; }
+function hpRellUi(){ try{ if(typeof document==='undefined'||!document.getElementById) return false; const st=document.getElementById('rel-state'); if(!st||!st.parentNode) return false;
+  let d=document.getElementById('rell-state'); if(!d){ d=document.createElement('div'); d.id='rell-state'; d.style.cssText='margin-top:4px'; st.parentNode.insertBefore(d,st.nextSibling); }
+  const t=HP_RELL_ACCT?hpRellMsg():''; if(d.textContent!==t) d.textContent=t; d.style.display=t?'':'none';
+  d.style.color=(HP_RELL.st==='late'||HP_RELL.st==='bad')?'var(--red)':HP_RELL.st==='wait'?'var(--amber)':HP_RELL.st==='ok'?'var(--teal)':'var(--dim)'; return true; }catch(e){ return false; } }
+try{ if(typeof hpRelCheck==='function'&&!hpRelCheck.__rell){ const f=hpRelCheck; hpRelCheck=async function(){ const st=await f.apply(this,arguments); try{ if(HP_RELL_ACCT) setTimeout(()=>{ hpRellCheck(false).catch(()=>{}); },0); }catch(e){} return st; }; Object.assign(hpRelCheck,f,{__rell:1}); } }catch(e){}
+try{ if(typeof hpRelUi==='function'&&!hpRelUi.__rell){ const f=hpRelUi; hpRelUi=function(){ const r=f.apply(this,arguments); try{ hpRellUi(); }catch(e){} return r; }; Object.assign(hpRelUi,f,{__rell:1}); } }catch(e){}
 
