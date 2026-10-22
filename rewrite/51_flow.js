@@ -1,4 +1,7 @@
 const HP_FL_KEEP=14*864e5, HP_FL_PRAISE=6000, HP_FL_SLOW=5000;
+
+const HP_FL_P3={friend:['fl_s3','fl_s3_face','fl_note','fl_b3'],self:['fl_s3_self','fl_s3_self','fl_note_self','fl_b3_any'],any:['fl_s3_any','fl_s3_any','fl_note_any','fl_b3_any']};
+function hpFlP3(F){ const p=(F&&(F.pay==='friend'||F.pay==='self'))?F.pay:'any'; return HP_FL_P3[p]; }
 const HP_FL_B=['fl_b1','fl_b2','fl_b3','fl_b4','fl_b5'], HP_FL_S=['fl_s1','fl_s2','fl_s3','fl_s4','fl_s5'], HP_FL_SF={3:'fl_s3_face',5:'fl_s5_face'}, HP_FL_MORE={'0':'fl_more_0','1':'fl_more_1','2':'fl_more_2','3':'fl_more_3'};
 let HP_FL_FACE=false, HP_FL_SEEN=false, HP_FL_PR='', HP_FL_PR_AT=0, HP_FL_PICK_AT=0, HP_FL_QUIT=0;
 function hpFlFace(v){ HP_FL_FACE=!!v; return HP_FL_FACE; }
@@ -28,7 +31,7 @@ function hpFlBot(){ try{ const NS='http://www.w3.org/2000/svg', sv=document.crea
 
 function hpFlBand(F,n){ let b=document.getElementById('fl-band');
   if(!F){ if(b&&b.parentNode) b.parentNode.removeChild(b); return null; }
-  const fresh=!!HP_FL_PR&&Date.now()-HP_FL_PR_AT<HP_FL_PRAISE, txt=fresh?HP_FL_PR:TF('fl_band',{n:n,t:T(HP_FL_B[n-1]||'fl_b5')}), key=n+'|'+txt;
+  const fresh=!!HP_FL_PR&&Date.now()-HP_FL_PR_AT<HP_FL_PRAISE, txt=fresh?HP_FL_PR:TF('fl_band',{n:n,t:T(n===3?hpFlP3(hpFlGet())[3]:(HP_FL_B[n-1]||'fl_b5'))}), key=n+'|'+txt;
   if(!b){ const nav=document.querySelector('nav'); if(!nav||!nav.parentNode) return null;
     b=hpFlEl('div'); b.id='fl-band'; b.setAttribute('role','button'); b.tabIndex=0; b.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 14px;background:#0f2a24;border-bottom:1px solid var(--teal);color:var(--ink);font-size:13px;line-height:1.4;cursor:pointer';
     b.addEventListener('click',()=>{ hpFlDlg(); }); nav.parentNode.insertBefore(b,nav); }
@@ -45,9 +48,9 @@ function hpFlDlg(){ const F=hpFlGet(); if(!F) return null; hpFlClose('fl-dlg'); 
   card.appendChild(hpFlEl('h2','',TF('fl_title',{name:nm})));
   const ld=hpFlEl('div','',T('fl_lead')); ld.style.cssText='margin:8px 0;line-height:1.5'; card.appendChild(ld);
   if(F.late){ const lt=hpFlEl('div','note',T('fl_late')); lt.style.cssText='margin:6px 0;line-height:1.5'; card.appendChild(lt); }
-  for(let i=1;i<=5;i++){ const k=(F.face&&HP_FL_SF[i])||HP_FL_S[i-1], d=hpFlEl('div','fl-s',(i<n?'✓':i===n?'▶':'・')+' '+i+'. '+TF(k,{name:nm}));
+  for(let i=1;i<=5;i++){ const k=i===3?hpFlP3(F)[F.face?1:0]:((F.face&&HP_FL_SF[i])||HP_FL_S[i-1]), d=hpFlEl('div','fl-s',(i<n?'✓':i===n?'▶':'・')+' '+i+'. '+TF(k,{name:nm}));
     d.style.cssText='margin:6px 0;line-height:1.5'+(i===n?';font-weight:600':i<n?';color:var(--teal)':''); card.appendChild(d); }
-  const nt=hpFlEl('div','note',TF('fl_note',{name:nm})); nt.style.whiteSpace='pre-line'; card.appendChild(nt);
+  const nt=hpFlEl('div','note',TF(hpFlP3(F)[2],{name:nm})); nt.style.whiteSpace='pre-line'; card.appendChild(nt);
   const row=hpFlEl('div','row'); row.style.cssText='margin-top:10px;flex-wrap:wrap';
   row.appendChild(hpFlBtn(F.go?'btn_fl_cont':'btn_fl_go',()=>{ try{ const G=hpFlGet(); if(G&&!G.go){ G.go=1; saveID(); hpLog('はじめての流れを始めた（'+n+'／5 から）'); } }catch(e){} hpFlClose('fl-dlg'); hpFlGoto(n); },true));
   row.appendChild(hpFlBtn('btn_fl_later',()=>{ hpFlClose('fl-dlg'); }));

@@ -302,7 +302,7 @@ function renderContacts(){
     const nm=document.createElement('div'); nm.className='nm';
     const b=document.createElement('b'); b.textContent=c.nick||T('no_nick');
     const s=document.createElement('span'); s.textContent=T('ct_addr')+' '+hpIdShort(c.address); s.title=c.address;   nm.appendChild(b); nm.appendChild(s);
-    { const k=document.createElement('span'); k.textContent=' '+(c.card?'\u2709 '+T('mk_card'):T('mk_nocard')); k.style.cssText='font-size:11px;margin-left:6px;color:'+(c.card?'var(--teal)':'var(--amber)'); if(typeof hpInvPendOf==='function'&&hpInvPendOf(c.address)){ k.textContent=' '+T('mk_invpend'); k.style.color='var(--amber)'; }   nm.appendChild(k); }
+    { const k=document.createElement('span'); k.textContent=' '+(c.card?'\u2709 '+T('mk_card'):T('mk_nocard')); k.style.cssText='font-size:11px;margin-left:6px;color:'+(c.card?'var(--teal)':'var(--amber)'); if(typeof hpInvPendOf==='function'&&hpInvPendOf(c.address)){ k.textContent=' '+T('mk_invpend'); k.style.color='var(--amber)'; }   else if(typeof hpIvWaitOf==='function'&&hpIvWaitOf(c.address)){ k.textContent=' '+T('mk_ivwait'); k.style.color='var(--amber)'; }   nm.appendChild(k); }
     if(c.card&&Array.isArray(c.card.devices)&&typeof hpDevMarksInto==='function'){ try{ const dv=document.createElement('div'); dv.className='dvs'; hpDevMarksInto(dv,c.card.devices,c.address,{kindText:true}); if(dv.childNodes&&dv.childNodes.length) nm.appendChild(dv); }catch(e){} }
     const callb=document.createElement('button'); callb.className='call'; callb.textContent=T('btn_connect');
     callb.onclick=()=>{ openConversation(c.address); };

@@ -1247,10 +1247,12 @@ async function hpDevOk(r){
     let o=null; try{ o=JSON.parse(r.body); }catch(e){ o=null; }
     const k=o&&o.card;
 
-    if(k&&typeof k==='object'&&k.id===r.from&&k.master===r.fromMaster&&Array.isArray(k.devices)&&k.devices.indexOf(r.fromDev)>=0
+    const kd=(k&&typeof k==='object')?(Array.isArray(k.devices)?k.devices:(Array.isArray(k.boxes)?k.boxes.map(b=>b&&b.dev):[])):[];
+    const km=(k&&typeof k==='object')?(k.master||k.root):'';
+    if(k&&typeof k==='object'&&k.id===r.from&&km===r.fromMaster&&kd.indexOf(r.fromDev)>=0
        &&k.token&&(c.card.devices.indexOf(k.token.iss)>=0
-         ||((!c.pubKey||c.pubKey===k.master)&&!hpGoneHas(c,r.fromDev)))){
-      try{ await hpCardCheck(k); return true; }catch(e){ return false; }
+         ||((!c.pubKey||c.pubKey===km)&&!hpGoneHas(c,r.fromDev)))){
+      try{ const ck=await hpCardCheck(k); return !!(ck&&Array.isArray(ck.devices)&&ck.devices.indexOf(r.fromDev)>=0); }catch(e){ return false; }
     }
     return false;
   }catch(e){ return true; }
