@@ -87,7 +87,7 @@ function hpRentShowAfter(c,o){ if(!c) return; const key=hpGgWho(o||{});
   hpGgDraw(); if(HP_GG&&!HP_GG.done&&!HP_GG_T) HP_GG_T=setInterval(hpGgDraw,1000); if((!HP_GG||HP_GG.done)&&HP_GG_T){ clearInterval(HP_GG_T); HP_GG_T=null; } }
 
 function hpMvLost(){ try{ const L=ID&&ID.lease, x=Number(L&&L.exp)||0, left=x-Date.now(); if(!(left>0)||(L&&L.gone)) return null; const u=Number(L.unit)||0, hrs=Math.round(left/3600e3); return {d:Math.floor(left/864e5),e:u>0?hrs*u:0}; }catch(e){ return null; } }
-function hpMvLostText(){ const r=hpMvLost(); if(!r) return ''; const num=v=>(typeof hpNum==='function')?hpNum(v,2):String(Math.round(v*100)/100); return '\n'+(r.e>0?TF('mv2_lost',{d:r.d,e:num(r.e)}):TF('mv2_lost_d',{d:r.d})); }
+function hpMvLostText(){ const r=hpMvLost(); if(!r) return ''; const num=v=>{ const dp=v>=1?2:6;   return (typeof hpNum==='function')?hpNum(v,dp):String(Number(v.toFixed(dp))); }, e=r.e>0?num(r.e):'0'; return '\n'+((e!=='0')?TF('mv2_lost',{d:r.d,e:e}):TF('mv2_lost_d',{d:r.d})); }
 function hpRenewHint(){ try{ const card=document.getElementById('post-renew'); if(!card) return ''; let el=document.getElementById('pt-ext-move');
   const x=(typeof hpLeaseExp==='function')?hpLeaseExp():0, warn=(typeof HP_LEASE_WARN!=='undefined')?HP_LEASE_WARN:30*864e5, left=x-Date.now();
   const on=!!(x&&left>0&&left<=warn&&hpIsMain()&&ID&&!(ID.lease&&ID.lease.gone)&&(typeof hpRentOwned!=='function'||hpRentOwned()));
@@ -1454,7 +1454,7 @@ async function hpSwAsk(){
   const wrap=document.createElement('div'); wrap.style.cssText='margin-top:10px;display:flex;flex-direction:column;gap:8px'; let pick=cur;
   cs.forEach((u,i)=>{ const l=document.createElement('label'); l.className='chk'; l.style.cssText='align-items:flex-start'; const r=document.createElement('input'); r.type='radio'; r.name='hp-sw'; r.value=u; r.checked=(u===cur); r.onchange=()=>{ if(r.checked) pick=u; };
     const s=document.createElement('span'); s.textContent=String(u).replace(/^wss:\/\//,'')+(u===cur?' '+T('sw_cur'):''); const ws=hpSwWho(u); if(ws){ const w=document.createElement('div'); w.className='note'; w.style.cssText='margin:2px 0 0'; w.textContent=TF('sw_who',{w:ws}); s.appendChild(w); } l.appendChild(r); l.appendChild(s); wrap.appendChild(l); });
-  if(!(await hpAsk({title:T('sw_title'),text:T('sw_note'),node:wrap,ok:T('sw_ok')}))) return false;
+  if(!(await hpAsk({title:T('sw2_title'),text:T('sw2_note'),node:wrap,ok:T('sw_ok')})  )) return false;
   return (await hpSwGo(pick))==='ok'; }
 try{ if(typeof hpBmGo==='function'&&!hpBmGo.__sw){ const f=hpBmGo; hpBmGo=Object.assign(function(go,k){ try{ if(go==='dev'&&hpSwOn()&&k&&k===hpSwMe()){ hpSwAsk().catch(()=>{}); return 'sw'; } }catch(e){} return f.apply(this,arguments); },f,{__sw:1}); } }catch(e){}
 try{ if(typeof hpSibPut==='function'&&!hpSibPut.__sw){ const f=hpSibPut; hpSibPut=Object.assign(async function(body){ try{ if(body&&body.type==='sib6'&&body.box&&body.box.url===''&&hpSwOn()&&typeof POST!=='undefined'&&POST&&POST.up&&!POST.notOwner&&POST.url) body.box.url=String(POST.url); }catch(e){} return f.apply(this,arguments); },f,{__sw:1}); } }catch(e){}
@@ -2494,7 +2494,8 @@ function hpMgModel(v){
   if(s4.st==='now'){ s4.notes.push(T('mg_n4_new')); if(N&&Date.now()-Number(N.at)>HP_MG_SKIP){ s4.notes.push(T('mg_n4_skip')); s4.btns.push({a:'skip',k:'btn_mg_skip'}); } }
   const s5=st(T('mg_s5'),(N&&N.rm)?'done':((N&&histOk)?'now':'todo')); if(s5.st==='now') s5.notes.push(T('mg_n5_now')); if(s5.st==='done'&&N.th>0) s5.notes.push(TF('mg_n5_th',{n:N.th}));
   let s6=st(T('mg_s6'),(N&&N.fin)?'done':((N&&N.rm)?'now':'todo'));
-  if(s6.st==='now'){ let cur=''; try{ cur=String((typeof POST!=='undefined'&&POST&&POST.url)||''); }catch(e){} if(HP_MG_PV&&HP_MG_PV.url===cur){ if(HP_MG_PV.old){ s6.notes.push(T('mg_n6_now')); s6.btns.push({a:'move',k:'btn_mg_move',pri:1}); } } else s6.notes.push(T('mg_n6_chk')); }
+  if(s6.st==='now'){ let cur=''; try{ cur=String((typeof POST!=='undefined'&&POST&&POST.url)||''); }catch(e){} const go=()=>{ s6.notes.push(T('mg_n6_lt')); s6.btns.push({a:'move',k:'btn_mg_move',pri:1}); s6.btns.push({a:'later',k:'btn_mg_later'}); };
+    if(HP_MG_PV&&HP_MG_PV.url===cur){ if(HP_MG_PV.old){ s6.notes.push(T('mg_n6_now')); go(); } } else if(typeof hpMgOff==='function'&&hpMgOff()){ s6.notes.push(T('mg_n6_off')); go(); } else s6.notes.push(T('mg_n6_chk')); }
   S.push(st(T('mg_s1_new'),'done'), s2, s3, s4, s5, s6);
   const fin=!!(N&&N.fin); return {v:v, lead:T(fin?'mg_lead_fin':'mg_lead_new'), steps:S, fin:fin, btns:fin?[{a:'close',k:'btn_close'}]:[]}; }
 function hpMgAct(a){ try{
@@ -2503,7 +2504,9 @@ function hpMgAct(a){ try{
   if(a==='vault'){ try{ if(typeof hpGoCard==='function') hpGoCard('vault-card'); }catch(e){} return a; }
   if(a==='retry'){ HP_MG_ERR=''; Promise.resolve(hpMgTake('もう一度')).catch(()=>{}); hpMgShow(); return a; }
   if(a==='skip'){ Promise.resolve(hpAsk({text:T('cf_mg_skip'),danger:true,ok:T('btn_mg_skip'),why:'待たずに進む'})).then(v=>{ if(v&&ID&&ID.ogNew){ ID.ogNew.skip=Date.now(); saveID(); hpLog('移る手順：待たずに進めた（過去の手紙を写し終えるのを待たない）'); hpMgShow(); } }).catch(()=>{}); return a; }
-  if(a==='move'){ if(typeof hpOvGo==='function') hpOvGo(); else if(typeof hpGoCard==='function') hpGoCard('post-move'); return a; }
+  if(a==='move'){ try{ HP_MG_GO=Date.now(); }catch(e){}   if(typeof hpOvGo==='function') hpOvGo(); else if(typeof hpGoCard==='function') hpGoCard('post-move'); try{ hpMgMvBand(); hpMgFlash(); }catch(e){} return a; }
+  if(a==='later'){ if(ID&&ID.ogNew){ ID.ogNew.shut=Date.now(); ID.ogNew.later=1; saveID(); hpLog('移る手順：郵便受けの移設はあとにした（手順の欄を閉じた）'); } hpMgShow(); return a; }
+  if(a==='back'){ try{ const t=document.getElementById('t-chat'); if(t&&t.click) t.click(); }catch(e){} try{ setTimeout(()=>{ try{ const g=document.getElementById('hp-mg'); if(g&&g.scrollIntoView) g.scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){} },80); }catch(e){} return a; }
   if(a==='close'){ if(ID&&ID.ogNew){ ID.ogNew.shut=Date.now(); saveID(); } hpMgShow(); return a; }
   }catch(e){} return ''; }
 function hpMgShow(){ try{
@@ -2628,4 +2631,34 @@ function hpPayHostDraw(){ try{ if(typeof document==='undefined'||!document.getEl
   box.appendChild(tb); const nt=document.createElement('div'); nt.className='note'; nt.style.cssText='white-space:pre-line'; nt.textContent=TF('pay_hb_nt',{n:R.list.filter(m=>m.host).length})+(part?'\n'+T('pay_m_part'):''); box.appendChild(nt);
   return R.list.length; }catch(e){ return -1; } }
 try{ if(typeof hpPayDrawAll==='function'&&!hpPayDrawAll.__f6){ const f=hpPayDrawAll; hpPayDrawAll=Object.assign(function(){ const v=f.apply(this,arguments); try{ hpPayHostDraw(); }catch(e){} return v; },f,{__f6:1}); } }catch(e){}
+
+const HP_MG_OFF_MS=20e3;
+let HP_MG_DOWN=0, HP_MG_GO=0;
+function hpMgOff(){ try{ const up=!!(typeof POST!=='undefined'&&POST&&POST.up); if(up){ HP_MG_DOWN=0; return false; } if(!HP_MG_DOWN) HP_MG_DOWN=Date.now(); return Date.now()-HP_MG_DOWN>=HP_MG_OFF_MS; }catch(e){ return false; } }
+function hpMgFlash(){ try{ const m=document.getElementById('post-move'); if(!m||!m.style) return false; m.style.outline='2px solid #35d1b7'; m.style.outlineOffset='2px'; setTimeout(()=>{ try{ m.style.outline=''; m.style.outlineOffset=''; }catch(e){} },2500); return true; }catch(e){ return false; } }
+function hpMgMvBand(){ try{ if(typeof document==='undefined'||!document||!document.getElementById) return ''; const card=document.getElementById('post-move'); if(!card) return '';
+  let b=document.getElementById('hp-mg-mv'); const N=ID&&ID.ogNew, on=!!(N&&N.rm&&!N.shut&&HP_MG_GO&&hpMgView()==='new');
+  if(!on){ if(b&&b.style) b.style.display='none'; return 'off'; }
+  if(!b){ b=document.createElement('div'); b.id='hp-mg-mv'; b.style.cssText='margin:6px 0 8px;padding:8px 10px;border:1px solid #35d1b7;border-radius:8px;background:#061a17;color:var(--ink,#e6edf6);font-size:13px;line-height:1.6';
+    const h=card.querySelector?card.querySelector('h2'):null; if(h&&h.parentNode===card) card.insertBefore(b,h.nextSibling||null); else card.insertBefore(b,card.firstChild||null); }
+  const k=N.fin?'done':'band';
+  if(b.getAttribute&&b.getAttribute('data-k')===k&&b.style.display!=='none') return k;
+  b.textContent=''; if(b.setAttribute) b.setAttribute('data-k',k);
+  const t=document.createElement('div'); t.textContent=T(N.fin?'mg_mv_done':'mg_mv_band'); b.appendChild(t);
+  if(N.fin){ const x=document.createElement('button'); x.type='button'; x.className='b pri'; x.style.cssText='margin-top:6px'; x.textContent=T('btn_mg_back'); if(x.setAttribute) x.setAttribute('data-mg','back'); x.onclick=()=>hpMgAct('back'); b.appendChild(x); }
+  b.style.display=''; return k; }catch(e){ return ''; } }
+function hpMvDoneText(J,n,mv){
+  const m=(mv&&mv.n)||0;
+  if(J&&J.move&&J.move.sw){ let k=0; try{ k=(typeof hpMvSubs==='function')?hpMvSubs():0; }catch(e){} return TF('mv2_done_sw',{n:n})+(k>0?'\n'+TF('mv2_done_sw_sub',{m:k}):''); }
+  return (m>0?TF('mv2_done',{n:n,m:m}):TF('mv2_done0',{n:n}))+((mv&&mv.why)?'\n'+TF('mv2_nosub',{why:mv.why}):''); }
+function hpCardKey(c){ try{ return (c&&c.token&&typeof c.token.id==='string')?c.token.id+'|'+((Array.isArray(c.post)&&c.post.join(','))||''):''; }catch(e){ return ''; } }
+function hpSendRace(peer,ts,k0){
+  try{ const k1=hpCardKey(hpCardOf(peer)); if(!k0||!k1||k0===k1) return false;
+    const m=histLoad(peer).find(x=>x.ts===ts&&x.d==='s'); if(!m||!m.p||!m.hf||m.hf.k!=='peer') return false;
+    hpLog('送っている間に名刺が新しくなった。新しい名刺で出し直す → '+nickOf(peer));
+    setTimeout(()=>{ try{ hpResendPeer(peer,{kinds:['peer'],force:'now'}); }catch(e){} },0); return true; }catch(e){ return false; } }
+
+try{ if(typeof hpSendText==='function'&&!hpSendText.__f7){ const f=hpSendText; hpSendText=Object.assign(async function(peer,text,ts){ let k0=''; try{ k0=hpCardKey(hpCardOf(peer)); }catch(e){} const v=await f.apply(this,arguments); if(v===false){ try{ hpSendRace(peer,ts,k0); }catch(e){} } return v; },f,{__f7:1}); } }catch(e){}
+try{ if(typeof hpMgShow==='function'&&!hpMgShow.__f7){ const f=hpMgShow; hpMgShow=Object.assign(function(){ const v=f.apply(this,arguments); try{ hpMgMvBand(); }catch(e){} return v; },f,{__f7:1}); } }catch(e){}
+try{ if(typeof hpMoveUi==='function'&&!hpMoveUi.__f7){ const f=hpMoveUi; hpMoveUi=Object.assign(function(){ const v=f.apply(this,arguments); try{ hpMgMvBand(); }catch(e){} return v; },f,{__f7:1}); } }catch(e){}
 
