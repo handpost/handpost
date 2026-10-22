@@ -241,7 +241,7 @@ async function hpCard(days){
   return JSON.stringify(out);
 }
 
-const HP_POOL_IDLE=20000, HP_PUT_WAIT=15000;
+const HP_POOL_IDLE=180000  , HP_PUT_WAIT=15000;
 const HP_POOL=new Map();
 const HP_PUT_ERRS={refused:1,'bad letter':1,'too big':1,'rate limit':1,'post full':1};
 let HP_MPUT=null, HP_MPUT_CHAIN=Promise.resolve();
