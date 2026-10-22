@@ -737,9 +737,9 @@ function hpMonText(host,now){   const r=hpMonGet(host); if(!r||!r.tries) return 
 
 function hpHsSt(t,err){ try{ const el=document.getElementById('hs-st'); if(el){ el.textContent=t||''; el.style.color=err?'var(--red)':''; } }catch(e){} }
 function hpHsBtn(){ try{ const b=document.getElementById('btn-hs-load'); if(b){ b.textContent=T(HP_HOSTS?'btn_hs_reload':'btn_hs_load'); b.disabled=!!HP_HS_BUSY; } }catch(e){} }
-async function hpHsLoad(){ if(HP_HS_BUSY) return false; HP_HS_BUSY=true; hpHsBtn(); hpHsSt(T('hs_busy'));
+async function hpHsLoad(auto){ if(HP_HS_BUSY) return false; HP_HS_BUSY=true; hpHsBtn(); const keep=!!auto&&!!(typeof document!=='undefined'&&document.querySelector&&document.querySelector('#hs-list tr[data-addr]'));   if(!keep) hpHsSt(T('hs_busy'));
   try{ const ents=await hpXahauSess(async q=>{ const a=[]; let mk=null, p=0; do{ const r=await q(Object.assign({command:'account_namespace',account:HP_GOV,namespace_id:HP_EVN_NS,ledger_index:'validated'},mk?{marker:mk}:{})); p++; for(const e of ((r&&r.namespace_entries)||[])) a.push(e); mk=(r&&r.marker)||null; if(p%5===0) hpHsSt(TF('hs_busy_n',{n:a.length})); } while(mk&&p<HP_HS_PAGES); return a; },HP_HS_WAIT_ALL,HP_HS_WAIT_IDLE);
-    HP_HOSTS=await hpHostsBuild(ents); HP_HOSTS.med=hpHsMedian(HP_HOSTS.hosts); hpHsCacheSave(0);   HP_HS_N=HP_HS_SHOW; HP_HS_BUSY=false; hpHsBtn(); hpHsFltDraw(); await hpHsDraw(); return true;
+    HP_HOSTS=await hpHostsBuild(ents); HP_HOSTS.med=hpHsMedian(HP_HOSTS.hosts); hpHsCacheSave(0);   HP_HS_BUSY=false; hpHsBtn(); if(keep&&typeof hpHsLaterShow==='function'){ hpHsLaterShow(); return true; } HP_HS_N=HP_HS_SHOW; hpHsFltDraw(); await hpHsDraw(); return true;
   }catch(e){ hpHsSt(TF('hs_fail',{why:String((e&&e.message)||e)}),true); return false; } finally{ HP_HS_BUSY=false; hpHsBtn(); } }
 async function hpHsDomains(list){ const need=list.filter(h=>!HP_HS_DOM.has(h.addr)); if(!need.length) return 0;
   try{ await hpXahauSess(async q=>{ for(const h of need){ try{ const r=await q({command:'account_info',account:h.addr,ledger_index:'validated'}); const d=r&&r.account_data&&r.account_data.Domain; HP_HS_DOM.set(h.addr,d?hpHexStr(d).replace(/[^\x20-\x7e]/g,'').trim().toLowerCase():''); }catch(e){ HP_HS_DOM.set(h.addr,''); } } },60000); }catch(e){}
@@ -754,14 +754,14 @@ const HP_HS_IDB={ open(){ return new Promise((res,rej)=>{ if(typeof indexedDB===
   async put(k,v){ const db=await this.open(); return new Promise(res=>{ try{ const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').put(v,k); tx.oncomplete=()=>{ try{ db.close(); }catch(e){} res(true); }; tx.onerror=()=>{ try{ db.close(); }catch(e){} res(false); }; }catch(e){ res(false); } }); } };
 let HP_HS_CACHE=HP_HS_IDB;
 function hpHsCacheSave(ms){ if(HP_HS_SAVE_T) clearTimeout(HP_HS_SAVE_T); HP_HS_SAVE_T=setTimeout(()=>{ HP_HS_SAVE_T=null; try{ if(!HP_HOSTS||HP_HOSTS.empty) return; Promise.resolve(HP_HS_CACHE.put('hosts',{hosts:HP_HOSTS.hosts,size:HP_HOSTS.size,freq:HP_HOSTS.freq,at:HP_HOSTS.at,med:HP_HOSTS.med,dom:[...HP_HS_DOM]})).catch(()=>{}); }catch(e){} },ms||0); return true; }
-async function hpHsAuto(){ if(HP_HS_AUTO){ if(HP_HOSTS&&!HP_HOSTS.empty&&!HP_HS_BUSY&&!(Date.now()-(Number(HP_HOSTS.at)||0)<HP_HS_STALE)&&Date.now()-HP_HS_TRY>=HP_HS_RETRY){ HP_HS_TRY=Date.now(); hpHsLoad(); return 'stale'; } return ''; }   HP_HS_AUTO=true;
+async function hpHsAuto(){ if(HP_HS_AUTO){ if(HP_HOSTS&&!HP_HOSTS.empty&&!HP_HS_BUSY&&!(Date.now()-(Number(HP_HOSTS.at)||0)<HP_HS_STALE)&&Date.now()-HP_HS_TRY>=HP_HS_RETRY){ HP_HS_TRY=Date.now(); hpHsLoad(true); return 'stale'; } return ''; }   HP_HS_AUTO=true;
   if(HP_HOSTS&&!HP_HOSTS.empty) return 'have';
   if(!HP_HOSTS){ HP_HOSTS={hosts:[],size:3600,freq:1,at:Date.now(),med:0,empty:1}; hpHsBtn(); try{ hpHsFltDraw(); }catch(e){} try{ await hpHsDraw(); }catch(e){} }
   let c=null; try{ c=await HP_HS_CACHE.get('hosts'); }catch(e){}
   const ok=!!(c&&Array.isArray(c.hosts)&&c.hosts.length);
   if(ok&&HP_HOSTS&&HP_HOSTS.empty){ HP_HOSTS={hosts:c.hosts,size:c.size||3600,freq:c.freq||1,at:Number(c.at)||0,med:c.med||hpHsMedian(c.hosts)}; try{ for(const [a,d] of (c.dom||[])) if(!HP_HS_DOM.has(a)) HP_HS_DOM.set(a,d); }catch(e){} HP_HS_N=HP_HS_SHOW; hpHsBtn(); try{ hpHsFltDraw(); }catch(e){} try{ await hpHsDraw(); }catch(e){} }
   const stale=!ok||!(Date.now()-(Number(c.at)||0)<HP_HS_STALE);
-  if(stale&&!HP_HS_BUSY){ HP_HS_TRY=Date.now(); hpHsLoad(); } return ok?(stale?'stale':'cache'):'none'; }
+  if(stale&&!HP_HS_BUSY){ HP_HS_TRY=Date.now(); hpHsLoad(true); } return ok?(stale?'stale':'cache'):'none'; }
 
 let HP_HS_FILL=false;
 async function hpHsDomFill(){ if(HP_HS_FILL||!HP_HOSTS||HP_HOSTS.empty) return 0; HP_HS_FILL=true; let n=0;
@@ -833,7 +833,7 @@ async function hpHsDraw(){ const box=document.getElementById('hs-list'); if(!box
     const hb0=(Number(HP_HOSTS.at)||now);   const cells=[T(h.active?'hs_st_on':'hs_st_off'), h.cc?(h.cc+' '+hpCcName(h.cc)):'—', dom, h.lease?hpNum(h.lease,6):'—'  , (typeof hpUpDaysText==='function')?hpUpDaysText(h):'—'  , h.free+'/'+h.maxI, (h.rep==null?'—':String(h.rep)), h.tier?(hpNum(h.perf,1)+' '+T(HP_HS_TK[h.tier])):'—', hpHsCpuText(h), h.ram?hpHsGb(h.ramI)+' GB':'—', h.disk?hpHsGb(h.diskI)+' GB':'—', h.regTs?hpDur(now-h.regTs*1000):'—', h.lhb?TF('hs_ago',{t:hpDur(Math.max(0,hb0-h.lhb*1000))}):'—'];
     cells.forEach((v,i)=>{ const td=document.createElement('td'); td.textContent=v; if(i===0){ td.style.color=h.active?'var(--teal)':'var(--red)'; td.style.whiteSpace='nowrap'; td.title=T('hs_st_tip'); } if(i===3&&hpHsHigh(h,med)){ td.style.color='var(--amber)'; td.title=T('hs_high_tip'); } if(i===2) td.className='mono'; if(i===4&&!pay){ td.style.color='var(--amber)'; td.title=T('hs_pay_tip'); }   if(i===8&&h.cpu) td.title=h.cpu;   if(i===cells.length-1&&!h.active) td.style.color='var(--red)'; tr.appendChild(td); });
     tr.addEventListener('click',()=>{ hpHsPick(h.addr); }); tb.appendChild(tr); }
-  if(rows.length) box.appendChild(tb); else box.textContent=T('hs_none');
+  if(rows.length) box.appendChild(tb); else box.textContent=(HP_HOSTS.empty||(typeof HP_HS_BUSY!=='undefined'&&HP_HS_BUSY))?'':T('hs_none');
   if(all.length>rows.length){ const b=document.createElement('button'); b.className='b'; b.textContent=T('btn_hs_more'); b.style.marginTop='6px'; b.addEventListener('click',()=>{ HP_HS_N+=HP_HS_SHOW; hpHsDraw(); }); box.appendChild(b); }
   return rows.length; }
 function hpHsLine(box,label,text,color){ const d=document.createElement('div'); d.className='kv'; const b=document.createElement('b'); b.textContent=label; const s=document.createElement('span'); s.textContent=text; if(color) s.style.color=color; d.appendChild(b); d.appendChild(s); box.appendChild(d); return s; }

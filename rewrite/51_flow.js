@@ -279,7 +279,7 @@ function hpFlGiftAsk(me){ hpFlClose('fl-gift');
   const row=hpFlEl('div','row'); row.style.cssText='margin-top:8px;flex-wrap:wrap'; row.appendChild(hpFlBtn('btn_fl_g_go',()=>{ pick(ip.value,say); })); row.appendChild(hpFlBtn('btn_fl_close',()=>{ hpFlClose('fl-gift'); })); card.appendChild(row);
   box.appendChild(card); document.body.appendChild(box); return true; }
 
-const HP_UP_EVERY=2400, HP_UP_DAYS=30, HP_UP_PAR=25, HP_UP_N=5, HP_UP_SESS=300e3, HP_UP_STALE=3600e3; let HP_UP={}, HP_UP_RUN=null, HP_UP_TICK=0;
+const HP_UP_EVERY=2400, HP_UP_DAYS=30, HP_UP_PAR=(()=>{ try{ return (typeof navigator!=='undefined'&&/Android|iPhone|iPad|iPod|Mobile/.test(String(navigator.userAgent||'')))?6:25; }catch(e){ return 25; } })()  , HP_UP_N=5, HP_UP_SESS=300e3, HP_UP_STALE=3600e3; let HP_UP={}, HP_UP_RUN=null, HP_UP_TICK=0;
 function hpUpAmt(){ try{ if(typeof HP_XM_INFO!=='undefined'&&HP_XM_INFO&&HP_XM_INFO.r&&Array.isArray(HP_XM_INFO.r.evr)) return Math.round(HP_XM_INFO.r.evr.reduce((s,l)=>s+(Number(l.v)||0),0)*1e6)/1e6; }catch(e){} try{ const F=hpFlGet(); if(F&&Number(F.evr)>0) return hpFlEvr(F.evr); }catch(e){} return HP_FL_EVR_DEF; }
 function hpUpRentDays(){ return (typeof HP_DAYS_DEF!=='undefined')?HP_DAYS_DEF:30; }
 function hpUpCost(h,days){ const size=hpUpSize(), d=Math.max(0,Math.floor(Number(days===undefined?hpUpRentDays():days)||0)), n=Math.max(0,Math.ceil(d*86400/size-1e-9)), p=Number(h&&h.lease)||0; return {n:n,d:d,evr:p>0?Math.round(p*n*1e6)/1e6:0,ok:p>0&&n>0}; }
@@ -470,7 +470,9 @@ function hpHsUpNeed(rows){ return (rows||[]).filter(h=>h&&h.aid&&!hpUpFresh(HP_U
 function hpHsUpCell(h){ if(!h||!h.aid) return '—'; const x=HP_UP[h.addr]; if(!x) return '—'; if(x.st==='busy') return '…'+(x.total?Math.round(x.done/x.total*100)+(typeof hpPctS==='function'?hpPctS():'％'):''); if(x.st!=='ok') return T('hs_up_no'); return (Number(x.pct)||0).toFixed(1)+(typeof hpPctS==='function'?hpPctS():'％'); }
 function hpHsUpVal(h){ const x=h&&HP_UP[h.addr]; return (x&&x.st==='ok')?Number(x.pct)||0:null; }
 function hpHsUpPut(addr){ try{ if(!addr) return false; const tr=document.querySelector('#hs-list tr[data-addr="'+addr+'"]'); const td=tr&&tr.querySelector('td[data-up]'); if(!td) return false; const h=HP_HOSTS.hosts.find(x=>x.addr===addr); td.textContent=hpHsUpCell(h); const x=HP_UP[addr]; td.title=(x&&x.st==='ok')?hpUpText(h):''; return true; }catch(e){ return false; } }
-function hpHsUpBtn(){ try{ const b=document.getElementById('btn-hs-up'); if(!b) return false; if(HP_HS_UP_RUN){ b.disabled=true; return true; } const n=hpHsUpNeed(hpHsUpRows()).length; b.disabled=!n; b.textContent=n?TF('btn_hs_up',{n:n,s:n*2}):T('hs_up_done'); return true; }catch(e){ return false; } }
+const HP_HS_UP_SEC=35;
+function hpHsUpEta(n){ const s=Math.max(1,Number(n)||0)*HP_HS_UP_SEC; return s<90?TF('hs_t_s',{n:s}):TF('hs_t_m',{n:Math.round(s/60)}); }
+function hpHsUpBtn(){ try{ const b=document.getElementById('btn-hs-up'); if(!b) return false; if(HP_HS_UP_RUN){ b.disabled=true; return true; } const n=hpHsUpNeed(hpHsUpRows()).length; b.disabled=!n; b.textContent=n?TF('btn_hs_up',{n:n,t:hpHsUpEta(n)}):T('hs_up_done'); return true; }catch(e){ return false; } }
 function hpHsUpCol(){ const box=document.getElementById('hs-list'); if(!box) return false; const tb=box.querySelector('table.hstb');
   let row=document.getElementById('hs-up-row'); if(!row&&box.parentNode){ row=document.createElement('div'); row.id='hs-up-row'; row.style.cssText='margin-top:6px'; const b=document.createElement('button'); b.className='b'; b.id='btn-hs-up'; b.style.cssText='font-size:13px'; b.addEventListener('click',()=>{ hpHsUpRun(); }); row.appendChild(b); const nt=document.createElement('div'); nt.className='hint'; nt.style.cssText='font-size:12px;opacity:.75;margin-top:3px'; nt.textContent=T('hs_up_nt'); row.appendChild(nt); box.parentNode.insertBefore(row,box); }
   if(row) row.style.display=tb?'':'none'; if(!tb) return false;
@@ -482,13 +484,14 @@ function hpHsUpCol(){ const box=document.getElementById('hs-list'); if(!box) ret
   hpHsUpBtn(); return true; }
 async function hpHsUpRun(){ if(HP_HS_UP_RUN) return HP_HS_UP_RUN; const list=hpHsUpNeed(hpHsUpRows()); if(!list.length){ hpHsUpBtn(); return 0; }
   const b=document.getElementById('btn-hs-up');
-  HP_HS_UP_RUN=(async()=>{ let k=0; for(const h of list){ k++; try{ if(b){ b.disabled=true; b.textContent=TF('hs_up_busy',{k:k,n:list.length}); } }catch(e){} if(hpUpFresh(HP_UP[h.addr])||(HP_UP[h.addr]&&HP_UP[h.addr].st==='busy')) continue;
+  const t0=Date.now(); let k=0; const say=()=>{ try{ const bb=document.getElementById('btn-hs-up'); if(bb&&HP_HS_UP_RUN){ bb.disabled=true; bb.textContent=TF('hs_up_busy',{k:k,n:list.length,s:Math.round((Date.now()-t0)/1000)}); } }catch(e){} }; const tk=(typeof setInterval==='function')?setInterval(say,1000):null;
+  HP_HS_UP_RUN=(async()=>{ for(const h of list){ k++; say(); if(hpUpFresh(HP_UP[h.addr])||(HP_UP[h.addr]&&HP_UP[h.addr].st==='busy')) continue;
       HP_UP[h.addr]={st:'busy',k:1,n:1,done:0,total:0}; hpHsUpPut(h.addr);
       try{ HP_UP[h.addr]=await hpUpHost(h,(d,t)=>{ const u=HP_UP[h.addr]; if(u&&u.st==='busy'){ u.done=d; u.total=t; } hpHsUpPut(h.addr); }); }
       catch(e){ HP_UP[h.addr]={st:'err',at:Date.now(),why:String((e&&e.message)||e)}; try{ log(TL('lg_up_fail',{dom:hpUpName(h),why:HP_UP[h.addr].why})); }catch(_){} }
       hpHsUpPut(h.addr); try{ if(typeof HP_HS_PICK!=='undefined'&&HP_HS_PICK===h.addr) hpUpPut(h); }catch(e){} }
     return k; })();
-  let n=0; try{ n=await HP_HS_UP_RUN; } finally{ HP_HS_UP_RUN=null; }
+  say(); let n=0; try{ n=await HP_HS_UP_RUN; } finally{ HP_HS_UP_RUN=null; if(tk) clearInterval(tk); }
   try{ const O=hpHsOpt(); if((O.col&&O.col.k==='hs_h_up')||(!(O.col&&O.col.k)&&O.sort==='up')) await hpHsDraw(); }catch(e){}
   hpHsUpBtn(); return n; }
 try{ if(typeof hpHsColVal==='function'){ const f=hpHsColVal; hpHsColVal=function(h,k){ return k==='hs_h_up'?hpHsUpVal(h):f.apply(this,arguments); }; } }catch(e){}
