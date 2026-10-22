@@ -515,7 +515,7 @@ async function hpOnMsg(r){
   }
 }
 
-const HP_RS_STEPS=[30e3,120e3,600e3], HP_RS_LAST=1800e3, HP_RS_GIVEUP=7*86400e3, HP_RS_OPEN_GAP=10e3;
+const HP_RS_STEPS=[30e3,120e3,600e3], HP_RS_LAST=1800e3, HP_RS_GIVEUP=3650*86400e3  , HP_RS_OPEN_GAP=10e3;
 let HP_RS_GAP=2500, HP_RS_TIMER=null, HP_RS_CHAIN=Promise.resolve();
 const HP_SENDING=new Set();
 function hpFailKind(reason){ const r=String(reason||''); if(r==='rate limit'||r==='post full'||r==='bad letter'||/返事がない|つながらない/.test(r)) return 'wait'; if(r==='too big'||/長すぎる/.test(r)) return 'self'; return 'peer'; }
