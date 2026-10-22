@@ -180,6 +180,7 @@ header{padding:6px 14px 4px}
 header{position:relative}
 body{padding-top:env(safe-area-inset-top,0px)} .hist-note{margin:6px 0 8px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);color:var(--dim);font-size:13px}
 @supports (-webkit-touch-callout:none){body.p2p-standalone{padding-top:env(safe-area-inset-top)}}
+@supports (-webkit-touch-callout:none){body.p2p-standalone{padding-top:calc(env(safe-area-inset-top,0px) + 12px)}}
 #hdr-actions{position:absolute;right:10px;top:8px;display:flex;gap:6px;z-index:5}
  #hdr-actions{display:grid;grid-template-columns:auto auto;justify-items:end} #hdr-actions #btn-home{grid-column:1/-1;grid-row:2;justify-self:end}
 #hdr-actions button{background:#17233c;border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:6px 10px;font-size:14px;position:relative}
@@ -646,14 +647,14 @@ a{color:var(--teal)}
 <script src="rewrite/12_identity_a.js?v=79e05ba9fd2a"></script>
 <script src="keep/14_sib.js?v=3299aa545b6b"></script>
 <script src="rewrite/15_identity_b.js?v=661e32fcd0ad"></script>
-<script src="keep/16_chatui.js?v=a0542268742f"></script>
+<script src="keep/16_chatui.js?v=ff7345a3bf47"></script>
 <script src="rewrite/17_rtc.js?v=e9ce74eba869"></script>
 <script src="rewrite/18_bgloop.js?v=48e0b84ae670"></script>
 <script src="keep/19_draft.js?v=f6f94869ca05"></script>
-<script src="keep/22_i18n.js?v=b0260db8bcc0"></script>
-<script src="keep/22_i18n_fr.js?v=83c674c4fbdc"></script>
-<script src="keep/22_i18n_de.js?v=a9915193a477"></script>
-<script src="keep/22_i18n_pl.js?v=300ffe377bb8"></script>
+<script src="keep/22_i18n.js?v=ae2539c939ae"></script>
+<script src="keep/22_i18n_fr.js?v=d062e5ca2d45"></script>
+<script src="keep/22_i18n_de.js?v=949c25d1e075"></script>
+<script src="keep/22_i18n_pl.js?v=38caffc01e6a"></script>
 <script src="keep/23_ui.js?v=fe17a2974308"></script>
 <script src="keep/24_qr.js?v=60fba8abce21"></script>
 <script src="rewrite/27_vault.js?v=b003f1b52248"></script>
@@ -680,7 +681,7 @@ a{color:var(--teal)}
 <script src="rewrite/47_rootkey.js?v=ce5d9843d373"></script>
 <script src="rewrite/46_roster.js?v=7fcf862c11f5"></script>
 <script src="rewrite/45_invface.js?v=daef1738f436"></script>
-<script src="rewrite/44_postui.js?v=719d941d6034"></script>
+<script src="rewrite/44_postui.js?v=310591df6496"></script>
 <script src="rewrite/25_wiring.js?v=0448b203a517"></script>
 <script src="keep/26_sound.js?v=dd1c7e5d5ba6"></script>
 </body>
