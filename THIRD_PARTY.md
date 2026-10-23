@@ -14,6 +14,7 @@ Handpost's own code is licensed under the GNU AGPL-3.0 (`LICENSE`). The componen
 | Xumm Universal SDK | `lib/xumm.min.js` | MIT | https://github.com/XRPL-Labs/Xumm-Universal-SDK |
 | jsQR | `jsqr.js` | Apache-2.0 | https://github.com/cozmo/jsQR |
 | QR Code Generator for JavaScript, Copyright (c) 2009 Kazuhiko Arase | inside `keep/23_ui.js` | MIT | https://github.com/kazuhikoarase/qrcode-generator |
+| KanjiVG (stroke data for the handwritten letters on stickers) | inside `rewrite/44_postui.js` | CC BY-SA 3.0 | https://kanjivg.tagaini.net/ |
 
 ## Evernode Software
 
@@ -21,3 +22,7 @@ hotpocket-js-client and hotpocket-nodejs-contract are Evernode Software, owned b
 https://raw.githubusercontent.com/EvernodeXRPL/evernode-resources/main/license/evernode-license.pdf
 
 Handpost includes them only for Legitimate Evernode Network Purposes as defined in that agreement: deploying an instance of a software application (the Handpost mailbox) to a hosting slot on a Host, and interacting with that instance from the browser.
+
+## KanjiVG
+
+The handwritten letters on the Hanpo stickers are drawn from stroke data derived from KanjiVG, Copyright (C) 2009/2010/2011 Ulrich Apel, released under the Creative Commons Attribution-Share Alike 3.0 license (https://creativecommons.org/licenses/by-sa/3.0/). Handpost selected the characters it uses and added accented letters and some symbols; that stroke data, including these additions, is distributed under the same license.
