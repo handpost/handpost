@@ -158,7 +158,7 @@ function hpBubbleMenu(el,ts,kind){
   hpMenuClose(); if(!CURPEER) return false;
   const rec=histLoad(CURPEER).find(x=>x.ts===ts&&x.d===(kind==='self'?'s':'p')); if(!rec) return false;
   const items=[], txt=(typeof rec.t==='string')?rec.t:'';
-  if(typeof rec.t==='string'&&rec.t.trim()&&hpLetterCopy(rec,kind)) items.push([T('btn_copy'),()=>hpCopyText(hpLetterCopy(rec,kind))]);
+  if(typeof rec.t==='string'&&rec.t.trim()&&!(typeof hpStpId==='function'&&hpStpId(rec.t))&&hpLetterCopy(rec,kind)) items.push([T('btn_copy'),()=>hpCopyText(hpLetterCopy(rec,kind))]);
   if(!rec.x&&((rec.img&&rec.img.id)||(rec.file&&rec.file.id))) items.push([T('btn_save_dev'),()=>hpSaveToDevice(rec)]);
   if(kind==='self'){ if(rec.x){ hpPeekRun(el,ts); return true; } else if(!hpOpenedNoBack(rec,el)) items.push([T('btn_unsend'),()=>hpVoidRun(el,ts)]); }
   const info=(typeof hpBubbleInfo==='function')?hpBubbleInfo(rec,kind):[];
