@@ -289,7 +289,7 @@ function menuToggle(){ const n=document.querySelector('nav'); if(n)n.classList.t
 function menuClose(){ const n=document.querySelector('nav'); if(n)n.classList.remove('open'); }
 var HP_ID_BACK='t-chat';
 function hpMeToggle(){ try{ const id=document.getElementById('t-id'); if(!id) return; if(id.classList.contains('on')){ const b=document.getElementById(HP_ID_BACK)||document.getElementById('t-chat'); if(b) b.click(); } else id.click(); }catch(e){} }
-function homeToggle(show){ const b=document.getElementById('btn-home'); if(b)b.style.display=show?'inline-block':'none'; }
+function homeToggle(show){ const b=document.getElementById('btn-home'); if(b)b.style.display=show?'inline-block':'none'; try{ if(typeof hpCsFit==='function') hpCsFit(); }catch(e){} }
 function menuBadge(){ const b=document.getElementById('menu-badge'); if(!b)return; const n=(REQUESTS?REQUESTS.length:0)+((typeof hpNtBadge==='function')?hpNtBadge():0);         if(n>0){ b.textContent=String(n); b.style.display='block'; } else { b.style.display='none'; } }
 function renderContacts(){
   try{ if(typeof hpStoreUi==='function') hpStoreUi(); }catch(e){}

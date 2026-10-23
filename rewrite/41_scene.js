@@ -402,7 +402,8 @@ function hpCsHold(peer,s){ const now=Date.now(); let m=null; try{ m=hpCsLastSent
   return {st:s,walk:null}; }
 let HP_CS_FITW='', HP_CS_RUNCSS='';
 function hpCsFit(){ if(typeof document==='undefined'||!document.getElementById) return; let aw=0; try{ const top=document.getElementById('hdr-top'), acts=document.getElementById('hdr-actions'); const nar=(typeof hpHdrNarrow==='function')&&hpHdrNarrow();   aw=(acts&&acts.offsetWidth&&!nar)?acts.offsetWidth+12:0; if(top) top.style.paddingRight=aw?(aw-2)+'px':''; }catch(e){}
-  const p=document.getElementById('path'), pw=p?Math.round(p.clientWidth||0):0; if(!pw) return; const key=pw+'|'+aw; if(key===HP_CS_FITW) return; HP_CS_FITW=key; const w=Math.max(0,pw-aw);
+  const p=document.getElementById('path'), pw=p?Math.round(p.clientWidth||0):0; if(!pw) return; let cut=aw; try{ const ac=document.getElementById('hdr-actions'); if(aw&&ac&&ac.getBoundingClientRect&&p.getBoundingClientRect){ const ra=ac.getBoundingClientRect(), rp=p.getBoundingClientRect(); if(ra&&rp&&ra.height>0&&ra.bottom<=rp.top+4) cut=0; } }catch(e){} try{ p.style.setProperty('--hp-cut',cut+'px'); }catch(e){}
+  const key=pw+'|'+aw+'|'+cut; if(key===HP_CS_FITW) return; HP_CS_FITW=key; const w=Math.max(0,pw-cut);
   const run=HP_CS_RUN;
   for(const [id,base,hh,d0,rx] of [['d-rly',120,40,2.6,22],['d-peer',220,44,2.8,0]]){ const sc=document.getElementById(id), sv=(sc&&typeof sc.querySelector==='function')?sc.querySelector('svg'):null; const W=Math.max(base,Math.round(w*hh/42)), dx=W-base; run[id]=dx+rx; if(!sv) continue; sv.setAttribute('viewBox','0 0 '+W+' '+hh); try{ sv.style.width=Math.round(W*42/hh)+'px'; }catch(e){} const g=sv.querySelector('.stg'); if(g) g.setAttribute('transform','translate('+dx+',0)'); try{ sc.style.setProperty('--run',dx+'px'); sc.style.setProperty('--wd',(d0+dx/120).toFixed(2)+'s'); }catch(e){} }
 
