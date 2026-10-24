@@ -63,7 +63,7 @@ function hpHIsFull(e){ try{ return !!e&&(e.name==='QuotaExceededError'||e.code==
 async function hpHFullHit(what){
   const now=Date.now(); if(now-HPH_FULL<30000) return false; HPH_FULL=now;
   hpHLog('この端末の保存容量がいっぱいで '+what+' を書けなかった。古い本体を外して空ける');
-  try{ if(typeof hpBanner==='function') hpBanner(T('bn_quota'),()=>{ try{ document.getElementById('t-set').click(); const sc=document.getElementById('store-card'); if(sc&&sc.scrollIntoView) sc.scrollIntoView({block:'start'}); }catch(e){} },'nag'); }catch(e){}
+  try{ if(typeof hpBanner==='function') hpBanner(T('bn_quota'),()=>{ try{ if(typeof hpAlSuggest==='function'){ hpAlSuggest(); return; } document.getElementById('t-set').click(); const sc=document.getElementById('store-card'); if(sc&&sc.scrollIntoView) sc.scrollIntoView({block:'start'}); }catch(e){} },'nag'); }catch(e){}
   let n=0; try{ n=await hpHSweep(true); }catch(e){}
   if(!n) hpHLog('外せる古い本体が無かった。写真やファイルを減らすか、ほかの端末で受け取ってください');
   return n>0;
@@ -234,7 +234,7 @@ function hpHWarn(u){
     const now=Date.now(); if((Number(st.lv)||0)>=lv&&now-(Number(st.at)||0)<86400e3) return;
     hpHSet('p2p_stwarn',JSON.stringify({lv:lv,at:now}));
     const pct=Math.floor(u.ratio*100); hpHLog('保存容量が '+pct+'%（使ってよい量＝ブラウザの許す量の 8 割）。帯で知らせた（まだ外さない）');
-    if(typeof hpBanner==='function') hpBanner(TF(lv===2?'bn_st90':'bn_st80',{pct:pct}),()=>{ try{ document.getElementById('t-set').click(); const sc=document.getElementById('store-card'); if(sc&&sc.scrollIntoView) sc.scrollIntoView({block:'start'}); }catch(e){} },'nag');
+    if(typeof hpBanner==='function') hpBanner(TF(lv===2?'bn_st90':'bn_st80',{pct:pct}),()=>{ try{ if(typeof hpAlSuggest==='function'){ hpAlSuggest(); return; } document.getElementById('t-set').click(); const sc=document.getElementById('store-card'); if(sc&&sc.scrollIntoView) sc.scrollIntoView({block:'start'}); }catch(e){} },'nag');
   }catch(e){}
 }
 
