@@ -308,8 +308,8 @@ async function hpKeepRun(dry){
     if(k.indexOf('p2p_chat_')!==0) continue; const peer=k.slice(9);
     const h=histLoad(peer), rest=[]; let ch=false;
     for(const m of h){ const o=histOrd(m), id=bid(m);
-      if(ct&&!m.p&&o<ct){ if(m.d==='s'||m.d==='p') out.t++; if(id&&!m.xb) drop.add(id); ch=true; continue; }
-      if(cb&&id&&!m.xb&&!m.p&&o<cb){ out.b++; drop.add(id); if(!dry) m.xb=1; ch=true; }
+      if(ct&&!m.p&&!m.kp&&o<ct){   if(m.d==='s'||m.d==='p') out.t++; if(id&&!m.xb) drop.add(id); ch=true; continue; }
+      if(cb&&id&&!m.xb&&!m.p&&!m.kp&&o<cb){ out.b++; drop.add(id); if(!dry) m.xb=1; ch=true; }
       else if(id) keep.add(id);
       rest.push(m); }
     if(!dry&&ch) histSave(peer,rest);
