@@ -90,7 +90,7 @@ function hpEvMemo0(tx){ const m=(((tx&&tx.Memos)||[])[0]||{}).Memo||{}; return {
 function hpEvFind(list,types,ref){ ref=String(ref||'').toUpperCase(); for(const it of (list||[])){ const tx=(it&&(it.tx||it.tx_json))||{}; const ty=hpHexStr(hpLgParam(tx,HP_LG_TYPE)); if(types.includes(ty)&&hpLgParam(tx,HP_LG_REF).toUpperCase()===ref) return {type:ty,tx:Object.assign({hash:String(it.hash||tx.hash||'')},tx)}; } return null; }
 async function hpEvWait(acct,from,types,ref,ms,every){ const until=Date.now()+(ms||240000); every=every||5000;
   while(Date.now()<until){ try{ const r=await hpXahauSess(async q=>q({command:'account_tx',account:acct,ledger_index_min:from,ledger_index_max:-1,forward:true,limit:100}),20000); const f=hpEvFind(r&&r.transactions,types,ref); if(f) return f; }catch(e){}
-    await new Promise(r=>setTimeout(r,every)); }
+    await new Promise(r=>setTimeout(r,(typeof hpJit==='function')?hpJit(every):every)); }
   return null; }
 function hpEvInfo(res){ const c=(res&&res.content&&typeof res.content==='object')?res.content:res;
   if(!c||typeof c!=='object'||!/^[a-z0-9.-]{1,253}$/i.test(String(c.domain||''))||!(Number(c.user_port)>0&&Number(c.user_port)<65536)||!/^ed[0-9a-f]{64}$/i.test(String(c.pubkey||''))) throw new Error('create_res');

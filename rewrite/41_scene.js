@@ -61,7 +61,7 @@ function hpLeaseGo(){ try{ const tab=document.getElementById('t-post');   if(tab
 function hpLeaseRenew(){ try{ if(typeof hpExtStart==='function') return hpExtStart(); }catch(e){} return false; }
 function hpLeaseUi(){ try{ const sv=document.getElementById('lease-exp-show'); if(sv){ const x=hpLeaseExp(), a0=hpLeaseAcct(); const v=a0?(x?hpLeaseText():(typeof T==='function'?T('lease_lg_busy'):'')):(typeof T==='function'?T('lease_noacct'):''); if(sv.textContent!==v) sv.textContent=v; } }catch(e){}   try{ const ea=document.getElementById('lease-acct'); if(ea&&ea!==document.activeElement){ const v=hpLeaseAcct(); if(ea.value!==v) ea.value=v; } }catch(e){}   try{ const el=document.getElementById('lease-exp'); if(!el||el===document.activeElement) return; const x=hpLeaseExp(); const v=x?hpLeaseLocal(x):''; if(el.value!==v) el.value=v; }catch(e){} }
 
-const HP_XAHAU_WSS='wss://xahau.network';
+let HP_XAHAU_WSS='wss://xahau.network';
 const HP_EV_IDX={base:'A5B8F673C538E8BE497C586BDD21F0087AEA7A9C292A35B3BBFF2FE4D1795FDC',size:'D687418E6C4B6D5677CF96AA0B2720EF287AEAB17592B3AFD3AECF26F8B8D0D4'};
 let HP_MOM_EDGE=0;
 let HP_MOM_CFG=null, HP_MOM_BUSY=false;
@@ -107,6 +107,11 @@ function hpXahauSess(fn,ms,idle){ return new Promise((res,rej)=>{ const W=HP_XAH
   ws.onopen=()=>{ Promise.resolve().then(()=>fn(q)).then(v=>fin(null,v),e=>fin(e)); };
   ws.onmessage=ev=>{ poke(); let m=null; try{ m=JSON.parse(ev.data); }catch(e){ return; } const w=m&&wait.get(m.id); if(!w) return; wait.delete(m.id); if(m.status==='success') w.res(m.result); else w.rej(new Error(m.error||'error')); };
   ws.onerror=()=>fin(new Error('connect')); ws.onclose=()=>fin(new Error('closed')); }); }
+
+const HP_XAHAU_LIST=['wss://xahau.network','wss://xahau.org'], HP_XAHAU_ALT_MS=10*60e3; let HP_XAHAU_ALT_AT=0;
+function hpXahauPick(now){ now=now||Date.now(); if(HP_XAHAU_ALT_AT&&now-HP_XAHAU_ALT_AT<HP_XAHAU_ALT_MS) return HP_XAHAU_LIST[1]; HP_XAHAU_ALT_AT=0; return HP_XAHAU_LIST[0]; }
+function hpXahauAlt(f){ const w=function(){ const a=arguments, me=this; if(HP_XAHAU_LIST.indexOf(HP_XAHAU_WSS)<0) return f.apply(me,a); const u=hpXahauPick(); HP_XAHAU_WSS=u; return f.apply(me,a).catch(e=>{ if(!(e&&e.message==='connect')) throw e; const o=HP_XAHAU_LIST.find(x=>x!==u); HP_XAHAU_ALT_AT=(o===HP_XAHAU_LIST[1])?Date.now():0; HP_XAHAU_WSS=o; try{ if(typeof hpLog==='function') hpLog('台帳の窓口 '+u.replace('wss://','')+' につながらないので '+o.replace('wss://','')+' で問い合わせる'); }catch(_){} return f.apply(me,a); }); }; w.__alt=1; return w; }
+try{ if(!hpXahauSess.__alt) hpXahauSess=hpXahauAlt(hpXahauSess); if(!hpXahauGet.__alt) hpXahauGet=hpXahauAlt(hpXahauGet); }catch(e){}
 function hpLeaseWant(acct){
   try{ if(typeof ID==='undefined'||!ID) return null; const hx=t=>(typeof t==='string'&&/^[0-9A-Fa-f]{64}$/.test(t))?t.toUpperCase():'';
     const L=ID.lease||{}, O=ID.leaseOld||null, skip=[]; let cur=''; try{ cur=(typeof hpPostUrl==='function')?String(hpPostUrl()||''):''; }catch(e){}

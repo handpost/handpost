@@ -4,6 +4,10 @@ function hpFramed(w){ try{ return !!(w&&w.top&&w.self&&w.top!==w.self); }catch(e
 function hpFrameStop(w,d){ try{ if(typeof w.stop==='function') w.stop(); }catch(e){} try{ d.documentElement.innerHTML='<head><meta charset="utf-8"><title>Handpost</title></head><body style="margin:0;padding:24px;background:#0b1220;color:#e6edf3;font:16px/1.7 system-ui,sans-serif"><p>Handpost は、ほかのページの中では動きません。<br>This page cannot run inside another page.</p><p><a href="https://handpost.page/" target="_blank" rel="noopener" style="color:#2ed3c0">handpost.page を直接開く / Open handpost.page</a></p></body>'; }catch(e){} return true; }
 if(typeof window!=='undefined'&&typeof document!=='undefined'&&hpFramed(window)){ hpFrameStop(window,document); throw new Error('framed'); }
 
+function hpJit(ms,f){ f=(f==null)?0.2:f; return Math.max(0,Math.round(Number(ms)*(1-f+Math.random()*2*f))); }
+let HP_SLOT_MEM=null;
+function hpSlot(){ if(HP_SLOT_MEM!=null) return HP_SLOT_MEM; let raw=null; try{ raw=localStorage.getItem('hp_slot'); }catch(e){} let v=(raw==null||raw==='')?NaN:Number(raw); if(!(Number.isInteger(v)&&v>=0&&v<60)){ v=Math.floor(Math.random()*60); try{ localStorage.setItem('hp_slot',String(v)); }catch(e){} } HP_SLOT_MEM=v; return v; }
+function hpSlotIn(now,P){ const w=P/60, off=hpSlot()*w, ph=(((Number(now)-off)%P)+P)%P; return ph<w; }
 const $=s=>document.querySelector(s);
 const te=new TextEncoder(), td=new TextDecoder();
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
