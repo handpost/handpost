@@ -306,7 +306,7 @@ function renderContacts(){
     if(c.card&&Array.isArray(c.card.devices)&&typeof hpDevMarksInto==='function'){ try{ const dv=document.createElement('div'); dv.className='dvs'; hpDevMarksInto(dv,c.card.devices,c.address,{kindText:true}); if(dv.childNodes&&dv.childNodes.length) nm.appendChild(dv); }catch(e){} }
     const callb=document.createElement('button'); callb.className='call'; callb.textContent=T('btn_connect');
     callb.onclick=()=>{ openConversation(c.address); };
-    const hisn=(()=>{ try{ return histLoad(c.address).length; }catch(e){ return 0; } })(); const hisb=hisn?document.createElement('button'):null; if(hisb) hisb.textContent=TF('btn_clearhist',{n:hisn});
+    const hisn=(()=>{ try{ return histLoad(c.address).length; }catch(e){ return 0; } })(); const hisb=null;   if(hisb) hisb.textContent=TF('btn_clearhist',{n:hisn});
     if(hisb) hisb.onclick=async()=>{ const h=histLoad(c.address); if(h.length===0){ alert(T('al_nohist')); return; }
       if(await hpAsk({text:TF('cf_clearhist',{who:c.nick||hpIdShort(c.address),n:h.length}), danger:true, ok:T('btn_ask_del')})){   histClear(c.address); if(CURPEER===c.address)$('#msgs').innerHTML=''; log('\u5c65\u6b74\u3092\u524a\u9664: '+c.address); } };
     const renb=document.createElement('button'); renb.textContent=T('btn_rename');

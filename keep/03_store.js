@@ -125,11 +125,11 @@ function p2pRenderOrphans(list){
   const hd=document.createElement('div'); hd.textContent=TF('orph_title',{n:orph.length}); box.appendChild(hd);
   for(const o of orph){
     const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap';
-    const s=document.createElement('span'); s.textContent=hpIdShort(o.address)+' ('+o.n+')'; s.title=o.address;   s.style.cssText='font-size:11px;word-break:break-all;flex:1 1 auto';
+    const s=document.createElement('span'); s.textContent=((typeof hpCtrName==='function'&&hpCtrName(o.address))||hpIdShort(o.address))+' ('+o.n+')'; s.title=o.address;   s.style.cssText='font-size:11px;word-break:break-all;flex:1 1 auto';
     const kb=document.createElement('button'); kb.textContent=T('btn_orph_keep');
     kb.onclick=async()=>{ const n=prompt(T('pr_nick'),''); if(n===null)return; const nn=n.trim(); if(addContact(o.address,nn,await hpNickOk(o.address,nn)))renderContacts(); };
     const db=document.createElement('button'); db.className='del'; db.textContent=T('btn_orph_del');
-    db.onclick=async()=>{ if(await hpAsk({text:TF('cf_orph_del',{addr:hpIdShort(o.address),n:o.n}), danger:true, ok:T('btn_ask_del')})){   p2pPurgeAddr(o.address); log(TL('lg_orph_del',{addr:o.address})); renderContacts(); } };
+    db.onclick=async()=>{ if(await hpAsk({text:TF('cf_orph_del',{addr:((typeof hpCtrName==='function'&&hpCtrName(o.address))||hpIdShort(o.address)),n:o.n}), danger:true, ok:T('btn_ask_del')})){   if(typeof hpCtrDel==='function') hpCtrDel(o.address); else p2pPurgeAddr(o.address);   log(TL('lg_orph_del',{addr:o.address})); renderContacts(); } };
     row.appendChild(s); row.appendChild(kb); row.appendChild(db); box.appendChild(row);
   }
   const all=document.createElement('button'); all.className='del'; all.style.cssText='margin-top:8px'; all.textContent=TF('btn_orph_all',{n:orph.length});
