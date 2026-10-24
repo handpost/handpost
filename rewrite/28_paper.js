@@ -278,6 +278,7 @@ function hpPaperFlow(step){
       card.appendChild(el('h2',null,T('pp2_h')));
       const nt=el('div','note',T('pp2_note')); nt.style.whiteSpace='pre-line'; card.appendChild(nt);
       { const on=el('div','note',T('pp2_once'),'paper-once'); on.style.cssText='margin-top:6px;color:var(--amber)'; card.appendChild(on); }
+      { const nv=el('div','note',T('pp_never'),'paper-never'); nv.style.cssText='margin-top:6px;color:var(--amber);white-space:pre-line'; card.appendChild(nv); }
       hpPaperOne(card,row,el,btn,'paper-go2',T('btn_pp2_go'),()=>show(3));   row.appendChild(btn(T('btn_pp_cancel'),false,'paper-cancel',close));
     } else if(n===3){
       card.appendChild(el('h2',null,T('pp3_h')));
@@ -295,6 +296,7 @@ function hpPaperFlow(step){
     } else if(n===5){
       card.appendChild(el('h2',null,T('rk5_h')));
       const nt=el('div','note',T('rk5_note')); nt.style.whiteSpace='pre-line'; card.appendChild(nt);
+      { const nv=el('div','note',T('pp_never'),'paper-never'); nv.style.cssText='margin-top:6px;color:var(--amber);white-space:pre-line'; card.appendChild(nv); }
       const cn=el('div',null,TF('rk5_count',{n:hpRkN()}),'paper-count'); cn.style.cssText='margin-top:10px;font-size:16px'; card.appendChild(cn);
       if(more&&hpPaperP()){
         hpPaperOne(card,row,el,btn,'paper-wrote',T('btn_rk5_wrote'),()=>{ hpRkSetN(hpRkN()+1); more=false; show(5); });   row.appendChild(btn(T('btn_rk5_hide'),false,'paper-hide',()=>{ more=false; show(5); }));
