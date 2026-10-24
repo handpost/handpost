@@ -266,7 +266,7 @@ async function hpHSaveOld(){
     if(k.indexOf('p2p_chat_')!==0) continue;
     let a=null; try{ a=JSON.parse(HPH_MEM[k]); }catch(e){}
     if(!Array.isArray(a)) continue;
-    for(const m of a){ const id=(m.img&&m.img.id)||(m.file&&m.file.id); if(!id||m.xb||m.sv||(m.file&&m.file.risk)) continue; const ts=Number(m.ts)||0; if(now-ts<HP_SW_KEEP) continue;
+    for(const m of a){ const id=(m.img&&m.img.id)||(m.file&&m.file.id); if(!id||m.xb||m.sv||(m.file&&m.file.risk)) continue; const ts=Number(m.ts)||0;
       cand.push({peer:k.slice(9),ts:ts,id:id,lost:!hpHRefetchable(k.slice(9)),img:m.img||null,file:m.file||null}); }
   }
   cand.sort((x,y)=>(x.lost?1:0)-(y.lost?1:0)||x.ts-y.ts);
@@ -296,7 +296,7 @@ function hpHRefetchable(peer){
   return false;
 }
 
-const HP_KEEP_T=[0,365,180,90,30], HP_KEEP_B=[0,365,180,90,30,7], HP_KEEP_EVERY=6*3600e3;
+const HP_KEEP_T=[0,365,180,90,30], HP_KEEP_B=[0,365,180,90,30]  , HP_KEEP_EVERY=6*3600e3;
 function hpKeepDays(k){ const v=Number(hpHGet(k==='b'?'p2p_keep_b':'p2p_keep_t'))||0; return (k==='b'?HP_KEEP_B:HP_KEEP_T).indexOf(v)>=0?v:0; }
 function hpKeepCut(k,now){ const d=hpKeepDays(k); return d?(now||Date.now())-d*864e5:0; }
 function hpKeepTooOld(m){ const c=hpKeepCut('t'); return !!(c&&m&&!m.p&&(m.d==='s'||m.d==='p'||m.d==='v')&&histOrd(m)<c); }
