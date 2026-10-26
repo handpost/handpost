@@ -79,12 +79,12 @@ async function hpSeal(card, body, kind, link, max){
 
   const dests=[]; for(const dev of card.devices){
     const p=card.prekeys.find(q=>q&&q.dev===dev&&hp5PreOk(dev,q.x25519,q.notAfter,q.sig,now));
-    if(p){ dests.push({ dev:dev, x:hpBytes(p.x25519), keyId:p.x25519.slice(0,16) }); continue; }
+    if(p){ dests.push({ dev:dev, x:hpBytes(p.x25519), keyId:p.x25519.slice(0,16), kem:hp6KemFor(dev,p,now) }); continue; }
     if(!card.prekeys.some(q=>q&&q.dev===dev&&hp5PreOk(dev,q.x25519,q.notAfter,q.sig,0))) throw new Error('有効なプレキーが無い端末がある '+String(dev).slice(0,10)+'…');
   }
   if(!dests.length) throw new Error('有効なプレキーが無い端末がある '+String(card.devices[0]).slice(0,10)+'…');
   const toDevs=dests.map(d=>d.dev);
-  const innerBytes=hp5U(JSON.stringify(link?{ link:1, fromDev:me.dev, fromPrekey:{x:mine.x, notAfter:mine.notAfter, sig:mine.sig}, sentAt:now, to:toDevs, toId:card.id, body:body }:{ from:me.id, fromMaster:me.master, fromDev:me.dev, fromDevSig:me.devSig, fromPrekey:{x:mine.x, notAfter:mine.notAfter, sig:mine.sig}, sentAt:now, to:toDevs, toId:card.id, body:body }));
+  const innerBytes=hp5U(JSON.stringify(link?{ link:1, fromDev:me.dev, fromPrekey:hp6MyFp(mine), sentAt:now, to:toDevs, toId:card.id, body:body }:{ from:me.id, fromMaster:me.master, fromDev:me.dev, fromDevSig:me.devSig, fromPrekey:hp6MyFp(mine), sentAt:now, to:toDevs, toId:card.id, body:body }));
   const kmsg=s.randombytes_buf(32), n1=s.randombytes_buf(24);
   const blob=hp5B64(hp5Cat(n1, s.crypto_aead_xchacha20poly1305_ietf_encrypt(innerBytes, hp5U('handpost-v5:'+kind), null, n1, kmsg)));
   const id=await hp5Id(kind, blob);
@@ -94,7 +94,8 @@ async function hpSeal(card, body, kind, link, max){
     const mac=hp5Mac(s, s.crypto_scalarmult(myPriv, d.x), myX, d.x, id, innerBytes);
     const n2=s.randombytes_buf(24);
     const wrap=hp5B64(hp5Cat(n2, s.crypto_aead_xchacha20poly1305_ietf_encrypt(hp5Cat(kmsg, mac), hp5U('handpost-v5-wrap:'+id), null, n2, kwrap)));
-    const letter=JSON.stringify({ v:5, kind:kind, keyId:d.keyId, eph:hp5B64(eph.publicKey), wrap:wrap, blob:blob });
+    const w6=d.kem?hp6Wrap(eph, d.x, d.kem, id, hp5Cat(kmsg, mac)):null;
+    const letter=JSON.stringify(w6?{ v:6, kind:kind, keyId:d.keyId, eph:hp5B64(eph.publicKey), kem:w6.kem, wrap:w6.wrap, blob:blob }:{ v:5, kind:kind, keyId:d.keyId, eph:hp5B64(eph.publicKey), wrap:wrap, blob:blob });
     const lim=(Number(max)>HP5_MAX)?Number(max):HP5_MAX; if(letter.length>lim) throw new Error('長すぎる（1 通 '+letter.length+' 文字、上限 '+lim+'）');
     return { dev:d.dev, blob:letter };
   });
@@ -103,7 +104,7 @@ async function hpSeal(card, body, kind, link, max){
 
 async function hpOpen(m){
   const s=hp5S(); let L; try{ L=JSON.parse(m.blob); }catch(e){ L=null; }
-  if(!L||L.v!==5||typeof L.blob!=='string'||typeof L.wrap!=='string'||typeof L.eph!=='string') throw new Error('v5 の封筒でない');
+  if(!L||!(L.v===5||(L.v===6&&typeof L.kem==='string'))||typeof L.blob!=='string'||typeof L.wrap!=='string'||typeof L.eph!=='string') throw new Error('v5 の封筒でない');
   const kind=(L.kind==='sig'?'sig':'msg'), id=await hp5Id(kind, L.blob);
   if(id!==m.id) throw new Error('番号が封筒と合わない');
   const pre=(await hp5Prekeys()).find(p=>p.x.slice(0,16)===L.keyId);
@@ -111,7 +112,7 @@ async function hpOpen(m){
   const myX=hpBytes(pre.x), myPriv=hpBytes(pre.priv), eph=hp5Un64(L.eph), w=hp5Un64(L.wrap), b=hp5Un64(L.blob);
   let km, innerBytes;
   try{
-    km=s.crypto_aead_xchacha20poly1305_ietf_decrypt(null, w.slice(24), hp5U('handpost-v5-wrap:'+id), w.slice(0,24), hp5Kwrap(s, s.crypto_scalarmult(myPriv, eph), eph, myX, id));
+    km=(L.v===6)?hp6Unwrap(myPriv, myX, pre.kseed, eph, L.kem, L.wrap, id):s.crypto_aead_xchacha20poly1305_ietf_decrypt(null, w.slice(24), hp5U('handpost-v5-wrap:'+id), w.slice(0,24), hp5Kwrap(s, s.crypto_scalarmult(myPriv, eph), eph, myX, id));
     if(km.length!==64) throw new Error('包みの形が違う');
     innerBytes=s.crypto_aead_xchacha20poly1305_ietf_decrypt(null, b.slice(24), hp5U('handpost-v5:'+kind), b.slice(0,24), km.slice(0,32));
   }catch(e){ throw new Error('封が開かない（壊れているか、書き換えられている）'); }
@@ -124,8 +125,8 @@ async function hpOpen(m){
   if(!s.memcmp(km.slice(32), hp5Mac(s, s.crypto_scalarmult(myPriv, fromX), fromX, myX, id, innerBytes))) throw new Error('MAC が合わない');
   if(!Array.isArray(inner.to)||inner.to.indexOf(pre.dev)<0) throw new Error('宛先にこの端末が無い');
   if(ID&&ID.address&&inner.toId!==ID.address) throw new Error('宛先の身元がこの端末の身元と違う');
-  if(isLink) return { id:id, kind:kind, link:true, fromDev:inner.fromDev, fromPrekey:{x:fp.x, notAfter:fp.notAfter, sig:fp.sig}, sentAt:inner.sentAt, body:inner.body };
-  return { id:id, kind:kind, from:inner.from, fromMaster:inner.fromMaster, fromDev:inner.fromDev, fromPrekey:{x:fp.x, notAfter:fp.notAfter, sig:fp.sig}, sentAt:inner.sentAt, body:inner.body };
+  if(isLink) return { id:id, kind:kind, link:true, fromDev:inner.fromDev, fromPrekey:hp6Fp(inner.fromDev, fp, inner.sentAt), sentAt:inner.sentAt, body:inner.body };
+  return { id:id, kind:kind, from:inner.from, fromMaster:inner.fromMaster, fromDev:inner.fromDev, fromPrekey:hp6Fp(inner.fromDev, fp, inner.sentAt), sentAt:inner.sentAt, body:inner.body };
 }
 
 const HP6_PUB=1568, HP6_CT=1568, HP6_SEED=64, HP6_PUB_B64=2092;
@@ -162,6 +163,14 @@ function hp6Unwrap(myPriv, myX, seedHex, eph, kemB64, wrapB64, id){
   }catch(e){ throw new Error('包みが開かない（壊れているか、別の端末あて）'); }
   finally{ hp6Zero(k.secretKey, seed, kk, kx, kw); }
 }
+
+let HP6_SEND=false;
+function hp6MyFp(p){ const o={ x:p.x, notAfter:p.notAfter, sig:p.sig }; if(p&&typeof p.kem==='string'&&typeof p.sig6==='string'&&p.kem&&p.sig6){ o.mlkem=p.kem; o.sig6=p.sig6; } return o; }
+function hp6Fp(dev, fp, at){ const o={ x:fp.x, notAfter:fp.notAfter, sig:fp.sig }; try{ if(fp&&typeof fp.mlkem==='string'&&typeof fp.sig6==='string'&&hp6PreOk(dev,fp.x,fp.mlkem,fp.notAfter,fp.sig6,at)){ o.mlkem=fp.mlkem; o.sig6=fp.sig6; } }catch(e){} return o; }
+function hp6KemFor(dev, p, now){ try{ if(!HP6_SEND||!hp6Has()||!p) return null;
+    if(typeof p.mlkem==='string'&&typeof p.sig6==='string'&&hp6PreOk(dev,p.x25519,p.mlkem,p.notAfter,p.sig6,now)) return p.mlkem;
+    const q=(typeof ID!=='undefined'&&ID&&ID.pre6&&typeof ID.pre6==='object'&&!Array.isArray(ID.pre6))?ID.pre6[dev]:null;
+    if(q&&q.x25519===p.x25519&&typeof q.mlkem==='string'&&hp6PreOk(dev,q.x25519,q.mlkem,q.notAfter,q.sig6,now)) return q.mlkem; }catch(e){} return null; }
 
 function extractFingerprint(sdp){const m=sdp.match(/a=fingerprint:\S+\s+(\S+)/);return m?m[1]:null;}
 
