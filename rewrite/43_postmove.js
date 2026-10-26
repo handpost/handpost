@@ -125,7 +125,8 @@ async function hpOldVisit(why){
     let up=false; try{ up=await hpWithin(c.connect(),20000,'前の郵便受けへのつなぎ'); }catch(e){ up=false; }
     if(!up) throw new Error('つながらない');
     const send=o=>hpWithin(c.submitContractInput(JSON.stringify(o)),HP_SEND_WAIT,'前の郵便受けへの送り');
-    await send(await hpClaimMsg()); await send({op:'sync',got:[]});
+    await send(await hpClaimMsg()); await send({op:'sync',got:[],v:2,max:(typeof hpRxOf==='function'?hpRxOf(O.url):100000)});
+    const askOld=async q=>{ await send(q); const t1=Date.now(); while(Date.now()-t1<(typeof HP_RX_SLICE_WAIT!=='undefined'?HP_RX_SLICE_WAIT:30000)){ const i=out.findIndex(x=>x&&typeof x==='object'&&x.id===q.id&&(x.ok==='get'||x.err)); if(i>=0) return out.splice(i,1)[0]; await sleep(250); } return null; };
     const t0=Date.now(); let idle=0;
     while(Date.now()-t0<HP_OLD_WAIT){
       if(!out.length){ if(++idle>=HP_OLD_IDLE) break; await sleep(250); continue; } idle=0;
@@ -133,10 +134,13 @@ async function hpOldVisit(why){
       if(o&&o.err){ if(o.err==='removed'||o.err==='killed'||o.err==='not owner'){ hpOldEnd(rec,o.err); break; } continue; }
       if(o&&Array.isArray(o.push)){
         const ids=[];
-        for(const m of o.push){ ids.push(m.id); if(hpSeen(m.id,m.exp)) continue; n++;
+        for(const m0 of o.push){ if(!m0||typeof m0.id!=='string') continue; let m=m0;
+          if(m0.big===1){   if(typeof hpSeenLoad==='function'&&hpSeenLoad().has(m0.id)){ ids.push(m0.id); continue; }
+            const r=(typeof hpRxFetch==='function')?await hpRxFetch(askOld,m0,hpRxOf(O.url)):null; if(!r){ hpLog('前の郵便受け（'+O.url+'）の大きい手紙 '+m0.id+' を受け取れない（次の見回りで）'); continue; } if(r.err){ ids.push(m0.id); continue; } m=r; }
+          ids.push(m.id); if(hpSeen(m.id,m.exp)) continue; n++;
           try{ await hpDeliver(m); }catch(e){ hpLog('前の郵便受けの手紙を開けられない '+m.id+' '+((e&&e.message)||e)); if(e&&e.hpOpen&&typeof hpOpenFail==='function') hpOpenFail(e); } }
         try{ hpSeenSave(); }catch(e){}
-        if(ids.length) await send({op:'sync',got:ids});
+        if(ids.length) await send({op:'sync',got:ids,v:2,max:(typeof hpRxOf==='function'?hpRxOf(O.url):100000)});
         if(!ids.length&&!(o.left>0)) break;
       }
     }

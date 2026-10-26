@@ -58,7 +58,7 @@ function p2pOnboard(){
     if(box.dataset) box.dataset.step=step;
     var stand=(typeof navigator!=='undefined'&&(navigator.standalone||(window.matchMedia&&window.matchMedia('(display-mode:standalone)').matches)));
     var keepName=(function(){ var o=document.getElementById('onb-name'); return o?o.value:''; })();
-    if(jc&&jc.parentNode===box) box.removeChild(jc);
+    if(jc&&jc.parentNode===box){ home(); if(jc.parentNode===box) box.removeChild(jc); }
     box.innerHTML='';
     var el=function(tag,cls,txt,css){ var e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; if(css)e.style.cssText=css; return e; };
     var to=function(s){ return function(){ W.HP_ONB_STEP=s; p2pOnboard(); }; };
