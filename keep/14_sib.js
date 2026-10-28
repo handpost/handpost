@@ -26,8 +26,11 @@ function sibSend(id,obj){
   try{ s.dc.send(JSON.stringify(obj)); return true; }catch(e){ return false; }
 }
 function renderSiblings(){ const el=document.getElementById('sib-status'); if(!el)return; const open=Object.keys(SIB).filter(k=>SIB[k].state==='open'); el.textContent=open.length?open.map(k=>{ const d=sibRows().find(x=>x.dev===k); return (typeof hpDevName==='function')?hpDevName(d&&d.label):sibLabel(k); }).join(', '):T('sib_none');   try{ const row=el.parentNode; if(row&&row.style){ let any=false; try{ any=!!(ID&&typeof hpSibs==='function'&&hpSibs().length>0); }catch(e){} row.style.display=any?'':'none'; } }catch(e){} }
-function sibNew(dev,role,call){ const s={dev:dev,pc:new RTCPeerConnection(RTCCFG),dc:null,state:'connecting',role:role,call:call,at:Date.now(),ans:false,openAt:0,bye:false,timer:null}; SIB[dev]=s; SIB_LAST[dev]=Date.now();
-  s.pc.onconnectionstatechange=()=>{ try{ if(SIB[dev]!==s)return; const st=s.pc.connectionState; if(st==='failed'||st==='closed'||(st==='disconnected'&&s.state==='open')) sibLost(s); }catch(e){} };
+
+function sibCfg(tn){ try{ if(!tn||!tn.host||!tn.port||!tn.user||!tn.pass) return RTCCFG; return {iceServers:[].concat(RTCCFG.iceServers||[],[{urls:'turn:'+tn.host+':'+tn.port+'?transport=udp',username:tn.user,credential:tn.pass}])}; }catch(e){ return RTCCFG; } }
+async function sibTurn(){ try{ if(typeof hpTurnCreds!=='function') return null; const c=await hpTurnCreds(); return (c&&c.host&&c.port&&c.user&&c.pass)?c:null; }catch(e){ return null; } }
+function sibNew(dev,role,call,cfg){ const s={dev:dev,pc:new RTCPeerConnection(cfg||RTCCFG),dc:null,state:'connecting',role:role,call:call,at:Date.now(),ans:false,openAt:0,bye:false,timer:null,turn:!!(cfg&&cfg!==RTCCFG)}; SIB[dev]=s; SIB_LAST[dev]=Date.now();
+  s.pc.onconnectionstatechange=()=>{ try{ if(SIB[dev]!==s)return; const st=s.pc.connectionState; if(st==='failed'&&s.state==='connecting'&&s.role==='answer'&&Date.now()-s.at<SIB_WAIT) return;   if(st==='failed'||st==='closed'||(st==='disconnected'&&s.state==='open')) sibLost(s); }catch(e){} };
   s.timer=setTimeout(()=>{ s.timer=null; if(SIB[dev]!==s||s.state==='open')return;
     if(s.role==='call'&&!s.ans){ hpLog('自分の機械（'+sibLabel(dev)+'）は応答なし（開いていないらしい。向こうが開いたときに、向こうから呼び出してくる）'); try{ const w=hpHistGet(); if(w&&w.dev===dev&&w.st==='wait') hpHistState(dev,'noans'); }catch(e){}   sibClose(dev); return; }
     sibLost(s); },SIB_WAIT);
@@ -48,16 +51,18 @@ function sibRetry(dev){
 }
 async function sibCall(dev){
   if(!sibCan()||SIB[dev]||sibTargets().indexOf(dev)<0) return false;
-  const s=sibNew(dev,'call',hpHex(crypto.getRandomValues(new Uint8Array(8))));
+  const tn=await sibTurn(); if(!sibCan()||SIB[dev]||sibTargets().indexOf(dev)<0) return false;
+  const s=sibNew(dev,'call',hpHex(crypto.getRandomValues(new Uint8Array(8))),sibCfg(tn));
   try{
     wireSibDC(s,s.pc.createDataChannel('sync'));
     await s.pc.setLocalDescription(await s.pc.createOffer()); await waitGathering(s.pc);
     if(SIB[dev]!==s) return false;
     const sdp=s.pc.localDescription.sdp, fp=extractFingerprint(sdp); if(!fp) throw new Error(T('e_nofp'));
-    const n=await hpSibPut({v:1,type:'sib-offer',call:s.call,sdp:sdp,fp:fp},[dev],'sig');
+    const body={v:1,type:'sib-offer',call:s.call,sdp:sdp,fp:fp}; if(tn) body.t={h:tn.host,p:tn.port,u:tn.user,k:tn.pass};
+    const n=await hpSibPut(body,[dev],'sig');
     if(SIB[dev]!==s) return false;
     if(!n){ sibClose(dev); return false; }
-    s.at=Date.now(); hpLog('自分の機械（'+sibLabel(dev)+'）を呼び出した');
+    s.at=Date.now(); hpLog('自分の機械（'+sibLabel(dev)+'）を呼び出した'+(tn?'（交換手 '+tn.host+':'+tn.port+' も使える）':''));
     return true;
   }catch(e){ hpLog('自分の機械（'+sibLabel(dev)+'）を呼び出せない '+((e&&e.message)||e)); if(SIB[dev]===s) sibClose(dev); return false; }
 }
@@ -82,7 +87,8 @@ async function sibOnSig(r){
   if(s0&&s0.state==='connecting'&&s0.role==='call'&&(Date.now()-s0.at<SIB_OFFER_MAXAGE)&&me<from){ hpLog('自分の機械と同時の呼び出し：こちらの呼び出しを残す'); return; }
   if(s0){ hpLog(s0.state==='open'?'線がある自分の機械から新しい呼び出し（古い線を畳んで応える）':'自分の機械と同時の呼び出し：向こうの呼び出しに応える'); sibClose(from); }
   { const t=SIB_TRY[from]; if(t&&t.timer){ clearTimeout(t.timer); t.timer=null; } }
-  const s=sibNew(from,'answer',o.call);
+  const tn=(typeof hpCallTurnOf==='function')?hpCallTurnOf(o.t):null;
+  const s=sibNew(from,'answer',o.call,sibCfg(tn));
   try{
     s.pc.ondatachannel=e=>wireSibDC(s,e.channel);
     await s.pc.setRemoteDescription({type:'offer',sdp:o.sdp});
