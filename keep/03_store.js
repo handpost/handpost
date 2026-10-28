@@ -8,7 +8,7 @@ function hpPostTs(x){ const t0=Number(x&&x.ts)||0; try{ const h=hpXhNorm(x&&x.xh
 function histSort(h){ return h.sort((x,y)=>histOrd(x)-histOrd(y)); }
 function histLoad(a){ try{ const s=hpHGet(histKey(a)); const r=s?JSON.parse(s):[]; return Array.isArray(r)?histSort(r):[]; }catch(e){ return []; } }
 function histSave(a,arr){   try{ hpHSet(histKey(a), JSON.stringify(arr)); }catch(e){ log(TL('lg_histsave',{err:e.message})); } if(CONV_OPEN&&a===CURPEER)lastOpenMark(a); convDirty(); }
-function histAdd(a,dir,text,ts,pend,img,file,extra){ if(!a)return; const h=histLoad(a); const o={d:dir,t:text,ts:ts||Date.now()}; if(dir==='p')o.rx=Date.now();   if(pend)o.p=1; if(img)o.img=img; if(file)o.file=file; if(extra&&typeof extra==='object'){ if(typeof extra.fd==='string'&&/^[0-9a-f]{16}$/.test(extra.fd)) o.fd=extra.fd; }   h.push(o); histSave(a,h); sibMirror(a,o); }
+function histAdd(a,dir,text,ts,pend,img,file,extra){ if(!a)return; const h=histLoad(a); const o={d:dir,t:text,ts:ts||Date.now()}; if(dir==='p')o.rx=Date.now();   if(pend)o.p=1; if(img)o.img=img; if(file)o.file=file; if(extra&&typeof extra==='object'){ if(typeof extra.fd==='string'&&/^[0-9a-f]{16}$/.test(extra.fd)) o.fd=extra.fd; if(Number(extra.sv)>0){ o.sv=Number(extra.sv); if(extra.svw) o.svw=String(extra.svw); if(extra.svn) o.svn=String(extra.svn).slice(0,120); }   }   h.push(o); histSave(a,h); sibMirror(a,o); }
 
 function histVoided(a,ts){ return histLoad(a).some(x=>x.ts===ts&&x.d==='v'); }
 const HP_VOID_READ_MS=24*3600e3;

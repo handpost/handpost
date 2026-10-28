@@ -38,6 +38,19 @@ async function imgPump(){
     try{ DC.send(JSON.stringify(Object.assign({v:1,type:'img',id:q.m.img.id,ts:q.m.ts,w:q.m.img.w,h:q.m.img.h,size:blob.size,mime:q.m.img.mime||'image/jpeg',thumb:q.m.img.thumb,n},hpBackHdr(q.m))));   await sendChunks(DC,blob); try{ if(typeof hpSceneLetter==='function') hpSceneLetter('hand','out'); }catch(_){}   ackWait(q.peer,q.m.ts,''); log(TL('lg_imgsent',{kb:Math.round(blob.size/1024)})); }catch(e){ log(TL('lg_imgfail',{err:e.message})); }
   } } finally { IMG_SENDING=false; }
 }
+
+const HP_SRC_FRESH=3*60e3;
+function hpExifDateBuf(buf){ try{ const b=new DataView(buf); if(b.byteLength<12||b.getUint16(0)!==0xFFD8) return null; let i=2; const n=b.byteLength;
+    while(i+4<=n){ if(b.getUint8(i)!==0xFF){ i++; continue; } const mk=b.getUint8(i+1); if(mk===0xD8||mk===0x01||(mk>=0xD0&&mk<=0xD7)){ i+=2; continue; } if(mk===0xDA||mk===0xD9) return null; const len=b.getUint16(i+2); if(len<2) return null;
+      if(mk===0xE1&&i+10<=n&&b.getUint32(i+4)===0x45786966&&b.getUint16(i+8)===0){ const t=i+10, lim=Math.min(n,i+2+len); if(t+8>lim) return null; const le=b.getUint16(t)===0x4949; const u16=o=>b.getUint16(o,le), u32=o=>b.getUint32(o,le);
+        if(u16(t+2)!==42) return null; const rd=(off,tag)=>{ const d=t+off; if(d+2>lim) return 0; const c=u16(d); for(let k=0;k<c;k++){ const e=d+2+k*12; if(e+12>lim) return 0; if(u16(e)===tag) return e; } return 0; };
+        const ex=rd(u32(t+4),0x8769); if(!ex) return null; const de=rd(u32(ex+8),0x9003); if(!de||u16(de+2)!==2||u32(de+4)<19) return null; const o=t+u32(de+8); if(o+19>lim) return null;
+        let str=''; for(let k=0;k<19;k++) str+=String.fromCharCode(b.getUint8(o+k)); const m=/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(str); if(!m) return null; const dt=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]).getTime(); return isNaN(dt)?null:dt; }
+      i+=2+len; }
+    return null; }catch(e){ return null; } }
+function hpExifDate(file){ return new Promise(res=>{ try{ if(!file||!/^image\/jpe?g$/i.test(String(file.type||''))||typeof FileReader==='undefined') return res(null); const fr=new FileReader(); fr.onload=()=>{ try{ res(hpExifDateBuf(fr.result)); }catch(e){ res(null); } }; fr.onerror=()=>res(null); fr.readAsArrayBuffer(file.slice(0,262144)); }catch(e){ res(null); } }); }
+async function hpSrcOnDevice(file){ try{ if(!file) return false; const now=Date.now(); let t=await hpExifDate(file); if(t===null) t=Number(file.lastModified)||0; if(!t) return false; return (now-t)>HP_SRC_FRESH; }catch(e){ return false; } }
+function hpSrcExtra(src,ts,file){ return src?{sv:ts,svw:'src',svn:String((file&&file.name)||'')}:null; }
 async function sendImage(file){
   if(!ID){ alert(T('al_noid')); return; }
   const peer=($('#peer').value||'').trim(); if(!peer){ alert(T('al_nopeer')); return; }
@@ -45,9 +58,9 @@ async function sendImage(file){
   if(file.size>IMG_MAX_BYTES){ alert(T('al_imgbig')); return; }
   let p; try{ p=await prepareImage(file); }catch(e){ alert(T('e_imgprep')+': '+(typeof hpErrShow==='function'?hpErrShow(e):e.message)); return; }
   const id=await imgIdOf(p.blob); await blobPut(id,p.blob);
-  const ts=Date.now(); const img={id,w:p.w,h:p.h,size:p.blob.size,mime:p.mime,thumb:p.thumb};
+  const ts=Date.now(); const img={id,w:p.w,h:p.h,size:p.blob.size,mime:p.mime,thumb:p.thumb}; const src=await hpSrcOnDevice(file);
   if(CURPEER!==peer){ CURPEER=peer; histRender(peer); }
-  histAdd(peer,'s','',ts,1,img); addMsgAt('self','',myName()||T('me'),ts,0,1,0,img);
+  histAdd(peer,'s','',ts,1,img,null,hpSrcExtra(src,ts,file)); addMsgAt('self','',myName()||T('me'),ts,0,1,0,img);
   if(rtcLineTo(peer)){ imgQueueSend(peer,{ts,img}); }
   else if(typeof hpMbAuto==='function'&&hpMbAuto(peer,ts,'')){ }
   else if(rtcBusyFor(peer)){ rtcMediaWait(peer,ts); }
@@ -123,9 +136,9 @@ async function sendFile(file){
   if(file.size>FILE_MAX_BYTES){ alert(T('al_filebig')); return; }
   const blob=file.slice(0,file.size,file.type||'application/octet-stream');
   const id=await imgIdOf(blob); await blobPut(id,blob);
-  const ts=Date.now(); const meta={id,name:file.name||'file',size:blob.size,mime:file.type||'application/octet-stream'};
+  const ts=Date.now(); const meta={id,name:file.name||'file',size:blob.size,mime:file.type||'application/octet-stream'}; const src=await hpSrcOnDevice(file);
   if(CURPEER!==peer){ CURPEER=peer; histRender(peer); }
-  histAdd(peer,'s','',ts,1,null,meta); addMsgAt('self','',myName()||T('me'),ts,0,1,0,null,meta);
+  histAdd(peer,'s','',ts,1,null,meta,hpSrcExtra(src,ts,file)); addMsgAt('self','',myName()||T('me'),ts,0,1,0,null,meta);
   if(rtcLineTo(peer)){ fileQueueSend(peer,{ts,file:meta}); }
   else if(typeof hpMbAuto==='function'&&hpMbAuto(peer,ts,'')){ }
   else if(rtcBusyFor(peer)){ rtcMediaWait(peer,ts); }
