@@ -242,9 +242,9 @@ try{ if(typeof document!=='undefined'&&document.getElementById){ const b=documen
 try{ if(typeof document!=='undefined'&&document.getElementById){ const b=document.getElementById('btn-xm-nick'); if(b&&!b.dataset.hpWired){ b.dataset.hpWired='1'; b.addEventListener('click',()=>{ hpXmNickAsk(); }); } } }catch(e){}
 
 function hpXmLocal(){ try{ const n=String(location.hostname||'').toLowerCase(); return n==='localhost'||n==='::1'||n==='[::1]'||/^127\./.test(n)||/^192\.168\./.test(n)||/^10\./.test(n)||/^172\.(1[6-9]|2\d|3[01])\./.test(n); }catch(e){ return false; } }
-const HP_POST_PKG={path:'lib/post/index.js',size:52938,sha256:'cc2e4ffcdb3f464874c72177f8c98569700cf014979c3c2f395da04831ce836c'};
+const HP_POST_PKG={path:'lib/post/index.js',size:118007,sha256:'30cbb880da3563f3253507c9ef8f67a88a4f4b6fec3828ddc5c7018819679d3f'};
 const HP_POST_LOADER={path:'lib/post/loader.js',size:1986,sha256:'36c902f3659932c421170a6f768548074e8bc4ef00a28a89e4a5a075a7455d7d'};
-const HP_POST_VER='bk36f146（2026-10-27）';
+const HP_POST_VER='bk36f164（2026-10-28）';
 const HP_POST_SIG='lib/post/index.js.sig';
 async function hpRentFile(P){
   let b; try{ const r=await fetch(P.path,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); b=new Uint8Array(await r.arrayBuffer()); }catch(e){ throw new Error(TF('rn_pkg_read',{why:String((e&&e.message)||e)})); }
@@ -448,6 +448,7 @@ async function hpRentAfter(J){ let k=''; HP_RENT_J=J;
     try{ stopBg(); }catch(e){} try{ localStorage.setItem('p2p_post',url); }catch(e){}
     delete ID.rentJob; ID.lease={acct:J.acct,tok:J.tok,at:Date.now(),host:J.host}; try{ if(url&&typeof J.tok==='string'&&J.tok){ const m=(ID.leaseByUrl&&typeof ID.leaseByUrl==='object')?ID.leaseByUrl:{}; m[String(url)]=J.tok.toUpperCase(); const ks=Object.keys(m); while(ks.length>8) delete m[ks.shift()]; ID.leaseByUrl=m; } }catch(e){}     let nCard=0; if(J.move&&typeof hpMoveAfter==='function') nCard=hpMoveAfter(J,url,mv);   if(J.again){ try{ if(typeof hpCardDueMark==='function') nCard=hpCardDueMark(1); }catch(e){} hpRentLog('lg_ag_cards',{n:nCard}); }   try{ saveID(); }catch(e){}
     try{ if(typeof hpLeaseAcctSet==='function') hpLeaseAcctSet(J.acct); }catch(e){}
+    try{ if(typeof hpTurnCfgSet==='function') hpTurnCfgSet(url,Number(J.info.gp_udp_port)||0,String(J.info.domain||'')); }catch(e){}
     setTimeout(()=>{ try{ startBg(); }catch(e){} },1500);
     J.done.save=1; hpRentLog('lg_rn_done',{u:url});
     hpRentShow({lines:hpRentLines(J,''),note:TF('rn_done',{u:url})+(J.sub?'\n'+T(J.obre?'ob_done_re':'ob_done'):'') +(J.move?'\n'+((typeof hpMvDoneText==='function')?hpMvDoneText(J,nCard,mv) :TF('mv2_done',{n:nCard,m:(mv&&mv.n)||0})+((mv&&mv.why)?'\n'+TF('mv2_nosub',{why:mv.why}):'')):'')+(J.again?'\n'+TF('ag_done',{n:nCard})+(hpAgSibs()?'\n'+T('ag_sibs'):''):''),btns:[[T('btn_rn_close'),()=>{ hpRentHide(); try{ hpPostUi(); }catch(e){} },true]]});
