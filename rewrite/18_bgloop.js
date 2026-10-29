@@ -344,7 +344,7 @@ async function hpPut(card, body, kind, opt){
   await hpReady();
   let sealed; try{ sealed=await hpSeal(card, body, kind, link); }catch(e){ throw fail(e, /長すぎる/.test(e.message)?'self':'peer'); }
   const id=sealed.id, groups=hpPutGroups(card, sealed.letters);
-  if(opt&&opt.ring) for(const g of groups) g.ring=true;
+  if(opt&&opt.ring) for(const g of groups) g.ring=(opt.ring==='call')?'call':true;
   if((opt&&opt.keep)||(kind==='msg'&&typeof body==='string'&&body.startsWith('{"v":1,"type":"card",'))) for(const g of groups) g.keep=true;
   if(groups.length<2){ const r=await hpPutOne(groups[0], id, sealed.kind, link); return { id:id, exp:r.exp }; }
   const res=await Promise.all(groups.map(g=>hpPutOne(g, id, sealed.kind, link).then(r=>({ok:true,exp:r.exp}),e=>({ok:false,e:e}))));
