@@ -402,9 +402,6 @@ try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f180){ const f=hpCallUi; hpCal
       const k=(typeof hpBotOn==='function'&&hpBotOn())?hpItoKind(C):'';   if(d.__ito.__k!==k){ d.__ito.__k=k; d.__ito.innerHTML=k?hpItoSvg(k):''; } d.__ito.style.display=k?'':'none';
       if(C&&C.st==='talking'&&C.rec) d.__st.textContent=T('cl_ito_slack');
 
-      if(!d.__spn){ const n=document.createElement('div'); n.className='spn'; n.style.cssText='font-size:.8em;opacity:.75;max-width:90vw'; d.__spn=n;   const tx=document.createElement('span'); n.appendChild(tx); n.__tx=tx; const hb=document.createElement('button'); hb.type='button'; hb.className='spn-hide'; hb.textContent=T('cl_spk_hide'); hb.style.cssText='margin-left:.6em;font-size:1em;padding:.1em .6em;background:none;border:1px solid currentColor;border-radius:1em;color:inherit;cursor:pointer'; hb.onclick=()=>{ try{ localStorage.setItem('p2p_spkhide','1'); }catch(e){} n.style.display='none'; }; n.appendChild(hb); const bt=d.querySelector('.btns'); if(bt) d.insertBefore(n,bt); else d.appendChild(n); }
-      const live=!!(C&&(C.st==='calling'||C.st==='connecting'||C.st==='talking')); let hide=false; try{ hide=localStorage.getItem('p2p_spkhide')==='1'; }catch(e){} d.__spn.__tx.textContent=live?T('cl_spk_note'):''; d.__spn.style.display=live&&!hide?'':'none';
-      if(live){ let seen=false; try{ seen=localStorage.getItem('p2p_spknote')==='1'; }catch(e){ seen=true; } if(!seen){ try{ localStorage.setItem('p2p_spknote','1'); }catch(e){} try{ hpToast(T('cl_spk_first'),9000); }catch(e){} } }
     }catch(e){} return r; },f,{__f180:1}); } }catch(e){}
 
 const HP_SL={}, HP_SL_LAST={}, HP_SL_MAX=8, HP_SL_PER=4, HP_SL_WAIT=45000, HP_SL_GAP=10*60e3, HP_SL_KEY='p2p_sbpeers', HP_CALL_SEEN=new Map();
@@ -462,4 +459,12 @@ try{ if(typeof hpCallOnEnd==='function'&&!hpCallOnEnd.__f182){ const f=hpCallOnE
 function hpSlBoot(){ try{ let i=0; for(const p of hpSlRecent().slice(0,3)){ if(!isContact(p)) continue; setTimeout(()=>{ hpSlStart(p).catch(()=>{}); },8000+(i++)*4000); } }catch(e){} }
 try{ if(typeof hpLinkOnReply==='function'&&!hpLinkOnReply.__f182){ const f=hpLinkOnReply; hpLinkOnReply=Object.assign(function(o){ const r=f.apply(this,arguments); try{ if(o&&o.ok==='claim') hpSlBoot(); }catch(e){} return r; },f,{__f182:1}); } }catch(e){}
 try{ if(typeof document!=='undefined'&&document.addEventListener) document.addEventListener('visibilitychange',()=>{ try{ if(document.visibilityState!=='visible') return; for(const p of hpSlRecent().slice(0,3).concat(typeof CURPEER!=='undefined'&&CURPEER?[CURPEER]:[])){ setTimeout(()=>{ hpSlStart(p,true).catch(()=>{}); },3000); } }catch(e){} }); }catch(e){}
+
+const HP_CALL_GONE=new Map();
+function hpCallGone(id){ try{ if(typeof id!=='string'||!id) return; const now=Date.now(); for(const [k,t] of HP_CALL_GONE) if(now-t>180e3) HP_CALL_GONE.delete(k); HP_CALL_GONE.set(id,now); }catch(e){} }
+function hpCallSibX(id){ try{ hpCallGone(id); const C=HP_CALL; if(!C||C.id!==id||C.dir!=='in'||C.st!=='ringing') return false; C.byeSent=true; hpLog('通話：自分のほかの端末で応じた（この端末の呼び出しを止めた）'); hpCallEnd('taken',T('cl_taken')); return true; }catch(e){ return false; } }
+function hpCallSibTell(C){ try{ if(!C||C.dir!=='in'||typeof SIB==='undefined'||typeof sibSend!=='function') return 0; let n=0; for(const id of Object.keys(SIB)){ if(SIB[id]&&SIB[id].state==='open'&&sibSend(id,{t:'callx',call:C.id})) n++; } if(n) hpLog('通話：自分のほかの端末 '+n+' 台に「応じた」と知らせた'); return n; }catch(e){ return 0; } }
+try{ if(typeof hpCallAccept==='function'&&!hpCallAccept.__f185){ const f=hpCallAccept; hpCallAccept=Object.assign(function(){ const C=HP_CALL; if(C&&C.st==='ringing'){ hpCallGone(C.id); hpCallSibTell(C); } return f.apply(this,arguments); },f,{__f185:1}); } }catch(e){}
+try{ if(typeof hpCallDecline==='function'&&!hpCallDecline.__f185){ const f=hpCallDecline; hpCallDecline=Object.assign(function(){ const C=HP_CALL; if(C&&C.st==='ringing'){ hpCallGone(C.id); hpCallSibTell(C); } return f.apply(this,arguments); },f,{__f185:1}); } }catch(e){}
+try{ if(typeof hpCallOnSig==='function'&&!hpCallOnSig.__f185){ const f=hpCallOnSig; hpCallOnSig=Object.assign(async function(r,o){ try{ if(o&&typeof o.call==='string'){ if(o.type==='callend'){ hpCallGone(o.call); }   else if(o.type==='call'&&HP_CALL_GONE.has(o.call)&&!(HP_CALL&&HP_CALL.id===o.call)){ hpLog('通話：もう済んだ呼び出しが遅れて届いた（鳴らさない）'); return; } } }catch(e){} return f.apply(this,arguments); },f,{__f185:1}); } }catch(e){}
 

@@ -215,6 +215,7 @@ function sibOnMessage(id,o){
   if(!SIB_FLOW)return;
   if(o.t==='evt'){ const r=sibApply(o.peer,o.item); if(r&&r.isNew) hpLog('自分の機械（'+sibLabel(id)+'）から'+(r.item.d==='s'?'送った手紙':'届いた本文')+'の写し → '+nickOf(o.peer)+' の履歴へ'); sibReflect(o.peer,r); if(r&&r.isNew&&r.item.img&&typeof sibBlobAuto==='function') sibBlobAuto(r.item.img,id); return; }
   if(o.t==='del'){ if(sibDelApply(o.peer,o.ts,o.d)) hpLog('自分の機械（'+sibLabel(id)+'）で消された 1 通を、この機械でも消した（'+nickOf(o.peer)+'）'); return; }
+  if(o.t==='callx'){ if(typeof o.call==='string'&&/^[0-9a-f]{16}$/.test(o.call)&&typeof hpCallSibX==='function') hpCallSibX(o.call); return; }
   if(o.t==='seen'){ sibSeenApply(o.peer,o.at); return; }
   if(o.t==='hist'){
     if(!isContact(o.peer)&&o.c&&typeof o.c==='object'&&o.c.address===o.peer&&typeof hpSibContacts==='function'){ const c0=o.c; sibHistLater(async()=>{ if(!isContact(o.peer)){ const n0=await hpSibContacts([c0]); if(n0&&isContact(o.peer)) SIB_HIST_IN.add=(SIB_HIST_IN.add||0)+1; } sibHistIn(id,o); }); return; }
