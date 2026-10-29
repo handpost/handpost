@@ -167,7 +167,7 @@ function hpBubbleMenu(el,ts,kind){
   if(info.length){ const bx=document.createElement('div'); bx.className='mi'; for(const t of info){ const r=document.createElement('div'); r.textContent=t; bx.appendChild(r); } m.appendChild(bx); }
   for(const [lab,fn] of items){ const b=document.createElement('button'); b.textContent=lab; b.onclick=e=>{ e.stopPropagation(); hpMenuClose(); fn(); }; m.appendChild(b); }
   try{ if(document.body) document.body.appendChild(m); }catch(e){} el.__menu=m;
-  try{ const r=el.getBoundingClientRect(), H=(window.innerHeight||600), Wd=(window.innerWidth||400), mh=m.offsetHeight||120, mw=m.offsetWidth||180; let B=H; try{ const vv=window.visualViewport; if(vv&&vv.height) B=Math.min(B,(vv.offsetTop||0)+vv.height); const ms=document.getElementById('msgs'); if(ms){ const mr=ms.getBoundingClientRect(); if(mr.bottom>0) B=Math.min(B,mr.bottom); } }catch(_){} let top=r.bottom+4; if(top+mh>B-4) top=Math.max(8,r.top-4-mh);   m.style.top=top+'px'; m.style.left=Math.max(8,Math.min(kind==='self'?r.right-mw:r.left,Wd-mw-8))+'px'; }catch(e){}
+  try{ const r=el.getBoundingClientRect(), H=(window.innerHeight||600), Wd=(window.innerWidth||400), mh=m.offsetHeight||120, mw=m.offsetWidth||180; let B=H, T0=8; try{ const vv=window.visualViewport; if(vv&&vv.height) B=Math.min(B,(vv.offsetTop||0)+vv.height); const ms=document.getElementById('msgs'); if(ms){ const mr=ms.getBoundingClientRect(); if(mr.bottom>0) B=Math.min(B,mr.bottom); if(mr.top>0) T0=Math.max(T0,mr.top); } }catch(_){} let top=r.bottom+4; if(top+mh>B-4) top=r.top-4-mh; if(top<T0||top+mh>B-4){ const ty=Number(el.__ty)>0?Number(el.__ty):(Math.max(r.top,T0)+Math.min(r.bottom,B))/2; top=Math.max(T0,Math.min(ty-mh/2,B-4-mh)); }     m.style.top=top+'px'; m.style.left=Math.max(8,Math.min(kind==='self'?r.right-mw:r.left,Wd-mw-8))+'px'; }catch(e){}
   setTimeout(()=>{ try{ if(HP_MENU_OFF){ HP_MENU_OFF(); HP_MENU_OFF=null; } const out=e=>{ try{ if(e&&e.target&&m.contains(e.target)) return; }catch(_){} hpMenuClose(); }; document.addEventListener('click',out,true); document.addEventListener('touchstart',out,{passive:true,capture:true}); HP_MENU_OFF=()=>{ try{ document.removeEventListener('click',out,true); document.removeEventListener('touchstart',out,{capture:true}); }catch(_){} }; }catch(e){} },0);
   return true;
 }
@@ -205,8 +205,8 @@ function hpNewDevNote(peer,rec){ try{ if(!rec||rec.d!=='p'||!rec.fd) return ''; 
 function wireVoid(el,ts,kind){
   kind=kind||'self'; el.style.cursor='pointer'; el.title=T(kind==='self'?'tip_void':'tip_copy');
   let touchAt=0, lp=null; const open=()=>{ hpBubbleMenu(el,ts,kind); };
-  el.onclick=()=>{ if(Date.now()-touchAt<1500&&!(kind==='self'&&el.classList&&el.classList.contains('void'))) return; open(); };
-  el.addEventListener('touchstart',()=>{ touchAt=Date.now(); lp=setTimeout(()=>{ lp=null; open(); },500); },{passive:true});
+  el.onclick=(e)=>{ try{ if(e&&e.clientY&&Date.now()-touchAt>=1500) el.__ty=e.clientY; }catch(_){} if(Date.now()-touchAt<1500&&!(kind==='self'&&el.classList&&el.classList.contains('void'))) return; open(); };
+  el.addEventListener('touchstart',(e)=>{ touchAt=Date.now(); try{ el.__ty=(e&&e.touches&&e.touches[0])?e.touches[0].clientY:0; }catch(_){} lp=setTimeout(()=>{ lp=null; open(); },500); },{passive:true});
   const cancelLp=()=>{ if(lp){ clearTimeout(lp); lp=null; } };
   el.addEventListener('touchend',cancelLp,{passive:true});
   el.addEventListener('touchmove',cancelLp,{passive:true});
