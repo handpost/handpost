@@ -92,6 +92,7 @@ async function hpVaultUnlock(pw){
 }
 function hpVaultKinds(){ const m=hpVaultMeta(); return m?m.wraps.map(w=>w.k):[]; }
 const HP_VAULT_WHY={nopk:'vt_e_nopk',noprf:'vt_e_noprf',wrong:'vt_e_wrong',pwshort:'vt_e_pwshort',empty:'vt_e_empty'};
+const HP_VL_STUCK_MS=1200;
 function hpVaultWhy(e){ const c=e&&e.hpv; if(c&&HP_VAULT_WHY[c]) return HP_VAULT_WHY[c]; if(e&&(e.name==='NotAllowedError'||e.name==='AbortError')) return 'vt_e_cancel'; return 'vt_e_other'; }
 
 function hpVaultForget(){
@@ -156,11 +157,11 @@ function hpVaultGate(){
     const pwf=document.createElement('form'); pwf.setAttribute('autocomplete','off'); pwf.addEventListener('submit',e=>e.preventDefault()); pwf.appendChild(pw);
     card.appendChild(h); card.appendChild(nt); card.appendChild(pwf); if(pp) card.appendChild(pp); if(sp){ sp.style.marginTop='6px'; hb.insertBefore(sp,fw); }   if(bk) row.appendChild(bk); card.appendChild(pn); card.appendChild(row); card.appendChild(er); card.appendChild(hl); card.appendChild(hb); box.appendChild(card); document.body.appendChild(box);
     let busy=false;
-    const go=()=>{ if(busy) return; busy=true; op.disabled=true; er.textContent='';
+    const go=()=>{ if(busy) return; busy=true; op.disabled=true; er.textContent=''; const t0=Date.now();
       const usePp=!!(pp&&pp.style.display!=='none'), usePw=!usePp&&pw.style.display!=='none';
       if(usePp&&ppc.empty()){ er.textContent=TF('pp_e_empty',{n:ppc.empty()}); busy=false; op.disabled=false; ppc.focus(ppc.empty()-1); return; }
       (usePp?hpVaultUnlockPaper(ppc.value()):hpVaultUnlock(usePw?pw.value:undefined)).then(()=>{ if(usePp){ try{ if(typeof hpVlPaperMark==='function') hpVlPaperMark(); }catch(e){} }   box.remove(); res(true); })
-        .catch(e=>{ try{ hpLog('鍵を開けない '+(e&&e.name||'')+' '+(e&&e.message||'')); }catch(x){} vlFail(e); er.textContent=(e&&e.hpvMsg)||T(hpVaultWhy(e)); busy=false; op.disabled=false; if(usePw){ pw.value=''; pw.focus(); } }); };
+        .catch(e=>{ try{ hpLog('鍵を開けない '+(e&&e.name||'')+' '+(e&&e.message||'')); }catch(x){} vlFail(e); er.textContent=(e&&e.hpvMsg)||T(hpVaultWhy(e)); if(!usePp&&!usePw&&!(e&&e.hpvMsg)&&hpVaultWhy(e)==='vt_e_cancel'&&Date.now()-t0<HP_VL_STUCK_MS){ er.textContent=T('vl_e_stuck'); try{ hpLog('パスキーの確認がすぐ断られた（'+(Date.now()-t0)+' ms。ほかの窓で確認が出たままの見込み）'); }catch(x){} }   busy=false; op.disabled=false; if(usePw){ pw.value=''; pw.focus(); } }); };
     op.onclick=go; pw.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
     if(!pk) setTimeout(()=>{ try{ pw.focus(); }catch(e){} },50);
   });
