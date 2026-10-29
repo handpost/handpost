@@ -43,7 +43,7 @@ function hpConnDrop(c,why){
   try{ const p=c.close(); if(p&&p.then) POST.closing=p.catch(()=>{}); }catch(e){}
   hpRetryLater(POST.gen); return true;
 }
-function hpSend(obj){ if(!POST.up||!POST.client) return Promise.reject(new Error('つながっていない')); const c=POST.client, t0=Date.now(), hl=(ok,e)=>{ try{ if(typeof hpHlSent==='function') hpHlSent(ok,Date.now()-t0,e&&e.message); }catch(_){} };   return hpWithin(c.submitContractInput(JSON.stringify(obj)),HP_SEND_WAIT,'送り（'+String((obj&&obj.op)||'')+'）').then(v=>{ hl(true); return v; },e=>{ hl(false,e); throw e; }).catch(e=>{ if(e&&e.hpTimeout) hpConnDrop(c,e.message); throw e; }); }
+function hpSend(obj){ if(!POST.up||!POST.client) return Promise.reject(new Error('つながっていない')); const c=POST.client, t0=Date.now(), hl=(ok,e)=>{ try{ if(typeof hpHlSent==='function') hpHlSent(ok,Date.now()-t0,e&&e.message); }catch(_){} };   return hpWithin(c.submitContractInput(JSON.stringify(obj)),HP_SEND_WAIT,'送り（'+String((obj&&obj.op)||'')+'）').then(v=>{ hl(true); return v; },e=>{ hl(false,e); throw e; }).catch(e=>{ if(e&&e.hpTimeout) hpConnDrop(c,e.message); else if(e&&(e instanceof TypeError||/null is not an object|Cannot read|undefined is not/.test(String(e.message||'')))&&POST.client===c){ hpLog('自分の郵便受けとのつなぎが壊れていた（'+String(e.message||'').slice(0,60)+'）。つなぎ直す'); hpConnDrop(c,'壊れたつなぎ'); } throw e; }); }
 
 function hpSync(){
   if(POST.timer){ clearTimeout(POST.timer); POST.timer=null; }
@@ -272,9 +272,10 @@ async function hpPoolOpen(urls, fail, key){
   p.up=true; HP_POOL.set(key,p); hpLog('郵便受けにつないだ '+key+'（この 10 分で '+n+' 回目）');
   return p;
 }
+function hpPoolBad(p,e){   try{ if(HP_POOL.get(p.key)===p) HP_POOL.delete(p.key); p.up=false; if(p.t){ clearTimeout(p.t); p.t=null; } try{ const r=p.c.close(); if(r&&r.catch) r.catch(()=>{}); }catch(x){} hpLog('（つなぎ）'+String(p.key||'').replace(/^wss:\/\//,'')+' への使い回しのつなぎが壊れていたので捨てた（'+String((e&&e.message)||e).slice(0,60)+'）'); }catch(x){} }
 function hpPoolIdle(p){ if(p.t) clearTimeout(p.t); p.t=setTimeout(()=>{ p.t=null; if(HP_POOL.get(p.key)===p) HP_POOL.delete(p.key); p.up=false; try{ const r=p.c.close(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} },HP_POOL_IDLE); try{ if(p.t&&p.t.unref) p.t.unref(); }catch(e){} }
 function hpPoolAsk(p, obj){
-  const run=async()=>{ p.replies.length=0; const t0=Date.now(); try{ await p.c.submitContractInput(JSON.stringify(obj)); }catch(e){ return {r:{err:'相手のポストにつながらない'},ms:Date.now()-t0}; } while(!p.replies.length&&p.up&&Date.now()-t0<HP_PUT_WAIT) await sleep(50); return {r:p.replies.shift()||{err:p.up?'15 秒待っても返事がない':'相手のポストにつながらない'}, ms:Date.now()-t0}; };
+  const run=async()=>{ p.replies.length=0; const t0=Date.now(); try{ await p.c.submitContractInput(JSON.stringify(obj)); }catch(e){ hpPoolBad(p,e); return {r:{err:'相手のポストにつながらない'},ms:Date.now()-t0}; }   while(!p.replies.length&&p.up&&Date.now()-t0<HP_PUT_WAIT) await sleep(50); return {r:p.replies.shift()||{err:p.up?'15 秒待っても返事がない':'相手のポストにつながらない'}, ms:Date.now()-t0}; };
   const q=p.chain.then(run,run); p.chain=q.catch(()=>{}); return q.finally(()=>hpPoolIdle(p));
 }
 function hpMainAsk(obj){
