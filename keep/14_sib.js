@@ -36,7 +36,7 @@ function sibNew(dev,role,call,cfg){ const s={dev:dev,pc:new RTCPeerConnection(cf
     sibLost(s); },SIB_WAIT);
   return s; }
 function sibLost(s){
-  const dev=s.dev; if(SIB[dev]!==s)return; const was=(s.state==='open'), bye=s.bye, stable=was&&(Date.now()-s.openAt>=SIB_STABLE);
+  const dev=s.dev; if(SIB[dev]!==s)return; const was=(s.state==='open'), bye=s.bye, stable=was&&(Date.now()-s.openAt>=SIB_STABLE); if(was){ try{ sibSyncMark(dev); }catch(e){} }
   sibClose(dev);
   hpLog(was?('自分の機械（'+sibLabel(dev)+'）との線が閉じた'+(bye?'（向こうが窓を閉じた）':'')):('自分の機械（'+sibLabel(dev)+'）と線をつなげなかった'));
   try{ const w=hpHistGet(); if(was&&w&&w.dev===dev&&w.st==='recv') hpHistState(dev,'stop'); if(HP_HIST_TX[dev]&&HP_HIST_TX[dev].st==='send'){ delete HP_HIST_TX[dev]; hpHistTxUi(); } }catch(e){}
@@ -104,7 +104,7 @@ async function sibOnSig(r){
 function wireSibDC(s,dc){
   const id=s.dev; s.dc=dc;
   dc.onopen=()=>{ if(SIB[id]!==s)return; s.state='open'; s.openAt=Date.now(); if(s.timer){ clearTimeout(s.timer); s.timer=null; } { const t=SIB_TRY[id]; if(t&&t.timer){ clearTimeout(t.timer); t.timer=null; } }
-    hpLog('自分の機械（'+sibLabel(id)+'）と線がつながった（'+Math.round((s.openAt-s.at)/100)/10+' 秒）'); renderSiblings(); sibSend(id,{t:'hello',v:2}); if(sibHistDue(id)) sibSendHistory(id).catch(()=>{}); };
+    hpLog('自分の機械（'+sibLabel(id)+'）と線がつながった（'+Math.round((s.openAt-s.at)/100)/10+' 秒）'); renderSiblings(); sibSend(id,{t:'hello',v:2}); try{ sibCatchUp(id); }catch(e){}   if(sibHistDue(id)) sibSendHistory(id).catch(()=>{}); };
   try{ dc.binaryType='arraybuffer'; }catch(e){}
   dc.onmessage=e=>{ if(SIB[id]!==s)return; if(!sibIsMine(id)){ sibClose(id); return; }
     if(e.data instanceof ArrayBuffer){ if(SIB_FLOW) sibBinary(id,e.data).catch(()=>{}); return; } let o=null; try{ o=JSON.parse(String(e.data)); }catch(err){ return; } try{ sibOnMessage(id,o); }catch(err){ log(TL('lg_sib_fail',{err:err.message})); } };
@@ -235,6 +235,7 @@ function sibKick(fresh){
 }
 function sibTick(){
   if(!ID||!SIB_ON)return;
+  try{ for(const id of Object.keys(SIB)){ if(SIB[id]&&SIB[id].state==='open') sibSyncMark(id); } }catch(e){}
   for(const id of Object.keys(SIB)){ if(!sibIsMine(id)){ hpLog('機械の一覧から消えた機械との線を畳んだ（'+String(id).slice(0,10)+'\u2026）'); sibClose(id); } }
   if(!sibCan())return;
   for(const dev of sibTargets()){ if(!SIB[dev]&&!SIB_LAST[dev]) sibCall(dev).catch(()=>{}); }
@@ -242,3 +243,13 @@ function sibTick(){
 function sibStart(){ if(SIB_ON&&SIB_TIMER)return; SIB_ON=true; if(SIB_TIMER)clearInterval(SIB_TIMER); SIB_TIMER=setInterval(()=>{ try{ sibTick(); }catch(e){} },30000); renderSiblings(); }
 function sibStop(){ SIB_ON=false; if(SIB_TIMER){ clearInterval(SIB_TIMER); SIB_TIMER=null; } for(const k of Object.keys(SIB_TRY)){ const t=SIB_TRY[k]; if(t.timer)clearTimeout(t.timer); delete SIB_TRY[k]; } for(const id of Object.keys(SIB))sibClose(id); }
 try{ window.addEventListener('pagehide',()=>{ try{ for(const id of Object.keys(SIB)) sibSend(id,{t:'bye'}); }catch(e){} }); }catch(e){}
+
+const SIB_SYNC_K='p2p_sibsync_', SIB_SYNC_FIRST=864e5, SIB_SYNC_MARGIN=10*60e3, SIB_SYNC_MAXN=300;
+function sibSyncMap(){ try{ const m=JSON.parse(hpHGet(SIB_SYNC_K+ID.address)||'{}'); return (m&&typeof m==='object')?m:{}; }catch(e){ return {}; } }
+function sibSyncMark(dev){ try{ if(!ID||!dev) return; const m=sibSyncMap(); m[dev]=Date.now(); hpHSet(SIB_SYNC_K+ID.address,JSON.stringify(m)); }catch(e){} }
+function sibItemAt(m){ return Math.max(Number(m&&m.ts)||0,Number(m&&m.rx)||0,Number(m&&m.u)||0); }
+function sibCatchUp(id){ if(!SIB_FLOW||!ID) return 0; const now=Date.now(), at=Number(sibSyncMap()[id])||0, since=Math.max(now-7*864e5,(at>0?at:now-SIB_SYNC_FIRST)-SIB_SYNC_MARGIN);
+  const L=[]; for(const c of contacts()){ let h=[]; try{ h=histLoad(c.address); }catch(e){ h=[]; } for(const m of h){ if(m&&(m.d==='s'||m.d==='p')&&typeof m.ts==='number'&&sibItemAt(m)>=since) L.push([c.address,m]); } }
+  L.sort((a,b)=>sibItemAt(b[1])-sibItemAt(a[1])); const pick=L.slice(0,SIB_SYNC_MAXN).reverse(); let n=0;
+  for(const [peer,m] of pick){ const it=Object.assign({},m); if(it.d==='s'&&!it.dv) it.dv=sibDv(); delete it.dc; delete it.hf; delete it.wl; if(sibSend(id,{t:'evt',peer:peer,item:it})) n++; }
+  if(n) hpLog('自分の機械（'+sibLabel(id)+'）へ、線が切れていた間の分をそろえた（'+n+' 行）'); return n; }
