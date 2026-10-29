@@ -390,7 +390,7 @@ function hpItoSvg(k){ const H=(x)=>'<use href="#hp-house" x="'+x+'" y="34" width
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f180){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(!d) return r;
       if(document.head&&!document.getElementById('hp-call-css5')){ const st=document.createElement('style'); st.id='hp-call-css5'; st.textContent=HP_ITO_CSS; document.head.appendChild(st); }
       if(!d.__ito){ const w=document.createElement('div'); w.className='ito'; d.__ito=w; if(d.__st&&d.__st.parentNode===d) d.insertBefore(w,d.__st); else d.appendChild(w); }
-      const k=(typeof hpBotOn==='function'&&hpBotOn())?hpItoKind(C):''; if(d.__ito.__k!==k){ d.__ito.__k=k; d.__ito.innerHTML=k?hpItoSvg(k):''; } d.__ito.style.display=k?'':'none';
+      const k=hpItoKind(C);   if(d.__ito.__k!==k){ d.__ito.__k=k; d.__ito.innerHTML=k?hpItoSvg(k):''; } d.__ito.style.display=k?'':'none';
       if(C&&C.st==='talking'&&C.rec) d.__st.textContent=T('cl_ito_slack');
 
       if(!d.__spn){ const n=document.createElement('div'); n.className='spn'; n.style.cssText='font-size:.8em;opacity:.75;max-width:90vw'; d.__spn=n; const bt=d.querySelector('.btns'); if(bt) d.insertBefore(n,bt); else d.appendChild(n); }
