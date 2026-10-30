@@ -31,7 +31,14 @@ self.addEventListener('push', (e) => {
   }
   let n = 0; try { const d = e.data ? e.data.json() : null; n = Math.floor(Number(d && d.n)); if (!(n >= 1 && n <= 99999)) n = 0; } catch (x) { n = 0; }
   const body = n > 0 ? (ja ? '郵便受けに手紙が ' + n + ' 通届いています' : 'Letters in your mailbox: ' + n) : (ja ? '手紙が届きました' : 'A letter has arrived');
-  e.waitUntil(self.registration.showNotification('Handpost', { body: body, tag: 'hp-letter', renotify: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' }));
+
+  let lw = null; try { lw = self.clients.matchAll({ type: 'window', includeUncontrolled: true }); } catch (x) { lw = null; }
+  e.waitUntil(Promise.resolve(lw || []).catch(() => []).then((cs) => {
+    let front = false; try { front = Array.isArray(cs) && cs.some((c) => c.visibilityState === 'visible' && c.focused); } catch (x) { front = false; }
+    if (!front) return self.registration.showNotification('Handpost', { body: body, tag: 'hp-letter', renotify: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' });
+    return self.registration.showNotification('Handpost', { body: body, tag: 'hp-letter', silent: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })
+      .then(() => self.registration.getNotifications({ tag: 'hp-letter' })).then((l) => { for (const n of (l || [])) n.close(); }).catch(() => { });
+  }));
 });
 
 self.addEventListener('notificationclick', (e) => {

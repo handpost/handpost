@@ -298,6 +298,7 @@ function hpPutGroups(card, letters){
 async function hpPutOne(g, id, kind, link){
   const req={ op:'put', token:g.token, id:id, kind:kind, letters:g.letters };
   if(g.ring===true&&kind==='msg') req.ring=true;
+  else if(g.ring==='call'&&kind==='sig') req.ring='call';
   if(g.keep===true&&kind==='msg') req.keep=true;
   const mine=!link&&g.post.length===1&&typeof POST!=='undefined'&&POST.up&&!!POST.client&&g.post[0]===POST.url;
   const a=mine?(await hpMainAsk(req)):(await hpPoolAsk(await hpPoolGet(g.post,hpPutFail),req));
