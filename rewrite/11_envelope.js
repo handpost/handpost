@@ -99,6 +99,7 @@ async function hpSeal(card, body, kind, link, max){
     const lim=(Number(max)>HP5_MAX)?Number(max):HP5_MAX; if(letter.length>lim) throw new Error('長すぎる（1 通 '+letter.length+' 文字、上限 '+lim+'）');
     return { dev:d.dev, blob:letter };
   });
+  try{ if(!link&&typeof hpCpsPqNote==='function') for(const d of dests) hpCpsPqNote(d.dev, id, kmsg, !!d.kem); }catch(e){}
   return { id:id, kind:kind, letters:letters };
 }
 
@@ -125,6 +126,7 @@ async function hpOpen(m){
   if(!s.memcmp(km.slice(32), hp5Mac(s, s.crypto_scalarmult(myPriv, fromX), fromX, myX, id, innerBytes))) throw new Error('MAC が合わない');
   if(!Array.isArray(inner.to)||inner.to.indexOf(pre.dev)<0) throw new Error('宛先にこの端末が無い');
   if(ID&&ID.address&&inner.toId!==ID.address) throw new Error('宛先の身元がこの端末の身元と違う');
+  try{ if(!isLink&&typeof hpCpsPqNote==='function') hpCpsPqNote(inner.fromDev, id, km.slice(0,32), L.v===6); }catch(e){}
   if(isLink) return { id:id, kind:kind, link:true, fromDev:inner.fromDev, fromPrekey:hp6Fp(inner.fromDev, fp, inner.sentAt), sentAt:inner.sentAt, body:inner.body };
   return { id:id, kind:kind, from:inner.from, fromMaster:inner.fromMaster, fromDev:inner.fromDev, fromPrekey:hp6Fp(inner.fromDev, fp, inner.sentAt), sentAt:inner.sentAt, body:inner.body };
 }

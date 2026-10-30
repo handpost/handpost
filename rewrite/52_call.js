@@ -129,9 +129,9 @@ function hpCallRing(on){ try{ if(HP_CALL_RING_T){ clearInterval(HP_CALL_RING_T);
 async function hpCallSig(peer,body,devs){
   const got=(typeof hpSlSend==='function')?hpSlSend(peer,body,devs):[]; const fast=got.length>0; if(fast&&Array.isArray(devs)&&devs.length&&devs.every(d=>got.indexOf(d)>=0)) return {fast:1};
   const p=hpCallSigPost(peer,body,devs); if(fast){ p.catch(e=>{ try{ hpLog('通話：郵便受けへの合図は届かなかった（糸では届いた。'+((e&&e.message)||e)+'）'); }catch(x){} }); return {fast:1}; } return p; }
-async function hpCallSigPost(peer,body,devs){ const card=(typeof hpCardOf==='function')?hpCardOf(peer):null; if(!card) throw new Error(T('al_nocard')); const to=(Array.isArray(devs)&&devs.length&&Array.isArray(card.devices))?Object.assign({},card,{devices:card.devices.filter(d=>devs.indexOf(d)>=0)}):card; if(!to.devices||!to.devices.length) return null;
+async function hpCallSigPost(peer,body,devs){ const card=(typeof hpCardOf==='function')?hpCardOf(peer):null; const extra=arguments[3];   if(!card) throw new Error(T('al_nocard')); const to=(Array.isArray(devs)&&devs.length&&Array.isArray(card.devices))?Object.assign({},card,{devices:card.devices.filter(d=>devs.indexOf(d)>=0)}):card; if(!to.devices||!to.devices.length) return null;
 
-  const t0=Date.now(), opt=Object.assign((body&&body.type==='call')?{ring:'call'}:{},(body&&HP_CALL_PRI.indexOf(body.type)>=0)?{pri:1}:{},(body&&body.type==='call'&&Number(body.w)>0)?{rw:Math.round(Number(body.w)/1000)}:{});       for(let n=0;;n++){ try{ return await hpPut(to,JSON.stringify(body),'sig',opt); }catch(e){ if(!(e&&e.hpk==='wait')||Date.now()-t0>HP_CALL_SIG_RETRY) throw e; if(n===0) try{ hpLog('通話：郵便受けが少し待ってと言っている。出し直す（'+((e&&e.message)||e)+'）'); }catch(x){} await new Promise(r=>setTimeout(r,2000)); } } }
+  const t0=Date.now(), opt=Object.assign((body&&body.type==='call')?{ring:'call'}:{},(body&&HP_CALL_PRI.indexOf(body.type)>=0)?{pri:1}:{},(body&&body.type==='call'&&Number(body.w)>0)?{rw:Math.round(Number(body.w)/1000)}:{},(extra&&typeof extra==='object')?extra:{});       for(let n=0;;n++){ try{ return await hpPut(to,JSON.stringify(body),'sig',opt); }catch(e){ if(!(e&&e.hpk==='wait')||Date.now()-t0>HP_CALL_SIG_RETRY) throw e; if(n===0) try{ hpLog('通話：郵便受けが少し待ってと言っている。出し直す（'+((e&&e.message)||e)+'）'); }catch(x){} await new Promise(r=>setTimeout(r,2000)); } } }
 const HP_CALL_SIG_RETRY=25000;
 function hpCallClose(C){ try{ hpCallCard(false); }catch(e){} try{ if(C.timer){ clearTimeout(C.timer); C.timer=null; } }catch(e){} try{ if(C.tick){ clearInterval(C.tick); C.tick=null; } }catch(e){} try{ if(C.stream) C.stream.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} }); }catch(e){} try{ if(C.pc){ C.pc.onconnectionstatechange=null; C.pc.ontrack=null; C.pc.close(); } }catch(e){} try{ const au=document.getElementById('hp-call-audio'); if(au) au.srcObject=null; }catch(e){} hpCallRing(false); }
 function hpCallEnd(why,text){ const C=HP_CALL; if(!C) return; if(C.st==='ended') return; hpCallClose(C); C.st='ended'; C.why=why; C.endText=text||''; hpLog('通話：終わり（'+why+(C.talkAt?'・'+hpCallFmt(Date.now()-C.talkAt):'')+'）'); hpCallUi(); setTimeout(()=>{ if(HP_CALL===C){ HP_CALL=null; hpCallUi(); } },2200); try{ if(typeof hpCallOnEnd==='function') hpCallOnEnd(C); }catch(e){} }
@@ -685,4 +685,79 @@ try{ if(typeof hpCallSig==='function'&&!hpCallSig.__f208){ const f=hpCallSig; hp
 
 try{ if(typeof hpCallAccept==='function'&&!hpCallAccept.__f208){ const f=hpCallAccept; hpCallAccept=Object.assign(async function(){ const C=HP_CALL; const v=await f.apply(this,arguments);
     try{ if(v===true&&C&&HP_CALL===C&&C.st==='connecting'&&C.cands&&C.ansSent){ if(C.timer) clearTimeout(C.timer); C.timer=setTimeout(async()=>{ try{ if(HP_CALL!==C||C.st!=='connecting'||!C.cands) return; const cs=C.cands; C.cands=null; const n=await hpCallAddCands(C,cs); hpCallIceGo(C); hpLog('通話：答えが郵便受けに入ったので、「始めよう」を待たずに線をつなぎ始めた（'+n+'）'); }catch(e){} },HP_CALL_GO_SELF); } }catch(e){} return v; },f,{__f208:1}); } }catch(e){}
+
+const HP_CPS_MAX=3600, HP_CPS_WAIT=2500, HP_CPS_CALL_WAIT=4000, HP_CPS_TYPES=['call','callans','callgo','callend'], HP_CPS_AGE={callans:90e3,callgo:90e3,callend:120e3}, HP_CPS_PQ_KEY='p2p_callpq', HP_CPS_PQ_N=3, HP_CPS_PQ_DEVS=40, HP_CPS_NAME={call:'呼び出し',callans:'答え',callgo:'始めよう',callend:'切った'};
+function hpCpsPqAll(){ try{ const o=JSON.parse(hpSecGet(HP_CPS_PQ_KEY)||'{}'); return (o&&typeof o==='object'&&!Array.isArray(o))?o:{}; }catch(e){ return {}; } }
+function hpCpsPqNote(dev,id,km,q){ try{ if(typeof dev!=='string'||!dev||typeof id!=='string'||!id||!(km&&km.length>=32)) return false; const s=hp5S(); const k=hpHex(s.crypto_generichash(32, hp5U('handpost-cap-pq:'+id), km.slice(0,32)));
+    const o=hpCpsPqAll(), l=(Array.isArray(o[dev])?o[dev]:[]).filter(x=>x&&x.id!==id); l.unshift(Object.assign({id:id,k:k,at:Date.now()},q?{q:1}:{})); l.sort((a,b)=>((b.q?1:0)-(a.q?1:0))||((Number(b.at)||0)-(Number(a.at)||0))); o[dev]=l.slice(0,HP_CPS_PQ_N);
+    const ks=Object.keys(o); if(ks.length>HP_CPS_PQ_DEVS){ ks.sort((a,b)=>(Number(o[a][0]&&o[a][0].at)||0)-(Number(o[b][0]&&o[b][0].at)||0)); for(const d of ks.slice(0,ks.length-HP_CPS_PQ_DEVS)) delete o[d]; }
+    hpSecSet(HP_CPS_PQ_KEY,JSON.stringify(o)); return true; }catch(e){ return false; } }
+function hpCpsPqGet(dev,id){ try{ const l=hpCpsPqAll()[dev]||[]; const e=id?l.find(x=>x&&x.id===id):l[0]; return (e&&/^[0-9a-f]{64}$/.test(String(e.k)))?{id:e.id,k:hpBytes(e.k)}:null; }catch(e){ return null; } }
+async function hpCpsZip(u8){ try{ if(typeof CompressionStream==='undefined') return null; return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer()); }catch(e){ return null; } }
+async function hpCpsUnzip(u8){ return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer()); }
+function hpCpsAd(h){ return hp5U('handpost-cap:v1:'+JSON.stringify([h.f,h.m,h.fd,h.ds,h.fp.x,h.fp.n,h.fp.s,h.kid,h.to,h.at,h.id,h.k,h.pq,h.e,h.z])); }
+function hpCpsKey(s,dh1,dh2,pair,eph,toX,id){ return s.crypto_generichash(32, hp5Cat(hp5U('handpost-cap-key'), eph, toX, hp5U(String(id))), s.crypto_generichash(32, hp5Cat(dh1, dh2, pair))); }
+
+async function hpCpsSeal(peer,dev,body,type,callId,why){
+  const s=hp5S(), card=hpCardOf(peer), now=Date.now(); if(!card||!Array.isArray(card.prekeys)){ if(why) why.push('nocard'); return null; }
+  const pq=hpCpsPqGet(dev,null); if(!pq){ if(why) why.push('nopq'); return null; }
+  const p=card.prekeys.find(q=>q&&q.dev===dev&&hp5PreOk(dev,q.x25519,q.notAfter,q.sig,now)); if(!p){ if(why) why.push('nopre'); return null; }
+  const me=await hp5Me(), mine=me.pre, toX=hpBytes(p.x25519), eph=s.crypto_box_keypair();
+  const raw=hp5U(String(body)); let z=await hpCpsZip(raw), zf=1; if(!z){ z=raw; zf=0; }
+  const h={v:1,f:me.id,m:me.master,fd:me.dev,ds:me.devSig,fp:{x:mine.x,n:mine.notAfter,s:mine.sig},kid:String(p.x25519).slice(0,16),to:dev,at:now,id:String(callId||''),k:String(type||''),pq:pq.id,e:hp5B64(eph.publicKey),z:zf};
+  const key=hpCpsKey(s, s.crypto_scalarmult(eph.privateKey,toX), s.crypto_scalarmult(hpBytes(mine.priv),toX), pq.k, eph.publicKey, toX, h.id);
+  const n=s.randombytes_buf(24); h.c=hp5B64(hp5Cat(n, s.crypto_aead_xchacha20poly1305_ietf_encrypt(z, hpCpsAd(h), null, n, key)));
+  const out=JSON.stringify(h); if(out.length>HP_CPS_MAX){ if(why) why.push('big'); return null; } return out; }
+
+async function hpCpsOpen(text){
+  const s=hp5S(), h=JSON.parse(String(text)); if(!h||h.v!==1||typeof h.c!=='string'||!h.fp||typeof h.e!=='string') throw new Error('形が違う');
+  const kp=await hpDevKey(), myDev=hpHex(kp.publicKey); if(h.to!==myDev) throw new Error('別の端末あて');
+  const c=contacts().find(x=>x.address===h.f); if(!c) throw new Error('連絡先にない'); if(c.pubKey&&c.pubKey!==h.m) throw new Error('マスター鍵が連絡先のものと違う');
+  if(!(await hp5IdOk(h.f,h.m,h.fd,h.ds))) throw new Error('送り手の身元を確かめられない'); if(!hp5PreOk(h.fd,h.fp.x,h.fp.n,h.fp.s,Number(h.at)||0)) throw new Error('送り手の受け取り用の鍵を確かめられない');
+  const pq=hpCpsPqGet(h.fd,h.pq); if(!pq) throw new Error('合わせ鍵が無い');
+  const pre=(await hp5Prekeys()).find(p=>p.x.slice(0,16)===h.kid); if(!pre) throw new Error('開ける鍵が無い');
+  const myX=hpBytes(pre.x), myPriv=hpBytes(pre.priv), eph=hp5Un64(h.e), fromX=hpBytes(h.fp.x), ct=hp5Un64(h.c);
+  const key=hpCpsKey(s, s.crypto_scalarmult(myPriv,eph), s.crypto_scalarmult(myPriv,fromX), pq.k, eph, myX, String(h.id||''));
+  let z; try{ z=s.crypto_aead_xchacha20poly1305_ietf_decrypt(null, ct.slice(24), hpCpsAd(h), ct.slice(0,24), key); }catch(e){ throw new Error('封が開かない'); }
+  const raw=h.z?await hpCpsUnzip(z):z; return { from:h.f, fromMaster:h.m, fromDev:h.fd, sentAt:Number(h.at)||0, body:new TextDecoder().decode(raw), id:String(h.id||''), k:String(h.k||'') }; }
+
+async function hpCpsRing(peer,bodyObj,devs){
+  const t0=Date.now(), out={sent:0,devs:[]}; try{
+    const type=bodyObj&&bodyObj.type; if(HP_CPS_TYPES.indexOf(type)<0) return out; const card=hpCardOf(peer); if(!card||!Array.isArray(card.devices)) return out;
+    const list=(Array.isArray(devs)&&devs.length)?card.devices.filter(d=>devs.indexOf(d)>=0):card.devices.slice(); if(!list.length) return out;
+    const text=JSON.stringify(bodyObj), caps=[], why=[]; for(const d of list){ const c=await hpCpsSeal(peer,d,text,type,bodyObj.call,why); if(c) caps.push({dev:d,blob:c}); }
+    if(!caps.length){ hpLog('通話：'+HP_CPS_NAME[type]+'を通知には載せない（'+(why.indexOf('nopq')>=0?'合わせ鍵がまだ無い。次からは載る':why.indexOf('big')>=0?'大きすぎる':why.indexOf('nopre')>=0?'受け取り用の鍵が無い':'名刺が無い')+'）'); return out; }
+    const w=(type==='call')?Math.max(60,Math.min(600,Math.round(Number(bodyObj.w)/1000)||60)):60, groups=hpPutGroups(card,caps);
+    await Promise.all(groups.map(async g=>{ try{ const p=await hpPoolGet(g.post,hpPutFail);
+        const rep=await hpWithin(p.c.submitContractReadRequest(JSON.stringify({op:'ring',token:g.token,k:type,call:String(bodyObj.call||''),w:w,caps:g.letters.map(l=>({dev:l.dev,cap:l.blob}))}),null,HP_CPS_WAIT),HP_CPS_WAIT+500,'通知の問い合わせ');
+        let o=null; try{ o=JSON.parse(rep==null?'null':hpText(rep)); }catch(e){ o=null; }
+        if(o&&o.ok==='ring'){ out.sent+=Number(o.sent)||0; if(Number(o.sent)===g.letters.length) for(const l of g.letters) out.devs.push(l.dev); }
+        else hpLog('通話：通知を頼めない（'+g.post[0]+'・'+((o&&o.err)||'返事がない')+'）'); }catch(e){ hpLog('通話：通知を頼めない（'+g.post[0]+'・'+((e&&e.message)||e)+'）'); } }));
+    hpLog('通話：'+HP_CPS_NAME[type]+'を通知に載せた（端末 '+caps.length+' 台のうち '+out.sent+' 台に送れた・'+caps[0].blob.length+' 文字・'+((Date.now()-t0)/1000).toFixed(1)+' 秒）'); return out;
+  }catch(e){ hpLog('通話：通知に載せられない（'+((e&&e.message)||e)+'）'); return out; } }
+try{ if(typeof hpCallSigPost==='function'&&!hpCallSigPost.__f209){ const f=hpCallSigPost; hpCallSigPost=Object.assign(async function(peer,body,devs){
+    const type=body&&body.type; if(HP_CPS_TYPES.indexOf(type)<0) return f.apply(this,arguments);
+    if(type==='call'){ let r=null; try{ r=await hpWithin(hpCpsRing(peer,body,devs),HP_CPS_CALL_WAIT,'通知の問い合わせ'); }catch(e){ r=null; } return f.call(this,peer,body,devs,(r&&r.devs.length)?{rang:r.devs}:null); }
+    hpCpsRing(peer,body,devs).catch(()=>{}); return f.apply(this,arguments); },f,{__f209:1}); } }catch(e){}
+
+const HP_CPS_DB='hp-cap', HP_CPS_PEND=[], HP_CPS_SEEN=new Set(); let HP_CPS_BOOT=0;
+function hpCpsDb(){ return new Promise((res,rej)=>{ try{ const q=indexedDB.open(HP_CPS_DB,1); q.onupgradeneeded=()=>{ try{ q.result.createObjectStore('cap',{keyPath:'key'}); }catch(e){} }; q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error||new Error('indexedDB')); }catch(e){ rej(e); } }); }
+function hpCpsStoreAll(){ return hpCpsDb().then(db=>new Promise((res,rej)=>{ try{ const rq=db.transaction('cap','readonly').objectStore('cap').getAll(); rq.onsuccess=()=>{ try{ db.close(); }catch(e){} res(rq.result||[]); }; rq.onerror=()=>{ try{ db.close(); }catch(e){} rej(rq.error); }; }catch(e){ try{ db.close(); }catch(x){} rej(e); } })).catch(()=>[]); }
+function hpCpsStoreDel(key){ return hpCpsDb().then(db=>new Promise(res=>{ try{ const tx=db.transaction('cap','readwrite'); tx.objectStore('cap').delete(key); tx.oncomplete=()=>{ try{ db.close(); }catch(e){} res(true); }; tx.onerror=()=>{ try{ db.close(); }catch(e){} res(false); }; }catch(e){ try{ db.close(); }catch(x){} res(false); } })).catch(()=>false); }
+function hpCpsReady(){ try{ return !!(ID&&ID.address&&typeof hpVaultOn==='function'&&(!hpVaultOn()||VAULT)&&typeof contacts==='function'); }catch(e){ return false; } }
+async function hpCpsTake(d,how){ const key=String((d&&d.key)||((d&&d.k)+':'+(d&&d.call))); try{
+    if(!d||!d.cap||HP_CPS_SEEN.has(key)) return false; HP_CPS_SEEN.add(key);
+    const age=Date.now()-Number(d.at||0), lim=(d.k==='call')?Math.max(60000,Math.min(600000,(Number(d.w)||60)*1000)):(HP_CPS_AGE[d.k]||90e3);
+    if(age>lim||age<-60000){ hpLog('通話：通知に載ってきた'+(HP_CPS_NAME[d.k]||'合図')+'が古い（'+Math.round(age/1000)+' 秒前。捨てた）'); return false; }
+    const r=await hpCpsOpen(d.cap); hpLog('通話：通知に載ってきた'+(HP_CPS_NAME[r.k]||'合図')+'を開いた（'+Math.round((Date.now()-r.sentAt)/1000)+' 秒前・'+(how==='sw'?'開いている間に届いた':'開いたときに読んだ')+'）');
+    if(typeof rtcOnSig==='function') await rtcOnSig({from:r.from,fromMaster:r.fromMaster,fromDev:r.fromDev,sentAt:r.sentAt,body:r.body,id:'cap:'+key}); return true;
+  }catch(e){ hpLog('通話：通知に載ってきた合図を開けない（'+((e&&e.message)||e)+'）'); return false; } finally{ if(d&&d.key) hpCpsStoreDel(d.key).catch(()=>{}); } }
+async function hpCpsBoot(){ if(HP_CPS_BOOT) return; HP_CPS_BOOT=1; try{ const all=await hpCpsStoreAll(), now=Date.now(); all.sort((a,b)=>(Number(a&&a.at)||0)-(Number(b&&b.at)||0));
+    for(const d of all){ if(!d||!d.key) continue; if(now-Number(d.at||0)>600e3){ hpCpsStoreDel(d.key).catch(()=>{}); continue; } await hpCpsTake(d,'store'); }
+    for(const d of HP_CPS_PEND.splice(0)) await hpCpsTake(d,'sw'); }catch(e){} }
+function hpCpsGot(d){ try{ if(!d||!d.cap) return; if(HP_CPS_BOOT&&hpCpsReady()) hpCpsTake(d,'sw').catch(()=>{}); else HP_CPS_PEND.push(d); }catch(e){} }
+try{ if(typeof navigator!=='undefined'&&navigator.serviceWorker&&navigator.serviceWorker.addEventListener) navigator.serviceWorker.addEventListener('message',ev=>{ try{ if(ev&&ev.data&&ev.data.t==='hp-cap') hpCpsGot(ev.data); }catch(e){} }); }catch(e){}
+try{ if(typeof setInterval==='function'){ let n=0; const t=setInterval(()=>{ try{ if(hpCpsReady()){ clearInterval(t); hpCpsBoot(); } else if(++n>1200) clearInterval(t); }catch(e){} },500); try{ if(t&&t.unref) t.unref(); }catch(e){} } }catch(e){}
+
+try{ if(typeof hpCallPushLog==='function'&&!hpCallPushLog.__f209){ const f=hpCallPushLog; hpCallPushLog=Object.assign(function(cr){ try{ if(cr&&cr.ro&&Number(cr.at)>0){ const k=String(cr.at)+'|ro'; if(k===HP_CALL_CR_SEEN) return false; HP_CALL_CR_SEEN=k; hpLog('通知：郵便受けが最後に電話の合図を受け付けたのは '+hpCallHm(cr.at)+'（送り手が読むだけの問い合わせで先に送っていた）'); return true; } }catch(e){} return f.apply(this,arguments); },f,{__f209:1}); } }catch(e){}
 

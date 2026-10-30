@@ -302,7 +302,7 @@ function hpPutGroups(card, letters){
 async function hpPutOne(g, id, kind, link){
   const req={ op:'put', token:g.token, id:id, kind:kind, letters:g.letters };
   if(g.ring===true&&kind==='msg') req.ring=true;
-  else if(g.ring==='call'&&kind==='sig') req.ring='call'; if(req.ring==='call'&&g.rw>0) req.rw=g.rw;
+  else if(g.ring==='call'&&kind==='sig') req.ring='call'; if(req.ring==='call'&&g.rw>0) req.rw=g.rw;   if(req.ring==='call'&&Array.isArray(g.rang)&&g.rang.length) req.rang=g.rang;
   if(g.keep===true&&kind==='msg') req.keep=true;
   const mine=!link&&g.post.length===1&&typeof POST!=='undefined'&&POST.up&&!!POST.client&&g.post[0]===POST.url;
   const a=mine?(await hpMainAsk(req,g.pri)):(await hpPoolAsk(await hpPoolGet(g.post,hpPutFail),req,g.pri));
@@ -354,6 +354,7 @@ async function hpPut(card, body, kind, opt){
   if(opt&&opt.ring) for(const g of groups) g.ring=(opt.ring==='call')?'call':true;
   if(opt&&opt.pri) for(const g of groups) g.pri=1;
   if(opt&&opt.rw>0) for(const g of groups) g.rw=Math.max(60,Math.min(600,Math.round(opt.rw)));
+  if(opt&&Array.isArray(opt.rang)&&opt.rang.length) for(const g of groups) g.rang=opt.rang.filter(d=>g.letters.some(l=>l.dev===d));
   if((opt&&opt.keep)||(kind==='msg'&&typeof body==='string'&&body.startsWith('{"v":1,"type":"card",'))) for(const g of groups) g.keep=true;
   if(groups.length<2){ const r=await hpPutOne(groups[0], id, sealed.kind, link); return { id:id, exp:r.exp }; }
   const res=await Promise.all(groups.map(g=>hpPutOne(g, id, sealed.kind, link).then(r=>({ok:true,exp:r.exp}),e=>({ok:false,e:e}))));

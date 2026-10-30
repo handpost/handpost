@@ -1,4 +1,4 @@
-const HP_VAULT_KEY='p2p_vault', HP_SEC_KEYS=['p2p_id','p2p_devkey','p2p_prekeys'], HP_VAULT_AD='handpost-vault:v1', HP_PW_ITER=600000, HP_PW_MIN=12;
+const HP_VAULT_KEY='p2p_vault', HP_SEC_KEYS=['p2p_id','p2p_devkey','p2p_prekeys','p2p_callpq']  , HP_VAULT_AD='handpost-vault:v1', HP_PW_ITER=600000, HP_PW_MIN=12;
 let VAULT=null, VAULT_DK=null;
 
 function hpSecretInput(el){ el.type='password'; el.setAttribute('autocomplete','off'); el.setAttribute('autocapitalize','off'); el.setAttribute('autocorrect','off'); el.setAttribute('spellcheck','false'); el.setAttribute('data-lpignore','true'); el.setAttribute('data-1p-ignore','true'); el.setAttribute('data-bwignore','true'); return el; }
