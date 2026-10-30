@@ -32,7 +32,7 @@ self.addEventListener('push', (e) => {
     e.waitUntil(Promise.resolve(lst || []).then((cs) => {
       let front = false; try { front = cs.some((c) => c.visibilityState === 'visible' && c.focused); } catch (x) { front = false; }
       const keep = rec ? hpSwCapPut(rec).then(() => hpSwCapTell(cs, rec)) : Promise.resolve();
-      return keep.then(() => self.registration.showNotification('Handpost', { body: body, tag: 'hp-call', renotify: true, requireInteraction: !old && !front, vibrate: front ? [] : old ? [200] : [400, 200, 400, 200, 400, 200, 400], silent: front, data: { call: String(cl.call || '') }, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' }))
+      return keep.then(() => self.registration.showNotification('Handpost', Object.assign({ body: body, tag: 'hp-call', renotify: true, requireInteraction: !old && !front, silent: front, data: { call: String(cl.call || '') }, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' }, front ? {} : { vibrate: old ? [200] : [400, 200, 400, 200, 400, 200, 400] })))
         .then(() => hpSwNote({ t: Date.now(), at: Number(cl.at) || 0, front: front ? 1 : 0, ok: 1 }), (er) => hpSwNote({ t: Date.now(), at: Number(cl.at) || 0, front: front ? 1 : 0, ok: 0, why: String((er && er.message) || er).slice(0, 80) }));
     }).catch(() => self.registration.showNotification('Handpost', { body: body, tag: 'hp-call', renotify: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })));
     return;

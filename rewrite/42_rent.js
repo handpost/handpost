@@ -242,9 +242,9 @@ try{ if(typeof document!=='undefined'&&document.getElementById){ const b=documen
 try{ if(typeof document!=='undefined'&&document.getElementById){ const b=document.getElementById('btn-xm-nick'); if(b&&!b.dataset.hpWired){ b.dataset.hpWired='1'; b.addEventListener('click',()=>{ hpXmNickAsk(); }); } } }catch(e){}
 
 function hpXmLocal(){ try{ const n=String(location.hostname||'').toLowerCase(); return n==='localhost'||n==='::1'||n==='[::1]'||/^127\./.test(n)||/^192\.168\./.test(n)||/^10\./.test(n)||/^172\.(1[6-9]|2\d|3[01])\./.test(n); }catch(e){ return false; } }
-const HP_POST_PKG={path:'lib/post/index.js',size:124734,sha256:'fba94acf9c57f7e5cf41ecf71e7cc7871dfaf079a83f1360933137d73277b0be'};
+const HP_POST_PKG={path:'lib/post/index.js',size:125820,sha256:'91d43e28ed99381a4aad316034c57ba3489922ecae4cd49efb91f7c740b7fba6'};
 const HP_POST_LOADER={path:'lib/post/loader.js',size:1986,sha256:'36c902f3659932c421170a6f768548074e8bc4ef00a28a89e4a5a075a7455d7d'};
-const HP_POST_VER='bk36f209（2026-10-31）';
+const HP_POST_VER='bk36f210（2026-10-31）';
 const HP_POST_SIG='lib/post/index.js.sig';
 async function hpRentFile(P){
   let b; try{ const r=await fetch(P.path,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); b=new Uint8Array(await r.arrayBuffer()); }catch(e){ throw new Error(TF('rn_pkg_read',{why:String((e&&e.message)||e)})); }

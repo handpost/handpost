@@ -727,13 +727,13 @@ async function hpCpsRing(peer,bodyObj,devs){
     const list=(Array.isArray(devs)&&devs.length)?card.devices.filter(d=>devs.indexOf(d)>=0):card.devices.slice(); if(!list.length) return out;
     const text=JSON.stringify(bodyObj), caps=[], why=[]; for(const d of list){ const c=await hpCpsSeal(peer,d,text,type,bodyObj.call,why); if(c) caps.push({dev:d,blob:c}); }
     if(!caps.length){ hpLog('通話：'+HP_CPS_NAME[type]+'を通知には載せない（'+(why.indexOf('nopq')>=0?'合わせ鍵がまだ無い。次からは載る':why.indexOf('big')>=0?'大きすぎる':why.indexOf('nopre')>=0?'受け取り用の鍵が無い':'名刺が無い')+'）'); return out; }
-    const w=(type==='call')?Math.max(60,Math.min(600,Math.round(Number(bodyObj.w)/1000)||60)):60, groups=hpPutGroups(card,caps);
+    const w=(type==='call')?Math.max(60,Math.min(600,Math.round(Number(bodyObj.w)/1000)||60)):60, groups=hpPutGroups(card,caps), whys=[];
     await Promise.all(groups.map(async g=>{ try{ const p=await hpPoolGet(g.post,hpPutFail);
         const rep=await hpWithin(p.c.submitContractReadRequest(JSON.stringify({op:'ring',token:g.token,k:type,call:String(bodyObj.call||''),w:w,caps:g.letters.map(l=>({dev:l.dev,cap:l.blob}))}),null,HP_CPS_WAIT),HP_CPS_WAIT+500,'通知の問い合わせ');
         let o=null; try{ o=JSON.parse(rep==null?'null':hpText(rep)); }catch(e){ o=null; }
-        if(o&&o.ok==='ring'){ out.sent+=Number(o.sent)||0; if(Number(o.sent)===g.letters.length) for(const l of g.letters) out.devs.push(l.dev); }
+        if(o&&o.ok==='ring'){ out.sent+=Number(o.sent)||0; if(Number(o.sent)===g.letters.length) for(const l of g.letters) out.devs.push(l.dev); if(Array.isArray(o.why)) for(const x of o.why) whys.push(String(x)); }
         else hpLog('通話：通知を頼めない（'+g.post[0]+'・'+((o&&o.err)||'返事がない')+'）'); }catch(e){ hpLog('通話：通知を頼めない（'+g.post[0]+'・'+((e&&e.message)||e)+'）'); } }));
-    hpLog('通話：'+HP_CPS_NAME[type]+'を通知に載せた（端末 '+caps.length+' 台のうち '+out.sent+' 台に送れた・'+caps[0].blob.length+' 文字・'+((Date.now()-t0)/1000).toFixed(1)+' 秒）'); return out;
+    hpLog('通話：'+HP_CPS_NAME[type]+'を通知に載せた（端末 '+caps.length+' 台のうち '+out.sent+' 台に送れた・'+caps[0].blob.length+' 文字・'+((Date.now()-t0)/1000).toFixed(1)+' 秒'+(whys.length?'・送れなかった訳 '+whys.join(' '):'')+'）'); return out;
   }catch(e){ hpLog('通話：通知に載せられない（'+((e&&e.message)||e)+'）'); return out; } }
 try{ if(typeof hpCallSigPost==='function'&&!hpCallSigPost.__f209){ const f=hpCallSigPost; hpCallSigPost=Object.assign(async function(peer,body,devs){
     const type=body&&body.type; if(HP_CPS_TYPES.indexOf(type)<0) return f.apply(this,arguments);
