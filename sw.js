@@ -18,7 +18,8 @@ self.addEventListener('push', (e) => {
 
   let cl = null; try { const d = e.data ? e.data.json() : null; if (d && d.c === 1) cl = d; } catch (x) { cl = null; }
   if (cl) {
-    const old = Date.now() - Number(cl.at || 0) > 60000;
+    const w = Math.max(60000, Math.min(600000, (Number(cl.w) || 60) * 1000));
+    const old = Date.now() - Number(cl.at || 0) > w;
     const body = old ? (ja ? '通話の着信がありました。Handpost を開いてください' : 'You missed a call. Open Handpost.') : (ja ? '通話の着信です。押すと Handpost が開きます' : 'Incoming call. Tap to open Handpost.');
 
     let lst = null; try { lst = self.clients.matchAll({ type: 'window', includeUncontrolled: true }); } catch (x) { lst = null; }
