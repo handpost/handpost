@@ -43,8 +43,9 @@ self.addEventListener('push', (e) => {
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
+  let call = false; try { call = e.notification.tag === 'hp-call'; } catch (x) { call = false; }
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
-    for (const c of cs) { if ('focus' in c) return c.focus(); }
-    return self.clients.openWindow('/');
+    for (const c of cs) { if ('focus' in c) { if (call) { try { c.postMessage({ t: 'hp-call-open' }); } catch (x) { } } return c.focus(); } }
+    return self.clients.openWindow(call ? '/#hpcall' : '/');
   }));
 });

@@ -275,14 +275,18 @@ async function hpPoolOpen(urls, fail, key){
 }
 function hpPoolBad(p,e){   try{ if(HP_POOL.get(p.key)===p) HP_POOL.delete(p.key); p.up=false; if(p.t){ clearTimeout(p.t); p.t=null; } try{ const r=p.c.close(); if(r&&r.catch) r.catch(()=>{}); }catch(x){} hpLog('（つなぎ）'+String(p.key||'').replace(/^wss:\/\//,'')+' への使い回しのつなぎが壊れていたので捨てた（'+String((e&&e.message)||e).slice(0,60)+'）'); }catch(x){} }
 function hpPoolIdle(p){ if(p.t) clearTimeout(p.t); p.t=setTimeout(()=>{ p.t=null; if(HP_POOL.get(p.key)===p) HP_POOL.delete(p.key); p.up=false; try{ const r=p.c.close(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} },HP_POOL_IDLE); try{ if(p.t&&p.t.unref) p.t.unref(); }catch(e){} }
-function hpPoolAsk(p, obj){
+function hpPoolAsk(p, obj, pri){
   const run=async()=>{ p.replies.length=0; const t0=Date.now(); try{ await p.c.submitContractInput(JSON.stringify(obj)); }catch(e){ hpPoolBad(p,e); return {r:{err:'相手のポストにつながらない'},ms:Date.now()-t0}; }   while(!p.replies.length&&p.up&&Date.now()-t0<HP_PUT_WAIT) await sleep(50); return {r:p.replies.shift()||{err:p.up?'15 秒待っても返事がない':'相手のポストにつながらない'}, ms:Date.now()-t0}; };
-  const q=p.chain.then(run,run); p.chain=q.catch(()=>{}); return q.finally(()=>hpPoolIdle(p));
+  return hpQAdd(p.pq||(p.pq={list:[],busy:false}),()=>{ const q=p.chain.then(run,run); p.chain=q.catch(()=>{}); return q; },!!pri).finally(()=>hpPoolIdle(p));
 }
-function hpMainAsk(obj){
+function hpMainAsk(obj,pri){
   const run=()=>new Promise(res=>{ const t0=Date.now(); let tm=null; const w={res:o=>{ if(tm) clearTimeout(tm); res({r:o,ms:Date.now()-t0}); }}; HP_MPUT=w; tm=setTimeout(()=>{ if(HP_MPUT===w){ HP_MPUT=null; res({r:{err:'15 秒待っても返事がない'},ms:Date.now()-t0}); } },HP_PUT_WAIT); hpSend(obj).catch(()=>{ if(HP_MPUT===w){ HP_MPUT=null; if(tm) clearTimeout(tm); res({r:{err:'自分の郵便受けにつながらない'},ms:Date.now()-t0}); } }); });
-  const q=HP_MPUT_CHAIN.then(run,run); HP_MPUT_CHAIN=q.catch(()=>{}); return q;
+  return hpQAdd(HP_MPUT_Q,()=>{ const q=HP_MPUT_CHAIN.then(run,run); HP_MPUT_CHAIN=q.catch(()=>{}); return q; },!!pri);
 }
+
+const HP_MPUT_Q={list:[],busy:false};
+function hpQAdd(Q,job,pri){ return new Promise(res=>{ const it={job:job,res:res,pri:!!pri}; if(pri){ const k=Q.list.findIndex(x=>!x.pri); if(k<0) Q.list.push(it); else Q.list.splice(k,0,it); } else Q.list.push(it); hpQPump(Q); }); }
+async function hpQPump(Q){ if(Q.busy) return; Q.busy=true; try{ while(Q.list.length){ const it=Q.list.shift(); let v; try{ v=await it.job(); }catch(e){ v={r:{err:String((e&&e.message)||e)},ms:0}; } it.res(v); } } finally{ Q.busy=false; } }
 
 const HP_PART_KEY='p2p_part', HP_PART_MAX=40, HP_PART_CHARS=1000000, HP_PART_KEEP=7*86400e3;
 let HP_PART_LIST=[], HP_PART_LOADED=false, HP_PART_BUSY=false, HP_PART_DIRTY=false;
@@ -301,7 +305,7 @@ async function hpPutOne(g, id, kind, link){
   else if(g.ring==='call'&&kind==='sig') req.ring='call';
   if(g.keep===true&&kind==='msg') req.keep=true;
   const mine=!link&&g.post.length===1&&typeof POST!=='undefined'&&POST.up&&!!POST.client&&g.post[0]===POST.url;
-  const a=mine?(await hpMainAsk(req)):(await hpPoolAsk(await hpPoolGet(g.post,hpPutFail),req));
+  const a=mine?(await hpMainAsk(req,g.pri)):(await hpPoolAsk(await hpPoolGet(g.post,hpPutFail),req,g.pri));
   const r=a.r;
   hpLog('投函 '+id+' → '+g.post[0]+(mine?'（常時のつなぎ）':'')+' '+g.letters.length+' 通 '+g.letters[0].blob.length+' 文字 '+a.ms+' ms '+(r.ok?'ok':'拒否'+(hpFailKind(r.err)==='peer'?'':' '+r.err)));
   if(r.err==='killed'&&typeof hpKillLearn==='function'){ try{ await hpKillLearn(r,'投函の返事'); }catch(e){} }
@@ -348,6 +352,7 @@ async function hpPut(card, body, kind, opt){
   let sealed; try{ sealed=await hpSeal(card, body, kind, link); }catch(e){ throw fail(e, /長すぎる/.test(e.message)?'self':'peer'); }
   const id=sealed.id, groups=hpPutGroups(card, sealed.letters);
   if(opt&&opt.ring) for(const g of groups) g.ring=(opt.ring==='call')?'call':true;
+  if(opt&&opt.pri) for(const g of groups) g.pri=1;
   if((opt&&opt.keep)||(kind==='msg'&&typeof body==='string'&&body.startsWith('{"v":1,"type":"card",'))) for(const g of groups) g.keep=true;
   if(groups.length<2){ const r=await hpPutOne(groups[0], id, sealed.kind, link); return { id:id, exp:r.exp }; }
   const res=await Promise.all(groups.map(g=>hpPutOne(g, id, sealed.kind, link).then(r=>({ok:true,exp:r.exp}),e=>({ok:false,e:e}))));
