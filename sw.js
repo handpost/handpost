@@ -16,7 +16,7 @@ self.addEventListener('push', (e) => {
   let cl = null; try { const d = e.data ? e.data.json() : null; if (d && d.c === 1) cl = d; } catch (x) { cl = null; }
   if (cl) {
     const old = Date.now() - Number(cl.at || 0) > 60000;
-    const body = old ? (ja ? '電話がありました。Handpost を開いてください' : 'You missed a call. Open Handpost.') : (ja ? '電話がかかっています。押すと Handpost が開きます' : 'Incoming call. Tap to open Handpost.');
+    const body = old ? (ja ? '通話の着信がありました。Handpost を開いてください' : 'You missed a call. Open Handpost.') : (ja ? '通話の着信です。押すと Handpost が開きます' : 'Incoming call. Tap to open Handpost.');
     e.waitUntil(self.registration.showNotification('Handpost', { body: body, tag: 'hp-call', renotify: true, requireInteraction: !old, vibrate: old ? [200] : [400, 200, 400, 200, 400, 200, 400], icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' }));
     return;
   }
