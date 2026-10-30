@@ -121,7 +121,7 @@ const HP_GATE_WAIT=30e3, HP_GATE_POLL=250, HP_GATE_ON=new Map(), HP_GATE_SAID=ne
 const HP_SUS_MAX=2, HP_SUS_GAP=60e3, HP_SUS_LOG=new Map();
 function hpGateKey(url,kp){ let pub=''; try{ const k=kp&&kp.publicKey; pub=typeof k==='string'?k:(k&&k.length?Array.from(k,b=>Number(b).toString(16).padStart(2,'0')).join(''):''); }catch(e){} return String(url)+'|'+pub; }
 function hpSusWait(key,mode){   const now=Date.now(), a=(HP_SUS_LOG.get(key)||[]).filter(t=>now-t<HP_CONN_WIN); HP_SUS_LOG.set(key,a); if(!a.length) return 0;
-  if(mode==='main') return Math.max(0,a.length>=3?a[0]+HP_CONN_WIN-now:a[a.length-1]+(a.length===1?10e3:30e3)-now);
+  if(mode==='main') return Math.max(0,a.length>=2?a[0]+HP_CONN_WIN-now:a[a.length-1]+10e3-now);
   return Math.max(0,a[a.length-1]+HP_SUS_GAP-now,a.length>=HP_SUS_MAX?a[0]+HP_CONN_WIN-now:0); }
 function hpSusNote(key,url,what,why){ const now=Date.now(), a=(HP_SUS_LOG.get(key)||[]).filter(t=>now-t<HP_CONN_WIN); a.push(now); HP_SUS_LOG.set(key,a);
   try{ hpLog('（関所）'+String(url).replace(/^wss:\/\//,'')+' へ'+(what?'（'+what+'）':'')+(why==='drop'?'つないだのに、返事の前に向こうから切られた（前のつなぎが向こうに残っていた見込み）':'名乗りの途中で止まった見込み')+'。10 分で '+a.length+' 回目なので、'+Math.ceil(hpSusWait(key)/1000)+' 秒あける'); }catch(e){}
