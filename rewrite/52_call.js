@@ -539,3 +539,13 @@ try{ hpSlBoot=Object.assign(function(){ try{ let i=0; for(const p of hpSlRecent(
 try{ hpSlLater=Object.assign(function(peer){ try{ const want=(typeof CURPEER!=='undefined'&&CURPEER===peer)||hpSlRecent().slice(0,3).indexOf(peer)>=0; if(!want) return; const n=HP_SL_LATER_N[peer]=(HP_SL_LATER_N[peer]||0)+1, ms=[3000,15000,60000][Math.min(n,3)-1];
     setTimeout(()=>{ try{ if(hpSlOpen(peer)){ HP_SL_LATER_N[peer]=0; return; } if(typeof document==='undefined'||document.visibilityState!=='hidden') hpSlStart(peer,true).catch(()=>{}); }catch(e){} },ms); }catch(e){} },{__fast:1}); }catch(e){}
 
+function hpCallSibTellBox(C){ try{ if(!C||C.dir!=='in'||typeof hpSibPut!=='function'||typeof sibTargets!=='function') return 0; const devs=sibTargets().filter(d=>!(typeof SIB!=='undefined'&&SIB[d]&&SIB[d].state==='open')); if(!devs.length) return 0;
+    const body={v:1,type:'callx',call:C.id};
+    if(HP_IOS&&typeof hpWtOwnPut==='function') for(const d of devs) hpWtOwnPut(body,d).catch(()=>{});
+    Promise.resolve(hpSibPut(body,devs,'sig')).then(n=>{ if(n) hpLog('通話：線の無い自分の端末 '+n+' 台に、郵便受けで「応じた」と知らせた'); }).catch(()=>{});
+    return devs.length; }catch(e){ return 0; } }
+try{ if(typeof hpCallSibTell==='function'&&!hpCallSibTell.__box){ const f=hpCallSibTell; hpCallSibTell=Object.assign(function(C){ const n=f.apply(this,arguments); try{ hpCallSibTellBox(C); }catch(e){} return n; },f,{__box:1}); } }catch(e){}
+try{ if(typeof sibOnSig==='function'&&!sibOnSig.__callx){ const f=sibOnSig; sibOnSig=Object.assign(async function(r){ let o=null; try{ o=JSON.parse(r&&r.body); }catch(e){ o=null; }
+    if(o&&o.v===1&&o.type==='callx'){ try{ if(r&&ID&&r.from===ID.address&&r.fromMaster===ID.publicKey&&r.fromDev&&typeof sibIsMine==='function'&&sibIsMine(r.fromDev)&&typeof o.call==='string'&&/^[0-9a-f]{16}$/.test(o.call)){ hpLog('通話：自分のほかの端末が応じたと郵便受けで届いた'); hpCallSibX(o.call); } }catch(e){} return; }
+    return await f.apply(this,arguments); },f,{__callx:1}); } }catch(e){}
+
