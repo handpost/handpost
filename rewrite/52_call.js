@@ -501,3 +501,41 @@ function hpRingCard(){ try{ if(typeof document==='undefined'||document.getElemen
     ref.parentNode.insertBefore(c,ref.nextSibling); return true; }catch(e){ return false; } }
 try{ if(typeof document!=='undefined'&&document.addEventListener){ const go=()=>{ hpRingCard(); }; if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else setTimeout(go,0); setTimeout(go,1500); } }catch(e){}
 
+function hpPcTurn(pc){ try{ const c=pc.getConfiguration&&pc.getConfiguration(); return !!(c&&Array.isArray(c.iceServers)&&c.iceServers.some(x=>[].concat(x&&x.urls||[]).some(u=>/^turns?:/.test(String(u))))); }catch(e){ return false; } }
+function hpGatherFast(pc,max,after){ return new Promise(res=>{ try{ if(!pc||pc.iceGatheringState==='complete') return res(); }catch(e){ return res(); }
+    let done=false, t2=null; const turn=hpPcTurn(pc), want=turn?/ typ relay/:/ typ srflx/;
+    const f=()=>{ try{ if(pc.iceGatheringState==='complete') fin(); }catch(e){} }, g=e=>{ try{ const c=(e&&e.candidate&&e.candidate.candidate)||''; if(!t2&&want.test(c)) t2=setTimeout(fin,after); }catch(x){} };
+    const fin=()=>{ if(done) return; done=true; clearTimeout(t1); if(t2) clearTimeout(t2); try{ pc.removeEventListener('icegatheringstatechange',f); pc.removeEventListener('icecandidate',g); }catch(e){} res(); };
+    const t1=setTimeout(fin,max); try{ pc.addEventListener('icegatheringstatechange',f); pc.addEventListener('icecandidate',g); }catch(e){ fin(); return; }
+    try{ const sd=String((pc.localDescription&&pc.localDescription.sdp)||''); if(want.test(sd)&&!t2) t2=setTimeout(fin,after); }catch(e){} }); }
+try{ if(typeof waitGathering==='function'&&!waitGathering.__fast){ waitGathering=Object.assign(function(pc){ return hpGatherFast(pc,8000,500); },{__fast:1}); } }catch(e){}
+try{ if(typeof hpCallGather==='function'&&!hpCallGather.__fast){ hpCallGather=Object.assign(function(pc){ return hpGatherFast(pc,HP_CALL_GATHER,1000); },{__fast:1}); } }catch(e){}
+try{ if(typeof hpCallGatherN==='function'&&!hpCallGatherN.__fast){ hpCallGatherN=Object.assign(function(pc,n){ return hpGatherFast(pc,HP_CALL_GATHER,n>1?1500:1000); },{__fast:1}); } }catch(e){}
+let HP_TURN_BG=false;
+try{ if(typeof hpTurnCreds==='function'&&!hpTurnCreds.__fast){ const f=hpTurnCreds; hpTurnCreds=Object.assign(async function(){ try{ const u=String((typeof POST!=='undefined'&&POST&&POST.url)||''), c=u?HP_TURN[u]:null;
+      if(c&&c.alive&&hpTurnFresh(c)&&POST.up&&!POST.notOwner){ if(Date.now()-Number(c.at||0)>60e3&&!HP_TURN_BG){ HP_TURN_BG=true; Promise.resolve().then(()=>f()).catch(()=>{}).then(()=>{ HP_TURN_BG=false; }); } return c; } }catch(e){}
+    return await f.apply(this,arguments); },f,{__fast:1}); } }catch(e){}
+const HP_SL_CALLWAIT=5000;
+try{ if(typeof hpCallSig==='function'&&!hpCallSig.__slwait){ const f=hpCallSig; hpCallSig=Object.assign(async function(peer,body){ try{ if(body&&body.type==='call'&&!hpSlOpen(peer)&&hpSlOf(peer).some(s=>s.st==='connecting')){ const t0=Date.now();
+        while(Date.now()-t0<HP_SL_CALLWAIT&&!hpSlOpen(peer)&&hpSlOf(peer).some(s=>s.st==='connecting')) await sleep(200);
+        hpLog('通話：'+hpSlNick(peer)+' との待機の糸を '+((Date.now()-t0)/1000).toFixed(1)+' 秒待った（'+(hpSlOpen(peer)?'できたので糸で呼ぶ':'まだなので郵便受けで呼ぶ')+'）'); } }catch(e){}
+    return await f.apply(this,arguments); },f,{__slwait:1}); } }catch(e){}
+const HP_SL_LTR_MAX=200000, HP_SL_LTR_SENT=new Set(), HP_SL_LATER_N={};
+function hpSlLetterOut(id,letters){ let n=0; try{ for(const L of letters){ if(!L||typeof L.dev!=='string'||typeof L.blob!=='string'||L.blob.length>HP_SL_LTR_MAX) continue; const k=id+'|'+L.dev; if(HP_SL_LTR_SENT.has(k)) continue;
+      const s=Object.keys(HP_SL).map(x=>HP_SL[x]).find(x=>x&&x.dev===L.dev&&hpSlIsOpen(x)); if(!s) continue;
+      try{ s.dc.send(JSON.stringify({t:'ltr',id:id,blob:L.blob})); HP_SL_LTR_SENT.add(k); n++; }catch(e){} }
+    while(HP_SL_LTR_SENT.size>200) HP_SL_LTR_SENT.delete(HP_SL_LTR_SENT.values().next().value);
+    if(n) hpLog('手紙 '+id+' を待機の糸でも渡した（端末 '+n+' 台）'); }catch(e){} return n; }
+async function hpSlLetterIn(s,m){ try{ if(!m||typeof m.id!=='string'||!/^[0-9a-f]{16,64}$/.test(m.id)||typeof m.blob!=='string'||m.blob.length>HP_SL_LTR_MAX) return false; const now=Date.now();
+    if(hpSeen(m.id,now+7*864e5)){ hpLog('重複 '+m.id+'（糸で届いた分。2 回目なので捨てた）'); return false; }
+    hpLog('手紙 '+m.id+' '+m.blob.length+' 文字（待機の糸で届いた）'); try{ await hpDeliver({id:m.id,ts:now,exp:now+7*864e5,blob:m.blob}); }catch(e){ hpLog('糸で届いた手紙を開けられない '+m.id+' '+((e&&e.message)||e)); }
+    try{ hpSeenSave(); }catch(e){} return true; }catch(e){ return false; } }
+try{ if(typeof hpPutOne==='function'&&!hpPutOne.__sl){ const f=hpPutOne; hpPutOne=Object.assign(async function(g,id,kind,link){ try{ if(kind==='msg'&&!link&&g&&Array.isArray(g.letters)) hpSlLetterOut(id,g.letters); }catch(e){} return f.apply(this,arguments); },f,{__sl:1}); } }catch(e){}
+try{ if(typeof hpSlWire==='function'&&!hpSlWire.__ltr){ const f=hpSlWire; hpSlWire=Object.assign(function(s,dc){ const v=f.apply(this,arguments);
+    try{ const om=dc.onmessage, oo=dc.onopen; dc.onmessage=e=>{ try{ const m=JSON.parse(String(e.data)); if(m&&m.t==='ltr'){ hpSlLetterIn(s,m).catch(()=>{}); return; } }catch(x){} return om&&om.call(dc,e); };
+      dc.onopen=e=>{ const r=oo&&oo.call(dc,e); try{ HP_SL_LATER_N[s.peer]=0; }catch(x){} return r; }; }catch(e){}
+    return v; },f,{__ltr:1}); } }catch(e){}
+try{ hpSlBoot=Object.assign(function(){ try{ let i=0; for(const p of hpSlRecent().slice(0,3)){ if(!isContact(p)) continue; setTimeout(()=>{ hpSlStart(p).catch(()=>{}); },1500+(i++)*500); } }catch(e){} },{__fast:1}); }catch(e){}
+try{ hpSlLater=Object.assign(function(peer){ try{ const want=(typeof CURPEER!=='undefined'&&CURPEER===peer)||hpSlRecent().slice(0,3).indexOf(peer)>=0; if(!want) return; const n=HP_SL_LATER_N[peer]=(HP_SL_LATER_N[peer]||0)+1, ms=[3000,15000,60000][Math.min(n,3)-1];
+    setTimeout(()=>{ try{ if(hpSlOpen(peer)){ HP_SL_LATER_N[peer]=0; return; } if(typeof document==='undefined'||document.visibilityState!=='hidden') hpSlStart(peer,true).catch(()=>{}); }catch(e){} },ms); }catch(e){} },{__fast:1}); }catch(e){}
+

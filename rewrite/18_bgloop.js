@@ -88,13 +88,13 @@ function hpOnOutput(o){
 }
 function hpRetryLater(gen){
   if(!BG_ON||POST.gen!==gen) return;
-  let i=Math.min(POST.retryI||0,HP_RETRY_STEPS.length-1), ms=Math.max(HP_RETRY_STEPS[i],hpConnWait(hpConnKey(POST.url)),(typeof hpSusWait==='function'?hpSusWait(hpConnKey(POST.url)):0));   const jit=hpJitter(Math.min(ms*0.3,15000));   ms+=jit; POST.retryI=i+1; POST.retry=ms;
+  let i=Math.min(POST.retryI||0,HP_RETRY_STEPS.length-1), ms=Math.max(HP_RETRY_STEPS[i],hpConnWait(hpConnKey(POST.url)),(typeof hpSusWait==='function'?hpSusWait(hpConnKey(POST.url),'main'):0));   const jit=hpJitter(Math.min(ms*0.3,15000));   ms+=jit; POST.retryI=i+1; POST.retry=ms;
   hpLog(Math.round(ms/1000)+' 秒後につなぎ直す');
   POST.nextAt=Date.now()+ms; if(POST.retryT) clearTimeout(POST.retryT); POST.retryQ=0; POST.retryT=setTimeout(()=>{ POST.retryT=null; POST.nextAt=0; if(BG_ON&&POST.gen===gen){ if(HP_IOS&&hpHidden()){ POST.waitVis=gen;   hpLog('画面が裏にあるので、戻ってからつなぎ直す'); } else hpConnect(); } },ms);   try{ if(typeof hpSceneCap==='function') hpSceneCap(); }catch(e){}
 }
 
 const HP_RETRY_NOW_GAP=20000;
-function hpRetryNow(why){ if(typeof BG_ON==='undefined'||!BG_ON||POST.up||POST.connecting||!POST.retryT) return false; if(Date.now()-(Number(POST.lastTry)||0)<HP_RETRY_NOW_GAP) return false; if(POST.retryQ) return false;   if(hpConnWait(hpConnKey(POST.url))>0) return false;   if(typeof hpSusWait==='function'&&hpSusWait(hpConnKey(POST.url))>0) return false;   clearTimeout(POST.retryT); const d=/回線/.test(String(why||''))?500+hpJitter(5500):300+hpJitter(1200), gen=POST.gen;   POST.nextAt=Date.now()+d; POST.retryQ=1; POST.retryT=setTimeout(()=>{ POST.retryT=null; POST.retryQ=0; POST.nextAt=0; if(BG_ON&&POST.gen===gen&&!POST.up&&!POST.connecting) hpConnect(); },d); hpLog((why||'')+'。'+(d/1000).toFixed(1)+' 秒後につなぎ直す'); return true; }
+function hpRetryNow(why){ if(typeof BG_ON==='undefined'||!BG_ON||POST.up||POST.connecting||!POST.retryT) return false; if(Date.now()-(Number(POST.lastTry)||0)<HP_RETRY_NOW_GAP) return false; if(POST.retryQ) return false;   if(hpConnWait(hpConnKey(POST.url))>0) return false;   if(typeof hpSusWait==='function'&&hpSusWait(hpConnKey(POST.url),'main')>0) return false;   clearTimeout(POST.retryT); const d=/回線/.test(String(why||''))?500+hpJitter(5500):300+hpJitter(1200), gen=POST.gen;   POST.nextAt=Date.now()+d; POST.retryQ=1; POST.retryT=setTimeout(()=>{ POST.retryT=null; POST.retryQ=0; POST.nextAt=0; if(BG_ON&&POST.gen===gen&&!POST.up&&!POST.connecting) hpConnect(); },d); hpLog((why||'')+'。'+(d/1000).toFixed(1)+' 秒後につなぎ直す'); return true; }
 try{ if(typeof document!=='undefined'&&typeof document.addEventListener==='function') document.addEventListener('visibilitychange',()=>{ if(document.hidden){ if(HP_IOS&&BG_ON) hpSleepConn(); return; }   if(POST.waitVis&&POST.waitVis===POST.gen&&BG_ON&&!POST.up&&!POST.connecting){ POST.waitVis=0; const d=300+hpJitter(1200), gen=POST.gen; hpLog('画面が戻った。'+(d/1000).toFixed(1)+' 秒後につなぎ直す'); setTimeout(()=>{ if(BG_ON&&POST.gen===gen&&!POST.up&&!POST.connecting) hpConnect(); },d);   } else hpRetryNow('画面が戻った'); try{ if(POST.up&&typeof hpResendKick==='function') hpResendKick(); }catch(e){}   }); if(typeof window!=='undefined'&&typeof window.addEventListener==='function') window.addEventListener('online',()=>hpRetryNow('回線が戻った')); }catch(e){}
 
 const HP_CONN_WIN=600000, HP_CONN_MAX=4, HP_CONN_LOG=new Map(); let HP_CONN_SLOW=4000;
@@ -120,7 +120,8 @@ function hpConnCount(key,up,t0){ const now=Date.now(); if(up){ HP_CONN_OK.set(ke
 const HP_GATE_WAIT=30e3, HP_GATE_POLL=250, HP_GATE_ON=new Map(), HP_GATE_SAID=new Map();
 const HP_SUS_MAX=2, HP_SUS_GAP=60e3, HP_SUS_LOG=new Map();
 function hpGateKey(url,kp){ let pub=''; try{ const k=kp&&kp.publicKey; pub=typeof k==='string'?k:(k&&k.length?Array.from(k,b=>Number(b).toString(16).padStart(2,'0')).join(''):''); }catch(e){} return String(url)+'|'+pub; }
-function hpSusWait(key){ const now=Date.now(), a=(HP_SUS_LOG.get(key)||[]).filter(t=>now-t<HP_CONN_WIN); HP_SUS_LOG.set(key,a); if(!a.length) return 0;
+function hpSusWait(key,mode){   const now=Date.now(), a=(HP_SUS_LOG.get(key)||[]).filter(t=>now-t<HP_CONN_WIN); HP_SUS_LOG.set(key,a); if(!a.length) return 0;
+  if(mode==='main') return Math.max(0,a.length>=3?a[0]+HP_CONN_WIN-now:a[a.length-1]+(a.length===1?10e3:30e3)-now);
   return Math.max(0,a[a.length-1]+HP_SUS_GAP-now,a.length>=HP_SUS_MAX?a[0]+HP_CONN_WIN-now:0); }
 function hpSusNote(key,url,what,why){ const now=Date.now(), a=(HP_SUS_LOG.get(key)||[]).filter(t=>now-t<HP_CONN_WIN); a.push(now); HP_SUS_LOG.set(key,a);
   try{ hpLog('（関所）'+String(url).replace(/^wss:\/\//,'')+' へ'+(what?'（'+what+'）':'')+(why==='drop'?'つないだのに、返事の前に向こうから切られた（前のつなぎが向こうに残っていた見込み）':'名乗りの途中で止まった見込み')+'。10 分で '+a.length+' 回目なので、'+Math.ceil(hpSusWait(key)/1000)+' 秒あける'); }catch(e){}
@@ -144,7 +145,7 @@ function hpGateWrap(c,url,kp,what,o){ o=o||{}; if(!c||c.__gate||typeof c.connect
       if(x.main){ hpGateSay('main',url,what); return false; }
       await sleep(HP_GATE_POLL); if(closed) return false; }
     if(one){ const x=HP_GATE_ON.get(key); if(x&&x.c!==c){ hpGateSay('busy',url,what); return false; } }
-    { const w=hpSusWait(ck); if(w>0){ hpGateSay('sus',url,what,w); return false; } }
+    { const w=hpSusWait(ck,o.main?'main':''); if(w>0){ hpGateSay('sus',url,what,w); return false; } }
     if(!o.main&&!o.bare){ const w=hpConnWait(ck); if(w>0){ hpGateSay('wait',url,what,w); return false; } }
     if(closed) return false;
     { const w=hpOpenSlot(); if(w>0){ await sleep(w); if(closed) return false; } }
