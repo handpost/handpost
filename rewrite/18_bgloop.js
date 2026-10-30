@@ -771,7 +771,7 @@ function hpDevMarksInto(box,devs,peer,opt){ try{ if(!box||typeof box.appendChild
 function hpLogHead(){
   const p=n=>String(n).padStart(2,'0'), d=new Date();
   const role=!ID?'身元なし':hpIsMain()?'親機':hpIsChild()?'子機':'—';
-  const tint=hpDevTintOf(); return '# Handpost のログ ／ '+(tint?tint[4]+'の窓'+((POST&&POST.pub)?'（'+POST.pub.slice(2,8)+'）':'')+' ／ ':'')    +((ID&&ID.myName)||'（名前なし）')+(ID?'（'+String(ID.address).slice(0,11)+'…）':'')+' ／ '+role+' '+hpDevLabelGuess()+' ／ 端末鍵 '+((POST&&POST.pub)?POST.pub.slice(0,10)+'…':'—')+' ／ ポスト '+((POST&&POST.url)||'—')+' ／ コピーした時刻 '+d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+  const tint=hpDevTintOf(); let ver=0; try{ ver=(typeof hpVerNow==='function')?hpVerNow():0; }catch(e){ ver=0; }   return '# Handpost のログ ／ '+(ver?'第 '+ver+' 版 ／ ':'')+(tint?tint[4]+'の窓'+((POST&&POST.pub)?'（'+POST.pub.slice(2,8)+'）':'')+' ／ ':'')    +((ID&&ID.myName)||'（名前なし）')+(ID?'（'+String(ID.address).slice(0,11)+'…）':'')+' ／ '+role+' '+hpDevLabelGuess()+' ／ 端末鍵 '+((POST&&POST.pub)?POST.pub.slice(0,10)+'…':'—')+' ／ ポスト '+((POST&&POST.url)||'—')+' ／ コピーした時刻 '+d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
 }
 
 function hpDevRows(){
