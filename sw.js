@@ -17,7 +17,13 @@ self.addEventListener('push', (e) => {
   if (cl) {
     const old = Date.now() - Number(cl.at || 0) > 60000;
     const body = old ? (ja ? '通話の着信がありました。Handpost を開いてください' : 'You missed a call. Open Handpost.') : (ja ? '通話の着信です。押すと Handpost が開きます' : 'Incoming call. Tap to open Handpost.');
-    e.waitUntil(self.registration.showNotification('Handpost', { body: body, tag: 'hp-call', renotify: true, requireInteraction: !old, vibrate: old ? [200] : [400, 200, 400, 200, 400, 200, 400], icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' }));
+
+    let lst = null; try { lst = self.clients.matchAll({ type: 'window', includeUncontrolled: true }); } catch (x) { lst = null; }
+    e.waitUntil(Promise.resolve(lst || []).then((cs) => {
+      let front = false; try { front = cs.some((c) => c.visibilityState === 'visible' && c.focused); } catch (x) { front = false; }
+      return self.registration.showNotification('Handpost', { body: body, tag: 'hp-call', renotify: true, requireInteraction: !old && !front, vibrate: front ? [] : old ? [200] : [400, 200, 400, 200, 400, 200, 400], silent: front, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })
+        .then(() => { if (front) return self.registration.getNotifications({ tag: 'hp-call' }).then((l) => { for (const n of (l || [])) n.close(); }); });
+    }).catch(() => self.registration.showNotification('Handpost', { body: body, tag: 'hp-call', renotify: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })));
     return;
   }
   let n = 0; try { const d = e.data ? e.data.json() : null; n = Math.floor(Number(d && d.n)); if (!(n >= 1 && n <= 99999)) n = 0; } catch (x) { n = 0; }

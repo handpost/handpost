@@ -162,7 +162,7 @@ async function hpCallStart(peer){
     C.turns=hpTurnPick([cr].concat(hpTurnOwnAll(),hpTurnPeerOf(peer))); C.pc=new RTCPeerConnection(hpCallIceN(C.turns)); hpCallWire(C); C.stream.getTracks().forEach(t=>C.pc.addTrack(t,C.stream)); hpCallCryptoOn(C);
     const off=await C.pc.createOffer({offerToReceiveAudio:true}); await C.pc.setLocalDescription({type:'offer',sdp:hpCallSdpTune(off.sdp)}); await hpCallGatherN(C.pc,C.turns.length); if(HP_CALL!==C) return false; hpTurnHealth(C).catch(()=>{}); C.gathered=Date.now(); hpCallUi();
     const sdp=C.pc.localDescription.sdp, fp=extractFingerprint(sdp); if(!fp) throw new Error(T('e_nofp')); if(!hpCallHasRelay(sdp)) throw new Error(T('cl_noturn'));
-    await hpCallSig(peer,{v:1,type:'call',call:C.id,sdp:sdp,fp:fp,k:hpHex(C.key),pq:1,t:{h:cr.host,p:cr.port,u:cr.user,k:cr.pass},ts:hpTurnWire(C.turns)},null); if(HP_CALL!==C) return false; C.sent=Date.now(); hpCallUi();
+    await hpCallSig(peer,{v:1,type:'call',call:C.id,sdp:sdp,fp:fp,k:hpHex(C.key),pq:1,pre:1,t:{h:cr.host,p:cr.port,u:cr.user,k:cr.pass},ts:hpTurnWire(C.turns)},null); if(HP_CALL!==C) return false; C.sent=Date.now(); hpCallUi();
     hpLog('通話：'+nickOf(peer)+' を呼び出した（交換手 '+C.turns.map(x=>x.host+':'+x.port).join('・')+'・型 '+(cr.ver||'?')+(cr.ext?'':'・外の住所なし')+'）');
     C.timer=setTimeout(()=>{ if(HP_CALL===C&&C.st==='calling'){ hpCallBye('timeout'); hpCallEnd('timeout',T('cl_noans')); } },HP_CALL_WAIT);
     return true;
@@ -219,7 +219,7 @@ async function hpCallAccept(){
   }catch(e){ const m=String((e&&e.message)||e); hpLog('通話：応えられない（'+m+'）'); if(HP_CALL===C){ hpCallBye('fail'); hpCallEnd('fail',/NotAllowed|Permission|denied/i.test(m)?T('cl_nomic'):(e&&e.hpk?T('cl_nosend'):m)); } return false; } }
 
 function hpCallHooks(){
-  try{ if(typeof rtcOnSig==='function'&&!rtcOnSig.__call){ const f=rtcOnSig; rtcOnSig=Object.assign(async function(r){ let o=null; try{ o=JSON.parse(r&&r.body); }catch(e){ o=null; } if(o&&o.v===1&&(o.type==='call'||o.type==='callans'||o.type==='callend'||o.type==='callgo'||o.type==='callring')) return hpCallOnSig(r,o); if(o&&o.v===1&&(o.type==='sbo'||o.type==='sba')&&typeof hpSlOnSig==='function') return hpSlOnSig(r,o);   return f.apply(this,arguments); },{__call:1}); } }catch(e){}
+  try{ if(typeof rtcOnSig==='function'&&!rtcOnSig.__call){ const f=rtcOnSig; rtcOnSig=Object.assign(async function(r){ let o=null; try{ o=JSON.parse(r&&r.body); }catch(e){ o=null; } if(o&&o.v===1&&(o.type==='call'||o.type==='callans'||o.type==='callend'||o.type==='callgo'||o.type==='callring'||o.type==='callpo'||o.type==='callpa')) return hpCallOnSig(r,o); if(o&&o.v===1&&(o.type==='sbo'||o.type==='sba')&&typeof hpSlOnSig==='function') return hpSlOnSig(r,o);   return f.apply(this,arguments); },{__call:1}); } }catch(e){}
   try{ if(typeof sibOnSig==='function'&&!sibOnSig.__turn){ const f=sibOnSig; sibOnSig=Object.assign(async function(r){ let o=null; try{ o=JSON.parse(r&&r.body); }catch(e){ o=null; } if(o&&o.v===1&&o.type==='turncfg'){ if(r&&ID&&r.from===ID.address&&r.fromMaster===ID.publicKey) hpTurnOnSig(r,o); return; } if(o&&o.v===1&&(o.type==='sib-offer'||o.type==='sib-answer')&&r&&ID&&r.from===ID.address&&r.fromMaster===ID.publicKey&&r.fromDev){ const dv=r.fromDev; setTimeout(()=>{ hpTurnShareTo(dv).catch(()=>{}); },1500); } return f.apply(this,arguments); },{__turn:1}); } }catch(e){}
   try{ if(typeof hpLinkOnReply==='function'&&!hpLinkOnReply.__turn){ const f=hpLinkOnReply; hpLinkOnReply=Object.assign(function(o){ const r=f.apply(this,arguments); try{ if(o&&o.ok==='claim') setTimeout(()=>{ hpTurnEnsure().then(()=>hpTurnShare()).catch(()=>{}); },1500); }catch(e){} return r; },{__turn:1}); } }catch(e){}
   try{ if(typeof hpUpCheck==='function'&&!hpUpCheck.__turn){ const f=hpUpCheck; hpUpCheck=Object.assign(async function(){ const v=await f.apply(this,arguments); try{ if(v==='ok') setTimeout(()=>{ hpTurnEnsure(true).catch(()=>{}); },45000); }catch(e){} return v; },{__turn:1}); } }catch(e){}
@@ -566,4 +566,76 @@ try{ if(typeof hpCallOnSig==='function'&&!hpCallOnSig.__f201){ const f=hpCallOnS
     return res; },f,{__f201:1}); } }catch(e){}
 try{ if(typeof hpCallOnEnd==='function'&&!hpCallOnEnd.__f201){ const f=hpCallOnEnd; hpCallOnEnd=Object.assign(function(C){ const r=f.apply(this,arguments); try{ if(C&&C.dir==='in'&&!C.accAt&&/^(missed|peer:hangup|peer:timeout)$/.test(String(C.why||''))){ const id=C.id, at=C.at; setTimeout(()=>{ if(!HP_CALL_X.has(id)&&(!HP_CALL||HP_CALL===C||HP_CALL.st==='ended')) hpCallMissedBar(C.peer,at); },400); } }catch(e){} return r; },f,{__f201:1}); } }catch(e){}
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f201){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(C&&d&&d.__st&&C.dir==='out'&&C.st==='calling'&&C.sent){ if(C.rung) d.__st.textContent=TF('cl_ring_peer',{who:nickOf(C.peer)}); else if(typeof hpSlOpen==='function'&&!hpSlOpen(C.peer)) d.__st.textContent=TF('cl_calling_shut',{who:nickOf(C.peer)}); } }catch(e){} return r; },f,{__f201:1}); } }catch(e){}
+
+const HP_PRE_MAX=4, HP_PRE_OKWAIT=4000, HP_PRE_LATE=15000, HP_BYE_KEEP=60000; let HP_BYE_LAST=null;
+function hpPreCry(C,pc){ try{ if(!C||!C.key||!pc) return 0; const me=C.dir==='out'?1:2, you=C.dir==='out'?2:1; C.cry=C.cry||{}; C.cryW=C.cryW||new WeakSet(); let n=0;
+    for(const t of pc.getTransceivers()){ const s=t.sender, r=t.receiver; if(s&&!C.cryW.has(s)){ C.cryW.add(s); C.cry['ps'+Object.keys(C.cry).length]=hpCallCryptoApply(s,'enc',C.key,hpCallSalt(me)); n++; } if(r&&!C.cryW.has(r)){ C.cryW.add(r); C.cry['pr'+Object.keys(C.cry).length]=hpCallCryptoApply(r,'dec',C.key,hpCallSalt(you)); n++; } } return n; }catch(e){ hpLog('通話：裏の線に二重の鍵を掛けられない（'+((e&&e.message)||e)+'）'); return -1; } }
+function hpPreClose(P){ try{ if(P&&P.pc){ P.pc.ontrack=null; P.pc.onconnectionstatechange=null; P.pc.close(); } }catch(e){} try{ if(P&&P.dc) P.dc.close(); }catch(e){} }
+function hpPreDropAll(C,keep){ try{ if(C&&C.pres){ for(const k of Object.keys(C.pres)){ if(C.pres[k]!==keep) hpPreClose(C.pres[k]); } C.pres={}; } if(C&&C.pre1&&C.pre1!==keep){ hpPreClose(C.pre1); C.pre1=null; } }catch(e){} }
+function hpPreLive(P){ try{ return !!(P&&P.pc&&P.pc.connectionState==='connected'&&P.dc&&P.dc.readyState==='open'); }catch(e){ return false; } }
+
+async function hpPreOffer(N){ try{ if(!N||N.dir!=='in'||!N.preOk||N.pre1) return false; const live=()=>HP_CALL===N&&N.st==='ringing';
+    try{ if(N.prep) await N.prep; }catch(e){ return false; } if(!live()) return false;
+    const pc=new RTCPeerConnection(hpCallIceN(N.turns)), P={pc:pc,dc:null,stream:null,at:Date.now()}; N.pre1=P; const t0=Date.now();
+    const tr=pc.addTransceiver('audio',{direction:'sendrecv'}); P.tr=tr; P.dc=pc.createDataChannel('hp-pre'); hpPreCry(N,pc);
+    pc.ontrack=e=>{ try{ P.stream=(e.streams&&e.streams[0])||new MediaStream([e.track]); }catch(x){} };
+    P.dc.onmessage=e=>{ try{ const m=JSON.parse(String(e.data)); if(m&&m.t==='okd'&&P.okd) P.okd(); }catch(x){} };
+    pc.onconnectionstatechange=()=>{ try{ if(pc.connectionState==='connected'&&!P.upLog){ P.upLog=1; hpLog('通話：裏の線がつながった（'+((Date.now()-t0)/1000).toFixed(1)+' 秒・［応答］ですぐ話せる）'); } }catch(e){} };
+    await pc.setLocalDescription(await pc.createOffer()); await hpCallGatherN(pc,N.turns.length); if(!live()||N.pre1!==P){ hpPreClose(P); return false; }
+    const sdp=pc.localDescription.sdp, fp=extractFingerprint(sdp); if(!fp||!hpCallHasRelay(sdp)){ hpPreClose(P); N.pre1=null; return false; }
+    await hpCallSig(N.peer,{v:1,type:'callpo',call:N.id,sdp:sdp,fp:fp},N.dev?[N.dev]:null); if(live()) hpLog('通話：裏の線を申し込んだ');
+    if(N.late&&live()) setTimeout(()=>{ if(live()&&N.pre1===P&&!P.ans){ hpLog('通話：呼んだ側から返事が無い（もう切ったらしい。鳴らすのをやめた）'); hpCallEnd('missed',T('cl_missed')); } },HP_PRE_LATE); return true;
+  }catch(e){ try{ hpLog('通話：裏の線を作れない（'+((e&&e.message)||e)+'）'); }catch(x){} return false; } }
+
+async function hpPreAnswer(C,dev,o){ try{ C.pres=C.pres||{}; if(C.pres[dev]||Object.keys(C.pres).length>=HP_PRE_MAX) return false;
+    const pc=new RTCPeerConnection(hpCallIceN(C.turns)), P={pc:pc,dc:null,stream:null,dev:dev,at:Date.now()}; C.pres[dev]=P;
+    pc.ontrack=e=>{ try{ P.stream=(e.streams&&e.streams[0])||new MediaStream([e.track]); }catch(x){} };
+    pc.ondatachannel=e=>{ P.dc=e.channel; P.dc.onmessage=m=>{ try{ const x=JSON.parse(String(m.data)); if(x&&x.t==='ok') hpPreAdopt(C,P); }catch(y){} }; };
+    await pc.setRemoteDescription({type:'offer',sdp:o.sdp}); for(const t of pc.getTransceivers()){ try{ t.direction='sendrecv'; }catch(e){} } hpPreCry(C,pc);
+    await pc.setLocalDescription(await pc.createAnswer()); await hpCallGatherN(pc,C.turns.length); if(HP_CALL!==C||C.st!=='calling'||C.pres[dev]!==P){ hpPreClose(P); return false; }
+    const sdp=pc.localDescription.sdp, fp=extractFingerprint(sdp); if(!fp){ hpPreClose(P); delete C.pres[dev]; return false; }
+    await hpCallSig(C.peer,{v:1,type:'callpa',call:C.id,sdp:sdp,fp:fp},[dev]); hpLog('通話：裏の線に答えた（端末 '+String(dev).slice(0,10)+'…）'); return true;
+  }catch(e){ try{ hpLog('通話：裏の線に答えられない（'+((e&&e.message)||e)+'）'); }catch(x){} return false; } }
+
+async function hpPreAdopt(C,P){ try{ if(HP_CALL!==C||C.st!=='calling'||!P||!P.pc) return false; const mic=C.stream&&C.stream.getAudioTracks()[0]; const tr=P.pc.getTransceivers().find(t=>t.sender); if(!mic||!tr) return false;
+    await tr.sender.replaceTrack(mic); try{ if(tr.sender.setStreams) tr.sender.setStreams(C.stream); }catch(e){}
+    try{ P.dc.send(JSON.stringify({t:'okd'})); }catch(e){}
+    const old=C.pc; C.pc=P.pc; C.dev=P.dev; delete C.pres[P.dev]; hpPreDropAll(C,P); try{ if(old){ old.onconnectionstatechange=null; old.ontrack=null; old.close(); } }catch(e){}
+    hpCallWire(C); try{ const au=document.getElementById('hp-call-audio'); if(au&&P.stream){ C.remote=P.stream; au.srcObject=P.stream; au.play().catch(()=>{}); } }catch(e){}
+    if(C.timer){ clearTimeout(C.timer); C.timer=null; } C.st='talking'; C.talkAt=Date.now(); C.tick=setInterval(hpCallUi,1000); C.pre=1;
+    try{ const card=hpCardOf(C.peer); const others=(card&&Array.isArray(card.devices)?card.devices:[]).filter(d=>d!==C.dev); if(others.length) hpCallSig(C.peer,{v:1,type:'callend',call:C.id,why:'taken'},others).catch(()=>{}); }catch(e){}
+    hpLog('通話：つながった（呼んだ・裏の線で・二重の鍵 '+Object.keys(C.cry||{}).length+'）'); hpCallUi(); try{ hpTurnGood(C); }catch(e){} return true; }catch(e){ try{ hpLog('通話：裏の線に切り替えられない（'+((e&&e.message)||e)+'）'); }catch(x){} return false; } }
+
+async function hpPreAccept(C){ const P=C.pre1, t0=Date.now(); try{
+    try{ hpCallCard(false); }catch(e){} try{ hpCallGone(C.id); }catch(e){} try{ hpCallSibTell(C); }catch(e){}
+    C.st='connecting'; C.accAt=t0; hpCallRing(false); hpCallUi(); hpCallUnlock();
+    C.stream=await hpCallMic(); if(HP_CALL!==C||C.st!=='connecting'){ hpCallClose(C); return false; } const mic=C.stream.getAudioTracks()[0]; if(!mic) throw new Error(T('cl_nomic'));
+    if(!hpPreLive(P)) throw new Error('裏の線が切れた');
+    await P.tr.sender.replaceTrack(mic); try{ if(P.tr.sender.setStreams) P.tr.sender.setStreams(C.stream); }catch(e){}
+    const got=await new Promise(res=>{ const t=setTimeout(()=>{ P.okd=null; res(false); },HP_PRE_OKWAIT); P.okd=()=>{ clearTimeout(t); P.okd=null; res(true); }; try{ P.dc.send(JSON.stringify({t:'ok'})); }catch(e){ clearTimeout(t); res(false); } });
+    if(!got) throw new Error('呼んだ側から返事が無い');
+    if(HP_CALL!==C||C.st!=='connecting') return false;
+    const old=C.pc; C.pc=P.pc; C.pre1=null; try{ if(old){ old.onconnectionstatechange=null; old.ontrack=null; old.close(); } }catch(e){}
+    hpCallWire(C); try{ const au=document.getElementById('hp-call-audio'); if(au&&P.stream){ C.remote=P.stream; au.srcObject=P.stream; au.play().catch(()=>{}); } }catch(e){}
+    if(C.timer){ clearTimeout(C.timer); C.timer=null; } C.st='talking'; C.talkAt=Date.now(); C.tick=setInterval(hpCallUi,1000); C.pre=1;
+    hpLog('通話：つながった（応えた・裏の線で・出てから '+((Date.now()-t0)/1000).toFixed(1)+' 秒・二重の鍵 '+Object.keys(C.cry||{}).length+'）'); hpCallUi(); return true;
+  }catch(e){ hpLog('通話：裏の線では出られない（'+((e&&e.message)||e)+'）。今までのやり方で応える'); try{ if(P&&P.tr) P.tr.sender.replaceTrack(null).catch(()=>{}); }catch(x){} hpPreDropAll(C,null); try{ if(C.stream) C.stream.getTracks().forEach(t=>{ try{ t.stop(); }catch(y){} }); C.stream=null; }catch(x){} if(HP_CALL===C&&C.st==='connecting'){ C.st='ringing'; return 'redo'; } return false; } }
+try{ if(typeof hpCallAccept==='function'&&!hpCallAccept.__f202){ const f=hpCallAccept; hpCallAccept=Object.assign(async function(){ const C=HP_CALL; if(C&&C.dir==='in'&&C.st==='ringing'&&hpPreLive(C.pre1)){ const v=await hpPreAccept(C); if(v!=='redo') return v; } return f.apply(this,arguments); },f,{__f202:1}); } }catch(e){}
+try{ if(typeof hpCallClose==='function'&&!hpCallClose.__f202){ const f=hpCallClose; hpCallClose=Object.assign(function(C){ try{ hpPreDropAll(C,null); }catch(e){} return f.apply(this,arguments); },f,{__f202:1}); } }catch(e){}
+try{ if(typeof hpCallOnSig==='function'&&!hpCallOnSig.__f202){ const f=hpCallOnSig; hpCallOnSig=Object.assign(async function(r,o){
+    if(!(o&&o.v===1&&typeof o.call==='string'&&/^[0-9a-f]{16}$/.test(o.call)&&r)) return f.apply(this,arguments);
+    const from=r.from, C=HP_CALL;
+    if(o.type==='callpo'){ if(C&&C.dir==='out'&&C.st==='calling'&&C.id===o.call&&C.peer===from&&r.fromDev&&typeof o.sdp==='string'&&typeof o.fp==='string'&&extractFingerprint(o.sdp)===o.fp&&hpCallHasRelay(o.sdp)) await hpPreAnswer(C,r.fromDev,o); return; }
+    if(o.type==='callpa'){ const P=C&&C.pre1; if(C&&C.dir==='in'&&C.st==='ringing'&&C.id===o.call&&C.peer===from&&P&&!P.ans&&(!C.dev||!r.fromDev||r.fromDev===C.dev)&&typeof o.sdp==='string'&&extractFingerprint(o.sdp)===o.fp){ P.ans=1; try{ await P.pc.setRemoteDescription({type:'answer',sdp:o.sdp}); }catch(e){ hpLog('通話：裏の線の答えを受け取れない（'+((e&&e.message)||e)+'）'); } } return; }
+    const res=await f.apply(this,arguments);
+    try{ const N=HP_CALL; if(o.type==='call'&&o.pre===1&&N&&N.dir==='in'&&N.id===o.call&&N.peer===from&&N.st==='ringing'&&!N.preOk){ N.preOk=1; if(Date.now()-Number(r.sentAt)>15000) N.late=1;   hpPreOffer(N).catch(()=>{}); }
+      if(o.type==='callans'&&N&&N.dir==='out'&&N.id===o.call&&N.st!=='calling') hpPreDropAll(N,null); }catch(e){}
+    return res; },f,{__f202:1}); } }catch(e){}
+
+try{ if(typeof hpCallBye==='function'&&!hpCallBye.__f202){ const f=hpCallBye; hpCallBye=Object.assign(function(why){ const C=HP_CALL; try{ if(C&&!C.byeSent){ const B={peer:C.peer,body:{v:1,type:'callend',call:C.id,why:why},devs:C.dev?[C.dev]:null,at:Date.now(),done:false}; HP_BYE_LAST=B; const sl=(typeof hpSlSend==='function')?hpSlSend(B.peer,B.body,B.devs):[]; if(sl.length) B.done=true; } }catch(e){} return f.apply(this,arguments); },f,{__f202:1}); } }catch(e){}
+try{ if(typeof hpCallSigPost==='function'&&!hpCallSigPost.__f202){ const f=hpCallSigPost; hpCallSigPost=Object.assign(async function(peer,body){ const v=await f.apply(this,arguments); try{ const B=HP_BYE_LAST; if(B&&body&&body.type==='callend'&&body.call===B.body.call) B.done=true; }catch(e){} return v; },f,{__f202:1}); } }catch(e){}
+function hpCallSleepBye(){ try{ const C=HP_CALL; if(C&&C.dir==='out'&&C.st==='calling'){ hpLog('通話：画面が裏に回ったので、呼び出しをやめた（「切った」を知らせた）'); hpCallBye('hangup'); hpCallEnd('hangup',T('cl_end_me')); } }catch(e){} }
+function hpCallWakeBye(){ try{ const B=HP_BYE_LAST; if(!B||B.done||Date.now()-B.at>HP_BYE_KEEP) return false; B.done=true; hpLog('通話：届いたか分からない「切った」を出し直す'); hpCallSigPost(B.peer,B.body,B.devs).catch(()=>{ B.done=false; }); return true; }catch(e){ return false; } }
+try{ if(typeof hpSleepConn==='function'&&!hpSleepConn.__f202){ const f=hpSleepConn; hpSleepConn=Object.assign(function(){ hpCallSleepBye(); return f.apply(this,arguments); },f,{__f202:1}); } }catch(e){}
+try{ if(typeof window!=='undefined'&&window.addEventListener){ window.addEventListener('pagehide',()=>{ hpCallSleepBye(); }); } if(typeof document!=='undefined'&&document.addEventListener){ document.addEventListener('visibilitychange',()=>{ try{ if(document.visibilityState==='visible') setTimeout(hpCallWakeBye,3000); }catch(e){} }); } }catch(e){}
 
