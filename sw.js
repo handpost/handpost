@@ -8,6 +8,9 @@ function hpSwLease(d, ja) {
   return ja ? '郵便受けの期限まであと ' + n + ' 日です（' + w + '）。延長は Handpost の郵便受けのタブから。'
     : 'Your mailbox expires in ' + n + (n === 1 ? ' day' : ' days') + ' (' + w + '). Extend it from the Mailbox tab in Handpost.';
 }
+
+function hpSwDb() { return new Promise((res, rej) => { try { const q = indexedDB.open('hp-diag', 1); q.onupgradeneeded = () => { try { q.result.createObjectStore('push', { autoIncrement: true }); } catch (x) { } }; q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); } catch (x) { rej(x); } }); }
+function hpSwNote(o) { try { return hpSwDb().then((db) => new Promise((res) => { try { const tx = db.transaction('push', 'readwrite'); tx.objectStore('push').add(o); tx.oncomplete = () => { db.close(); res(); }; tx.onerror = () => { db.close(); res(); }; } catch (x) { res(); } })).catch(() => { }); } catch (x) { return Promise.resolve(); } }
 self.addEventListener('push', (e) => {
   let ja = true; try { ja = /^ja/i.test(String((self.navigator && self.navigator.language) || 'ja')); } catch (x) { }
   let ls = null; try { const d = e.data ? e.data.json() : null; if (d && d.x !== undefined) ls = hpSwLease(d, ja); } catch (x) { ls = null; }
@@ -22,7 +25,7 @@ self.addEventListener('push', (e) => {
     e.waitUntil(Promise.resolve(lst || []).then((cs) => {
       let front = false; try { front = cs.some((c) => c.visibilityState === 'visible' && c.focused); } catch (x) { front = false; }
       return self.registration.showNotification('Handpost', { body: body, tag: 'hp-call', renotify: true, requireInteraction: !old && !front, vibrate: front ? [] : old ? [200] : [400, 200, 400, 200, 400, 200, 400], silent: front, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })
-        .then(() => { if (front) return self.registration.getNotifications({ tag: 'hp-call' }).then((l) => { for (const n of (l || [])) n.close(); }); });
+        .then(() => hpSwNote({ t: Date.now(), at: Number(cl.at) || 0, front: front ? 1 : 0, ok: 1 }), (er) => hpSwNote({ t: Date.now(), at: Number(cl.at) || 0, front: front ? 1 : 0, ok: 0, why: String((er && er.message) || er).slice(0, 80) }));
     }).catch(() => self.registration.showNotification('Handpost', { body: body, tag: 'hp-call', renotify: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })));
     return;
   }

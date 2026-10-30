@@ -640,3 +640,12 @@ function hpCallWakeBye(){ try{ const B=HP_BYE_LAST; if(!B||B.done||Date.now()-B.
 try{ if(typeof hpSleepConn==='function'&&!hpSleepConn.__f202){ const f=hpSleepConn; hpSleepConn=Object.assign(function(){ hpCallSleepBye(); return f.apply(this,arguments); },f,{__f202:1}); } }catch(e){}
 try{ if(typeof window!=='undefined'&&window.addEventListener){ window.addEventListener('pagehide',()=>{ hpCallSleepBye(); }); } if(typeof document!=='undefined'&&document.addEventListener){ document.addEventListener('visibilitychange',()=>{ try{ if(document.visibilityState==='visible') setTimeout(hpCallWakeBye,3000); }catch(e){} }); } }catch(e){}
 
+let HP_CALL_CR_SEEN='';
+function hpCallHm(t){ try{ const d=new Date(Number(t)), p=n=>String(n).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }catch(e){ return '?'; } }
+function hpCallPushLog(cr){ try{ if(!cr||!(Number(cr.at)>0)) return false; const k=String(cr.at)+'|'+cr.code; if(k===HP_CALL_CR_SEEN) return false; HP_CALL_CR_SEEN=k; const c=Number(cr.code)||0;
+    hpLog('通知：郵便受けが最後に電話の合図を送ったのは '+hpCallHm(cr.at)+'（'+(c>=200&&c<300?'通知の窓口が受け取った '+c:c?'通知の窓口が断った '+c:'通知の窓口に届かなかった')+'）'); return true; }catch(e){ return false; } }
+async function hpCallPushDiag(){ try{ if(typeof indexedDB==='undefined') return 0; const db=await new Promise((res,rej)=>{ const q=indexedDB.open('hp-diag',1); q.onupgradeneeded=()=>{ try{ q.result.createObjectStore('push',{autoIncrement:true}); }catch(e){} }; q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); });
+    const l=await new Promise((res)=>{ try{ const tx=db.transaction('push','readwrite'), st=tx.objectStore('push'), g=st.getAll(); g.onsuccess=()=>{ const v=g.result||[]; try{ st.clear(); }catch(e){} res(v); }; g.onerror=()=>res([]); }catch(e){ res([]); } }); try{ db.close(); }catch(e){} let n=0;
+    for(const x of (Array.isArray(l)?l.slice(-10):[])){ if(!x) continue; n++; hpLog('通知：この端末が電話の合図を受けた '+hpCallHm(x.t)+'（郵便受けが送ったのは '+hpCallHm(x.at)+'・'+(x.ok?(x.front?'Handpost が前に出ていたので音なしで出した':'通知を出した'):'通知を出せなかった '+String(x.why||''))+'）'); } return n; }catch(e){ return -1; } }
+try{ if(typeof window!=='undefined'&&typeof setTimeout==='function') setTimeout(()=>{ hpCallPushDiag().catch(()=>{}); },4000); }catch(e){}
+
