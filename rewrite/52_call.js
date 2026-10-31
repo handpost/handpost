@@ -889,3 +889,35 @@ hpVmGo=async function(peer){ try{ if(!peer||HP_VMR) return false; let ac=null, o
     const lang=(typeof curLang==='function')?curLang():'ja', said=await hpVmSay(T('vm_greet'),lang); if(HP_VMR!==R) return false;
     hpLog('通話：留守電の応答の声'+(said?'を読み上げた（'+(HP_VM_LANG[lang]||'en-US')+'）':'は読み上げられなかった（画面に文を出した）')); R.st='beep'; hpVmUi(); return await hpVmRec(R); }catch(e){ hpLog('通話：留守電を始められない（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } };
 
+const HP_VMB_CSS='#hp-vm .vmb{display:none;flex-direction:column;align-items:stretch;gap:6px;width:min(92vw,420px);box-sizing:border-box;border-radius:12px;padding:8px 10px;background:rgba(226,59,59,.20);border:2px solid #ff5a5a;animation:hpvmglow 1.4s ease-in-out infinite;text-align:left}'
+ +'@keyframes hpvmglow{50%{box-shadow:0 0 0 4px rgba(255,90,90,.35)}}#hp-vm .vmb .vc-h{display:flex;align-items:center;font-size:13px;font-weight:700;color:#ff8a8a}#hp-vm .vmb .vc-r{display:flex;align-items:center;gap:8px}'
+ +'#hp-vm .vmb .vc-dot{color:#ff5a5a;animation:hpvmbl 1s infinite}@keyframes hpvmbl{50%{opacity:.2}}#hp-vm .vmb .vc-eq{display:flex;align-items:center;gap:2px;height:30px;flex:1;min-width:0}'
+ +'#hp-vm .vmb .vc-eq i{display:block;flex:1;max-width:6px;min-width:2px;height:4px;border-radius:2px;background:#ff8a8a;transition:height .08s}#hp-vm .vmb .vc-eq.fake i{animation:hpvmeq .9s ease-in-out infinite}@keyframes hpvmeq{0%,100%{height:4px}50%{height:24px}}'
+ +'#hp-vm .vmb .vc-t{font-size:12px;color:#ffd0d0;white-space:nowrap}#hp-vm .vmb button.vstop{background:#e23b3b;color:#fff;border:none;border-radius:20px;padding:8px 16px;font-weight:700;font-size:15px;white-space:nowrap}';
+const HP_VMB_EQN=20, HP_VM_RETRY_MS=1500; let HP_VM_U=null;
+function hpVmBandCss(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-vmb-css')) return false; const st=document.createElement('style'); st.id='hp-vmb-css'; st.textContent=HP_VMB_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
+function hpVmEqRun(eq,R){ let an=null, src=null, dt=null; try{ const ac=R.ac; if(ac&&ac.state!=='closed'&&ac.createMediaStreamSource&&R.stream&&typeof requestAnimationFrame==='function'){ src=ac.createMediaStreamSource(R.stream); an=ac.createAnalyser(); an.fftSize=64; an.smoothingTimeConstant=0.55; src.connect(an); dt=new Uint8Array(an.frequencyBinCount); } }catch(e){ an=null; }
+  if(!an){ eq.className='vc-eq fake'; return 'fake'; } const rec=R.rec, n=eq.children.length;
+  const step=()=>{ if(HP_VMR!==R||R.rec!==rec){ try{ src.disconnect(); }catch(e){} return; } try{ an.getByteFrequencyData(dt); for(let i=0;i<n;i++){ const x=dt[Math.min(dt.length-1,1+Math.floor(i*(dt.length-2)/n))]||0; eq.children[i].style.height=(4+Math.round(x/255*26))+'px'; } }catch(e){} requestAnimationFrame(step); };
+  requestAnimationFrame(step); return 'live'; }
+function hpVmBand(d,R){ let b=d.__band; if(!b){ b=document.createElement('div'); b.className='vmb'; d.insertBefore(b,d.__end.parentNode); d.__band=b; }
+  if(!R||R.st!=='rec'||!R.rec){ b.style.display='none'; b.__r=null; return b; } b.style.display='flex'; const t=TF('vc_rec',{t:hpVcClock(Date.now()-R.t0),max:hpVcClock(HP_VC_MAX)});
+  if(b.__r===R.rec&&b.__tx){ b.__tx.textContent=t; return b; } b.textContent=''; b.__r=R.rec;
+  const E=(tag,c,x)=>{ const e=document.createElement(tag); if(c) e.className=c; if(x!=null) e.textContent=x; return e; };
+  const h=E('div','vc-h'); h.appendChild(E('span','','🎤 '+T('cl_vm_l'))); b.appendChild(h); const r=E('div','vc-r'); b.appendChild(r);
+  r.appendChild(E('span','vc-dot','●')); const eq=E('div','vc-eq'); for(let i=0;i<HP_VMB_EQN;i++){ const k=E('i'); k.style.animationDelay=((i*37)%90/100)+'s'; eq.appendChild(k); } r.appendChild(eq);
+  const tx=E('span','vc-t',t); r.appendChild(tx); const s=E('button','vstop','■ '+T('btn_vm_end')); s.type='button'; s.onclick=()=>{ hpVmEnd().catch(()=>{}); }; r.appendChild(s); b.__tx=tx; b.__eq=eq; b.__eqm=hpVmEqRun(eq,R); return b; }
+hpVmUi=function(){ try{ const R=HP_VMR; let d=document.getElementById('hp-vm'); if(!R){ if(d) d.style.display='none'; return; } d=hpVmEl(); hpVmBandCss(); d.style.display='flex';
+    d.__who.textContent=nickOf(R.peer); const rec=(R.st==='rec'), send=(R.st==='send'); hpVmBand(d,R);
+    d.__st.style.display=rec?'none':''; d.__st.textContent=rec?'':T(send?'vm_st_send':'vm_st_greet'); d.__msg.textContent=(R.st==='greet')?T('vm_greet'):'';
+    d.__end.style.display='none'; d.__redo.style.display=rec?'':'none'; d.__cancel.style.display=send?'none':''; }catch(e){ try{ hpLog('通話：留守電の画面を出せない（'+((e&&e.message)||e)+'）'); }catch(x){} } };
+hpVmSay=function(text,lang){ return new Promise(res=>{ let done=false, started=false, tries=0, why='', nv=0; const bc=HP_VM_LANG[lang]||'en-US';
+    const end=v=>{ if(done) return; done=true; try{ hpLog('通話：留守電の読み上げ '+(v?'できた':'できない')+'（'+bc+'・声 '+nv+'・'+(tries)+' 回'+(why?'・'+why:'')+'）'); }catch(e){} res(v); };
+    try{ const ss=(typeof speechSynthesis!=='undefined')?speechSynthesis:null; if(!ss||typeof SpeechSynthesisUtterance==='undefined'){ why='読み上げの仕組みが無い'; return end(false); }
+      const go=()=>{ if(done) return; tries++; const u=new SpeechSynthesisUtterance(text); u.lang=bc; u.volume=1; u.rate=1;
+        try{ const vs=ss.getVoices()||[]; nv=vs.length; const v=vs.find(x=>x&&x.lang===bc)||vs.find(x=>x&&String(x.lang||'').replace('_','-').slice(0,2)===bc.slice(0,2)); if(v) u.voice=v; }catch(e){}
+        u.onstart=()=>{ started=true; }; u.onend=()=>end(true); u.onerror=e=>{ why=String((e&&e.error)||'error'); if(started||(why!=='interrupted'&&why!=='canceled')) end(false); };
+        HP_VM_U=u; try{ if(ss.paused) ss.resume(); }catch(e){} ss.speak(u);
+        setTimeout(()=>{ if(done||started) return; let busy=false; try{ busy=!!ss.speaking; }catch(e){} if(busy) return; if(tries<2){ why='始まらない'; try{ ss.cancel(); }catch(e){} setTimeout(go,200); } },HP_VM_RETRY_MS); };
+      let wait=0; try{ if(ss.speaking||ss.pending){ ss.cancel(); wait=250; } }catch(e){} setTimeout(go,wait); setTimeout(()=>{ if(!why) why='時間切れ'; end(false); },HP_VM_SAY_MAX); }catch(e){ why=String((e&&e.message)||e); end(false); } }); };
+
