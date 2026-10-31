@@ -799,7 +799,17 @@ function hpCpsBcStart(){ try{ if(typeof BroadcastChannel!=='function') return nu
 var HP_CPS_BCH=null; try{ HP_CPS_BCH=hpCpsBcStart(); }catch(e){}
 function hpCpsAllGap(r){ return !!(r&&Number(r.sent)===0&&Array.isArray(r.why)&&r.why.length>0&&r.why.every(x=>x==='gap')); }
 try{ if(typeof hpCpsRing==='function'&&!hpCpsRing.__f214){ const f=hpCpsRing; hpCpsRing=Object.assign(async function(peer,bodyObj,devs){ const r=await f.apply(this,arguments);
-    try{ const call=(bodyObj&&bodyObj.type==='call')?String(bodyObj.call||''):''; if(call&&hpCpsAllGap(r)){ hpLog('通話：呼び出しの通知は郵便受けが「送ったばかり」で断った（'+(HP_CPS_GAP_RETRY/1000)+' 秒後にもう一度送る）');
+    try{ const call=(bodyObj&&bodyObj.type==='call')?String(bodyObj.call||''):''; if(call&&hpCpsAllGap(r)&&!(typeof HP_CPS_RERING_ON!=='undefined'&&HP_CPS_RERING_ON)){   hpLog('通話：呼び出しの通知は郵便受けが「送ったばかり」で断った（'+(HP_CPS_GAP_RETRY/1000)+' 秒後にもう一度送る）');
         setTimeout(()=>{ try{ if(!HP_CALL||String(HP_CALL.id||'')!==call||HP_CALL.st!=='calling') return; f.call(this,peer,bodyObj,devs).then(x=>{ hpLog('通話：呼び出しの通知を送り直した（'+((x&&x.sent)?x.sent+' 台に送れた':'また送れなかった')+'）'); }).catch(()=>{}); }catch(e){} },HP_CPS_GAP_RETRY); } }catch(e){}
     return r; },f,{__f214:1}); } }catch(e){}
+
+var HP_CPS_RERING_ON=1, HP_CPS_RERING_SET=new Set(); const HP_CPS_RERING_MS=6000, HP_CPS_RERING_FOR=45000;
+function hpCpsReRing(f,peer,bodyObj,devs){ const call=String((bodyObj&&bodyObj.call)||''), t0=Date.now(); let n=0, sent=0;
+  const live=()=>!!(HP_CALL&&String(HP_CALL.id||'')===call&&HP_CALL.st==='calling'), stop=w=>{ hpLog('通話：呼び出しの通知の鳴らし直しを止めた（'+n+' 回・送れたのは '+sent+' 回・'+w+'）'); };
+  const tick=()=>{ try{ if(!live()) return stop('呼び出し中でなくなった'); if(Date.now()-t0>=HP_CPS_RERING_FOR) return stop((HP_CPS_RERING_FOR/1000)+' 秒たった'); n++;
+      Promise.resolve().then(()=>f(peer,bodyObj,devs)).catch(()=>null).then(x=>{ if(x&&Number(x.sent)>0) sent++; setTimeout(tick,HP_CPS_RERING_MS); }); }catch(e){} };
+  hpLog('通話：呼び出しの通知を '+(HP_CPS_RERING_MS/1000)+' 秒おきに鳴らし直す（呼び出し中の間・'+(HP_CPS_RERING_FOR/1000)+' 秒まで）'); setTimeout(tick,HP_CPS_RERING_MS); return true; }
+try{ if(typeof hpCpsRing==='function'&&!hpCpsRing.__f215){ const f=hpCpsRing; hpCpsRing=Object.assign(async function(peer,bodyObj,devs){ const r=await f.apply(this,arguments);
+    try{ const call=(bodyObj&&bodyObj.type==='call')?String(bodyObj.call||''):''; if(/^[0-9a-f]{16}$/.test(call)&&!HP_CPS_RERING_SET.has(call)){ HP_CPS_RERING_SET.add(call); hpCpsReRing(f,peer,bodyObj,devs); } }catch(e){}
+    return r; },f,{__f215:1}); } }catch(e){}
 
