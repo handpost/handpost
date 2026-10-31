@@ -688,7 +688,7 @@ try{ if(typeof hpCallAccept==='function'&&!hpCallAccept.__f208){ const f=hpCallA
 
 const HP_CPS_MAX=3600, HP_CPS_WAIT=2500, HP_CPS_CALL_WAIT=4000, HP_CPS_TYPES=['call','callans','callgo','callend'], HP_CPS_AGE={callans:90e3,callgo:90e3,callend:120e3}, HP_CPS_PQ_KEY='p2p_callpq', HP_CPS_PQ_N=10, HP_CPS_PQ_DEVS=40, HP_CPS_NAME={call:'呼び出し',callans:'答え',callgo:'始めよう',callend:'切った'};
 
-const HP_CPS_PQ_KEEP=300e3, HP_CPS_PQ_CAP=30, HP_CPS_PQ_SENT=20e3, HP_CPS_PQ_LAG=6e3;
+const HP_CPS_PQ_KEEP=300e3, HP_CPS_PQ_CAP=60, HP_CPS_PQ_SENT=20e3, HP_CPS_PQ_LAG=6e3;
 function hpCpsPqAll(){ try{ const o=JSON.parse(hpSecGet(HP_CPS_PQ_KEY)||'{}'); return (o&&typeof o==='object'&&!Array.isArray(o))?o:{}; }catch(e){ return {}; } }
 function hpCpsPqNote(dev,id,km,q,r){ try{ if(typeof dev!=='string'||!dev||typeof id!=='string'||!id||!(km&&km.length>=32)) return false; const s=hp5S(); const k=hpHex(s.crypto_generichash(32, hp5U('handpost-cap-pq:'+id), km.slice(0,32)));
     const o=hpCpsPqAll(), l=(Array.isArray(o[dev])?o[dev]:[]).filter(x=>x&&x.id!==id), now=Date.now(); l.unshift(Object.assign({id:id,k:k,at:now},q?{q:1}:{},r?{r:1}:{})); l.sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0)); o[dev]=l.filter((x,i)=>i<HP_CPS_PQ_N||now-(Number(x.at)||0)<HP_CPS_PQ_KEEP).slice(0,HP_CPS_PQ_CAP);
@@ -776,6 +776,7 @@ try{ if(typeof hpCpsRing==='function'&&!hpCpsRing.__f211){ const f=hpCpsRing; hp
       setTimeout(async()=>{ try{ if(HP_CALL!==C||C.st!=='connecting'||!C.cands) return; const cs=C.cands; C.cands=null; const n=await hpCallAddCands(C,cs); hpCallIceGo(C); hpLog('通話：答えを通知に載せられたので、投函を待たずに線をつなぎ始めた（'+n+'）'); }catch(e){} },HP_CALL_GO_SELF); } } }catch(e){} return r; },f,{__f211:1}); } }catch(e){}
 
 const HP_CPS_SCAN_MS=3000; let HP_CPS_SCAN_BUSY=0;
+const HP_CPS_SCAN_FAST=1000;
 function hpCpsFrom(cap){ try{ const h=JSON.parse(String(cap||'')); return (h&&typeof h.f==='string')?h.f:''; }catch(e){ return ''; } }
 async function hpCpsScan(how){ if(HP_CPS_SCAN_BUSY) return 0; HP_CPS_SCAN_BUSY=1; let n=0; try{ const all=await hpCpsStoreAll(), now=Date.now(), list=[];
     for(const d of all){ if(!d||!d.key) continue; const k=String(d.key); if(now-Number(d.at||0)>600e3){ hpCpsStoreDel(k).catch(()=>{}); continue; } if(k.slice(0,3)==='nm:'||!d.cap) continue; if(HP_CPS_SEEN.has(k)){ hpCpsStoreDel(k).catch(()=>{}); continue; } list.push(d); }
@@ -788,5 +789,8 @@ async function hpCpsScan(how){ if(HP_CPS_SCAN_BUSY) return 0; HP_CPS_SCAN_BUSY=1
   }catch(e){} finally{ HP_CPS_SCAN_BUSY=0; } return n; }
 try{ if(typeof hpCpsBoot==='function'&&!hpCpsBoot.__f212){ hpCpsBoot=Object.assign(async function(){ if(HP_CPS_BOOT) return; HP_CPS_BOOT=1; try{ await hpCpsScan('store'); for(const d of HP_CPS_PEND.splice(0)) await hpCpsTake(d,'sw'); }catch(e){} },{__f212:1}); } }catch(e){}
 try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f212){ const f=hpCallEnd; hpCallEnd=Object.assign(function(){ const C=HP_CALL; const r=f.apply(this,arguments); try{ if(C&&/^[0-9a-f]{16}$/.test(String(C.id||''))) for(const k of HP_CPS_TYPES){ HP_CPS_SEEN.add(k+':'+C.id); hpCpsStoreDel(k+':'+C.id).catch(()=>{}); } }catch(e){} return r; },f,{__f212:1}); } }catch(e){}
-try{ if(typeof setInterval==='function'){ const t=setInterval(()=>{ try{ if(HP_CPS_BOOT&&hpCpsReady()) hpCpsScan('scan').catch(()=>{}); }catch(e){} },HP_CPS_SCAN_MS); try{ if(t&&t.unref) t.unref(); }catch(e){} } }catch(e){}
+try{ if(typeof setInterval==='function'){ let n=0; const t=setInterval(()=>{ try{ n++; const busy=!!(HP_CALL&&HP_CALL.st!=='ended'); if(!busy&&(n%3)) return;   if(HP_CPS_BOOT&&hpCpsReady()) hpCpsScan('scan').catch(()=>{}); }catch(e){} },HP_CPS_SCAN_FAST); try{ if(t&&t.unref) t.unref(); }catch(e){} } }catch(e){}
+
+function hpSwMsgStart(){ try{ if(typeof navigator==='undefined'||!navigator.serviceWorker||typeof navigator.serviceWorker.startMessages!=='function') return false; navigator.serviceWorker.startMessages(); return true; }catch(e){ return false; } }
+try{ hpSwMsgStart(); }catch(e){}
 
