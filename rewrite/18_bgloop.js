@@ -1041,6 +1041,7 @@ function hpSibs(){
 }
 
 function hpPreLearn(r){
+  try{ if(typeof hpCkLearn==='function') hpCkLearn(r); }catch(e){}
   try{
     const fp=r&&r.fromPrekey; if(!ID||!fp||!r.fromDev||!hp5PreOk(r.fromDev,fp.x,fp.notAfter,fp.sig,Date.now())) return false;
     const pre=Object.assign({dev:r.fromDev,x25519:fp.x,notAfter:fp.notAfter,sig:fp.sig},(typeof fp.mlkem==='string'&&typeof fp.sig6==='string')?{mlkem:fp.mlkem,sig6:fp.sig6}:{}), newer=old=>!old||!(old.notAfter>=pre.notAfter)||(!!pre.mlkem&&old.x25519===pre.x25519&&old.notAfter===pre.notAfter&&old.mlkem!==pre.mlkem);

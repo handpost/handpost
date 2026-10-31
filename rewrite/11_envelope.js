@@ -48,6 +48,7 @@ async function hp5Prekeys(){
     catch(e){ hpLog('受け取り用の鍵に ML-KEM-1024 の鍵を足せなかった '+(e&&e.message)); }
   }
   if(changed) hpSecSet('p2p_prekeys', JSON.stringify(list));
+  try{ if(typeof hpCkEnsure==='function') hpCkEnsure(dev,kp); }catch(e){ hpLog('通話用の鍵を用意できなかった '+(e&&e.message)); }
   return list;
 }
 
@@ -167,8 +168,8 @@ function hp6Unwrap(myPriv, myX, seedHex, eph, kemB64, wrapB64, id){
 }
 
 let HP6_SEND=false;
-function hp6MyFp(p){ const o={ x:p.x, notAfter:p.notAfter, sig:p.sig }; if(p&&typeof p.kem==='string'&&typeof p.sig6==='string'&&p.kem&&p.sig6){ o.mlkem=p.kem; o.sig6=p.sig6; } return o; }
-function hp6Fp(dev, fp, at){ const o={ x:fp.x, notAfter:fp.notAfter, sig:fp.sig }; try{ if(fp&&typeof fp.mlkem==='string'&&typeof fp.sig6==='string'&&hp6PreOk(dev,fp.x,fp.mlkem,fp.notAfter,fp.sig6,at)){ o.mlkem=fp.mlkem; o.sig6=fp.sig6; } }catch(e){} return o; }
+function hp6MyFp(p){ const o={ x:p.x, notAfter:p.notAfter, sig:p.sig }; if(p&&typeof p.kem==='string'&&typeof p.sig6==='string'&&p.kem&&p.sig6){ o.mlkem=p.kem; o.sig6=p.sig6; } try{ if(typeof hpCkMyFp==='function'){ const ck=hpCkMyFp(p); if(ck) o.ck=ck; } }catch(e){}   return o; }
+function hp6Fp(dev, fp, at){ const o={ x:fp.x, notAfter:fp.notAfter, sig:fp.sig }; try{ if(fp&&typeof fp.mlkem==='string'&&typeof fp.sig6==='string'&&hp6PreOk(dev,fp.x,fp.mlkem,fp.notAfter,fp.sig6,at)){ o.mlkem=fp.mlkem; o.sig6=fp.sig6; } }catch(e){} try{ if(fp&&fp.ck&&typeof hpCkFp==='function'){ const ck=hpCkFp(dev, fp.ck, at); if(ck) o.ck=ck; } }catch(e){}   return o; }
 function hp6KemFor(dev, p, now){ try{ if(!HP6_SEND||!hp6Has()||!p) return null;
     if(typeof p.mlkem==='string'&&typeof p.sig6==='string'&&hp6PreOk(dev,p.x25519,p.mlkem,p.notAfter,p.sig6,now)) return p.mlkem;
     const q=(typeof ID!=='undefined'&&ID&&ID.pre6&&typeof ID.pre6==='object'&&!Array.isArray(ID.pre6))?ID.pre6[dev]:null;

@@ -958,3 +958,65 @@ hpVmUi=function(){ try{ const R=HP_VMR; let d=document.getElementById('hp-vm'); 
     d.__st.style.display=send?'':'none'; d.__st.textContent=send?T('vm_st_send'):''; if(d.__msg.__on!==(R.st==='greet')){ d.__msg.__on=(R.st==='greet'); hpVmMsg(d.__msg,d.__msg.__on); }
     d.__end.style.display='none'; d.__redo.style.display=(rec||rev)?'':'none'; d.__cancel.style.display=send?'none':''; }catch(e){ try{ hpLog('通話：留守電の画面を出せない（'+((e&&e.message)||e)+'）'); }catch(x){} } };
 
+const HP_CK_KEY='p2p_callkey', HP_CB_KEY='p2p_callbook', HP_CK_ROT=30*86400e3, HP_CK_LIFE=60*86400e3, HP_CB_MAX=400, HP_CB_PRUNE_MS=600e3;
+let HP_CB_PRUNED=0;
+function hpCkMsg(dev,x,na){ return 'handpost-callkey:v1:'+dev+':'+x+':'+na; }
+function hpCkList(){ try{ const a=JSON.parse(localStorage.getItem(HP_CK_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+
+function hpCkEnsure(dev,kp){
+  const s=hp5S(), now=Date.now(), n0=hpCkList().length;
+  let list=hpCkList().filter(k=>k&&k.dev===dev&&/^[0-9a-f]{64}$/.test(k.x)&&/^[0-9a-f]{64}$/.test(k.priv)&&k.notAfter>now), ch=list.length!==n0;
+  if(!list.length||!(now-list[0].at<HP_CK_ROT)){
+    const k=s.crypto_box_keypair(), x=hpHex(k.publicKey), na=now+HP_CK_LIFE;
+    list.unshift({ dev:dev, x:x, priv:hpHex(k.privateKey), at:now, notAfter:na, sig:hpHex(s.crypto_sign_detached(s.from_string(hpCkMsg(dev,x,na)), kp.privateKey.slice(1))) });
+    ch=true; hpLog('通話用の鍵を新しく作った '+x.slice(0,16));
+  }
+  if(list.length>2){ list=list.slice(0,2); ch=true; }
+  if(ch) localStorage.setItem(HP_CK_KEY, JSON.stringify(list));
+  try{ if(now-HP_CB_PRUNED>HP_CB_PRUNE_MS){ HP_CB_PRUNED=now; hpCbPrune(); } }catch(e){}
+  return list[0];
+}
+
+function hpCkMyFp(p){ try{ const k=hpCkList()[0]; if(!k||!p||k.dev!==p.dev||!(k.notAfter>Date.now())) return null; return { x:k.x, notAfter:k.notAfter, sig:k.sig }; }catch(e){ return null; } }
+function hpCkOk(dev,ck,at){
+  try{
+    if(!ck||typeof ck!=='object'||!/^ed[0-9a-f]{64}$/.test(dev)||!/^[0-9a-f]{64}$/.test(ck.x)||!Number.isFinite(ck.notAfter)||!(ck.notAfter>at)||typeof ck.sig!=='string'||!/^[0-9a-f]{128}$/.test(ck.sig)) return false;
+    const s=hp5S(); return s.crypto_sign_verify_detached(hpBytes(ck.sig), s.from_string(hpCkMsg(dev,ck.x,ck.notAfter)), hpBytes(dev).slice(1));
+  }catch(e){ return false; }
+}
+
+function hpCkFp(dev,ck,at){ return hpCkOk(dev,ck,at)?{ x:ck.x, notAfter:ck.notAfter, sig:ck.sig }:null; }
+function hpCbGet(){ try{ const o=JSON.parse(localStorage.getItem(HP_CB_KEY)||'null'); if(o&&o.v===1&&o.d&&typeof o.d==='object'&&!Array.isArray(o.d)) return o; }catch(e){} return { v:1, d:{} }; }
+function hpCbSet(o){ const now=Date.now(); let ks=Object.keys(o.d).filter(k=>{ const e=o.d[k]; return e&&e.notAfter>now; });
+  if(ks.length>HP_CB_MAX) ks=ks.sort((a,b)=>(o.d[b].at||0)-(o.d[a].at||0)).slice(0,HP_CB_MAX);
+  const d={}; for(const k of ks) d[k]=o.d[k]; localStorage.setItem(HP_CB_KEY, JSON.stringify({ v:1, d:d })); return ks.length; }
+
+function hpCkLearn(r){
+  try{
+    const ck=r&&r.fromPrekey&&r.fromPrekey.ck, now=Date.now();
+    if(typeof ID==='undefined'||!ID||!ID.address||!r.from||!r.fromDev||!hpCkOk(r.fromDev,ck,now)) return false;
+    let own=0;
+    if(r.from===ID.address){ if(r.fromMaster!==ID.publicKey||r.fromDev===hpCkSelf()) return false; own=1; }
+    else { const c=(ID.contacts||[]).find(x=>x&&x.address===r.from); if(!(c&&c.pubKey===r.fromMaster&&c.card&&Array.isArray(c.card.devices)&&c.card.devices.indexOf(r.fromDev)>=0)) return false; }
+    const b=hpCbGet(), o=b.d[r.fromDev];
+    if(o&&o.a===r.from&&o.x===ck.x&&o.notAfter===ck.notAfter) return false;
+    if(o&&o.a===r.from&&o.notAfter>ck.notAfter) return false;
+    b.d[r.fromDev]={ a:r.from, own:own, x:ck.x, notAfter:ck.notAfter, sig:ck.sig, at:now };
+    const n=hpCbSet(b); hpLog('通話の名簿に控えた（'+(own?'自分の端末':'友達の端末')+' '+String(r.fromDev).slice(0,10)+'…・名簿 '+n+' 台）'); return true;
+  }catch(e){ return false; }
+}
+function hpCkSelf(){ try{ const k=hpCkList()[0]; return k?k.dev:''; }catch(e){ return ''; } }
+
+function hpCbPrune(){
+  if(typeof ID==='undefined'||!ID||!ID.address) return 0;
+  const b=hpCbGet(), ks=Object.keys(b.d); let sibs=null, n=0;
+  for(const k of ks){ const e=b.d[k]; let keep=false;
+    try{
+      if(e&&e.own){ if(e.a===ID.address){ if(sibs===null){ try{ sibs=(typeof hpSibs==='function')?hpSibs().map(x=>x&&x.dev):[]; }catch(x){ sibs=[]; } } keep=sibs.indexOf(k)>=0; } }
+      else if(e&&e.a&&e.a!==ID.address&&!(typeof hpBlocked==='function'&&hpBlocked(e.a))){ const c=(ID.contacts||[]).find(x=>x&&x.address===e.a); keep=!!(c&&c.card&&Array.isArray(c.card.devices)&&c.card.devices.indexOf(k)>=0); }
+    }catch(x){ keep=false; }
+    if(!keep){ delete b.d[k]; n++; } }
+  if(n){ hpCbSet(b); hpLog('通話の名簿から '+n+' 台を消した（友達でない・ブロック中・外した端末）'); }
+  return n;
+}
+
