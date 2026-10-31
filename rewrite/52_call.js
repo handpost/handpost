@@ -233,7 +233,7 @@ const HP_CALL_CSS2='#hp-call .btns{position:absolute;left:0;right:0;bottom:calc(
  +'#hp-call button.opt{background:#2b3a52}#hp-call button.opt.on{background:#e8eef7;color:#1b2740}#hp-call .sp{width:76px;height:76px;visibility:hidden}'
  +'#hp-call .tap{display:none;font-size:.8em;opacity:.45;position:absolute;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom,0px))}#hp-call.dim{background:#030509}#hp-call.dim .btns,#hp-call.dim .pq{opacity:0;pointer-events:none}#hp-call.dim .tap{display:block}#hp-call.dim .who,#hp-call.dim .st{opacity:.55}'
  +'#hp-call-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:8990;background:#1b2740;color:#fff;border:1px solid #2f4466;border-radius:12px;padding:8px 10px 8px 14px;display:flex;align-items:center;gap:8px;max-width:calc(100vw - 32px);box-shadow:0 6px 24px rgba(0,0,0,.4);font-size:.92em}'
- +'#hp-call-bar .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}#hp-call-bar button{border:0;border-radius:18px;padding:7px 14px;font:inherit;cursor:pointer;flex:0 0 auto}#hp-call-bar .re{background:#2e9c5c;color:#fff}#hp-call-bar .x{background:transparent;color:#cfd8e6}';
+ +'#hp-call-bar .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}#hp-call-bar button{border:0;border-radius:18px;padding:7px 14px;font:inherit;cursor:pointer;flex:0 0 auto}#hp-call-bar .re{background:#2e9c5c;color:#fff}#hp-call-bar .vm{background:#2f6fb8;color:#fff}#hp-call-bar .x{background:transparent;color:#cfd8e6}';
 function hpCallCoarse(){ try{ return !!(window.matchMedia&&window.matchMedia('(pointer: coarse)').matches); }catch(e){ return false; } }
 function hpCallGuard(d,fn){ return function(){ try{ const now=Date.now(); if(d.classList.contains('dim')||now-(d.__showAt||0)<400||now-(d.__multiAt||0)<700) return; }catch(e){} return fn.apply(this,arguments); }; }
 function hpCallDimArm(d){ try{ if(d.__dimT){ clearTimeout(d.__dimT); d.__dimT=null; } const C=HP_CALL; if(!C||C.st!=='talking'||!hpCallCoarse()) { d.classList.remove('dim'); return; } d.__dimT=setTimeout(()=>{ try{ if(HP_CALL===C&&C.st==='talking') d.classList.add('dim'); }catch(e){} },5000); }catch(e){} }
@@ -812,4 +812,21 @@ function hpCpsReRing(f,peer,bodyObj,devs){ const call=String((bodyObj&&bodyObj.c
 try{ if(typeof hpCpsRing==='function'&&!hpCpsRing.__f215){ const f=hpCpsRing; hpCpsRing=Object.assign(async function(peer,bodyObj,devs){ const r=await f.apply(this,arguments);
     try{ const call=(bodyObj&&bodyObj.type==='call')?String(bodyObj.call||''):''; if(HP_CPS_RERING_ON&&/^[0-9a-f]{16}$/.test(call)&&!HP_CPS_RERING_SET.has(call)){ HP_CPS_RERING_SET.add(call); hpCpsReRing(f,peer,bodyObj,devs); } }catch(e){}
     return r; },f,{__f215:1}); } }catch(e){}
+
+const HP_VM_WHY=['timeout','peer:busy','fail','lost'], HP_VM_LANG={ja:'ja-JP',en:'en-US',fr:'fr-FR',de:'de-DE',pl:'pl-PL'}, HP_VM_SAY_MAX=9000;
+function hpVmOk(C){ try{ return !!(C&&C.dir==='out'&&C.peer&&!C.talkAt&&HP_VM_WHY.indexOf(String(C.why||''))>=0&&C.endText!==T('cl_nomic')&&!(typeof hpBlocked==='function'&&hpBlocked(C.peer))); }catch(e){ return false; } }
+function hpVmBeep(ac){ return new Promise(res=>{ try{ if(!ac) return res(false); const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=1000; g.gain.value=0.2; o.connect(g); g.connect(ac.destination); const t=ac.currentTime||0; o.onended=()=>res(true); o.start(t); o.stop(t+0.45); setTimeout(()=>res(true),800); }catch(e){ res(false); } }); }
+function hpVmSay(text,lang){ return new Promise(res=>{ let done=false; const end=v=>{ if(!done){ done=true; res(v); } }; try{ const ss=(typeof speechSynthesis!=='undefined')?speechSynthesis:null; if(!ss||typeof SpeechSynthesisUtterance==='undefined') return end(false);
+    const u=new SpeechSynthesisUtterance(text), bc=HP_VM_LANG[lang]||'en-US'; u.lang=bc; try{ const vs=ss.getVoices()||[]; const v=vs.find(x=>x&&x.lang===bc)||vs.find(x=>x&&String(x.lang||'').slice(0,2)===bc.slice(0,2)); if(v) u.voice=v; }catch(e){}
+    u.onend=()=>end(true); u.onerror=()=>end(false); try{ ss.cancel(); }catch(e){} ss.speak(u); setTimeout(()=>end(false),HP_VM_SAY_MAX); }catch(e){ end(false); } }); }
+async function hpVmGo(peer){ try{ if(!peer) return false; let ac=null; try{ const A=(typeof AudioContext!=='undefined')?AudioContext:((typeof webkitAudioContext!=='undefined')?webkitAudioContext:null); if(A){ ac=new A(); if(ac.resume) Promise.resolve(ac.resume()).catch(()=>{}); } }catch(e){ ac=null; }
+    try{ if(typeof openConversation==='function') openConversation(peer); }catch(e){}
+    const text=T('vm_greet'), lang=(typeof curLang==='function')?curLang():'ja'; try{ hpToast(text,HP_VM_SAY_MAX); }catch(e){}
+    const said=await hpVmSay(text,lang); hpLog('通話：伝言の前の応答の声'+(said?'を読み上げた（'+(HP_VM_LANG[lang]||'en-US')+'）':'は読み上げられなかった（画面に文を出した）'));
+    await hpVmBeep(ac); try{ if(ac&&ac.close) Promise.resolve(ac.close()).catch(()=>{}); }catch(e){} try{ hpToastHide(); }catch(e){}
+    const ok=await hpVcStart(); hpLog('通話：伝言の録音を'+(ok?'始めた':'始められない')); return !!ok; }catch(e){ hpLog('通話：伝言を残せない（'+((e&&e.message)||e)+'）'); return false; } }
+try{ if(typeof hpCallBar==='function'&&!hpCallBar.__f217){ const f=hpCallBar; hpCallBar=Object.assign(function(C){ const r=f.apply(this,arguments);
+    try{ if(hpVmOk(C)){ const b=document.getElementById('hp-call-bar'), re=b&&b.querySelector('button.re'); if(b&&re&&!b.querySelector('button.vm')){ const v=document.createElement('button'); v.type='button'; v.className='vm'; v.textContent=T('btn_vmsg');
+          v.onclick=()=>{ hpCallBar(null); if(HP_CALL&&HP_CALL.st==='ended'){ HP_CALL=null; hpCallUi(); } hpVmGo(C.peer).catch(()=>{}); }; b.insertBefore(v,re); } } }catch(e){}
+    return r; },f,{__f217:1}); } }catch(e){}
 
