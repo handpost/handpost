@@ -1718,3 +1718,7 @@ try{ if(typeof sibSendHistory==='function') sibSendHistory=hpSibSendHistory2; }c
 try{ if(typeof hpSibPut==='function'){ const f=hpSibPut; hpSibPut=async function(body){ try{ if(body&&body.type==='histpull'&&!body.have){ const h=hpSpHave(); if(Object.keys(h).length) body=Object.assign({},body,{have:h}); arguments[0]=body; } }catch(e){} return await f.apply(this,arguments); }; } }catch(e){}
 try{ if(typeof hpSibLetter==='function'){ const f=hpSibLetter; hpSibLetter=async function(r){ try{ const o=JSON.parse(r&&r.body); if(o&&o.type==='histpull'&&o.have) hpSpHaveIn(r.fromDev,o.have); }catch(e){} return await f.apply(this,arguments); }; } }catch(e){}
 
+try{ if(typeof hpConnect==='function'&&!hpConnect.__f227){ const f=hpConnect; hpConnect=Object.assign(async function(){ const busy=!!POST.connecting;
+    try{ return await f.apply(this,arguments); }
+    finally{ try{ if(!busy&&typeof BG_ON!=='undefined'&&BG_ON&&!POST.up&&!POST.connecting&&!POST.retryT&&!POST.waitVis&&!(typeof hpPostNone==='function'&&hpPostNone())&&!(typeof ID!=='undefined'&&!ID&&!HP_JOIN)){ hpLog('自分の郵便受けにつながっていないのに、つなぎ直しの予定が無い。入れ直す'); hpRetryLater(POST.gen); } }catch(e){} } },f,{__f227:1}); } }catch(e){}
+
