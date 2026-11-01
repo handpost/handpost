@@ -1020,3 +1020,61 @@ function hpCbPrune(){
   return n;
 }
 
+const HP_CK_PQ_KEY='p2p_callckpq';
+function hpCkPqAll(){ try{ const o=JSON.parse(localStorage.getItem(HP_CK_PQ_KEY)||'{}'); return (o&&typeof o==='object'&&!Array.isArray(o))?o:{}; }catch(e){ return {}; } }
+function hpCkPqNote(dev,id,km,q,r){ try{ if(typeof dev!=='string'||!dev||typeof id!=='string'||!id||!(km&&km.length>=32)) return false; const s=hp5S(); const k=hpHex(s.crypto_generichash(32, hp5U('handpost-cap-ckpq:'+id), km.slice(0,32)));
+    const o=hpCkPqAll(), l=(Array.isArray(o[dev])?o[dev]:[]).filter(x=>x&&x.id!==id), now=Date.now(); l.unshift(Object.assign({id:id,k:k,at:now},q?{q:1}:{},r?{r:1}:{})); l.sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0)); o[dev]=l.filter((x,i)=>i<HP_CPS_PQ_N||now-(Number(x.at)||0)<HP_CPS_PQ_KEEP).slice(0,HP_CPS_PQ_CAP);
+    const ks=Object.keys(o); if(ks.length>HP_CPS_PQ_DEVS){ ks.sort((a,b)=>(Number(o[a][0]&&o[a][0].at)||0)-(Number(o[b][0]&&o[b][0].at)||0)); for(const d of ks.slice(0,ks.length-HP_CPS_PQ_DEVS)) delete o[d]; }
+    localStorage.setItem(HP_CK_PQ_KEY,JSON.stringify(o)); return true; }catch(e){ return false; } }
+function hpCkPqGet(dev,id){ try{ const l=hpCkPqAll()[dev]||[]; const e=id?l.find(x=>x&&x.id===id):hpCpsPqPick(l); return (e&&/^[0-9a-f]{64}$/.test(String(e.k)))?{id:e.id,k:hpBytes(e.k)}:null; }catch(e){ return null; } }
+try{ if(typeof hpCpsPqNote==='function'&&!hpCpsPqNote.__f224){ const f=hpCpsPqNote; hpCpsPqNote=Object.assign(function(dev,id,km,q,r){ const v=f.apply(this,arguments); try{ hpCkPqNote(dev,id,km,q,r); }catch(e){} return v; },f,{__f224:1}); } }catch(e){}
+function hpCkAd(h){ return hp5Cat(hpCpsAd(h), hp5U(':ck:'+JSON.stringify([h.fk.x,h.fk.n,h.fk.s,h.ck,h.cq]))); }
+function hpCkKey(s,dh1,dh2,pair,eph,toCk,id){ return s.crypto_generichash(32, hp5Cat(hp5U('handpost-cap-ck'), eph, toCk, hp5U(String(id))), s.crypto_generichash(32, hp5Cat(dh1, dh2, pair))); }
+
+function hpCkWrap(s,h,key,toDev,myDev,eph){
+  const now=Date.now(), e=hpCbGet().d[toDev], mine=hpCkList()[0];
+  if(!e||!(e.notAfter>now)||!/^[0-9a-f]{64}$/.test(String(e.x))) return { why:'相手の端末の通話用の鍵がまだ無い' };
+  if(!mine||mine.dev!==myDev||!(mine.notAfter>now)) return { why:'この端末の通話用の鍵が無い' };
+  const pq=hpCkPqGet(toDev,null); if(!pq) return { why:'通話用の合わせ鍵がまだ無い' };
+  const toCk=hpBytes(e.x), a={ fk:{x:mine.x,n:mine.notAfter,s:mine.sig}, ck:e.x.slice(0,16), cq:pq.id }, hh=Object.assign({},h,a);
+  const kk=hpCkKey(s, s.crypto_scalarmult(eph.privateKey,toCk), s.crypto_scalarmult(hpBytes(mine.priv),toCk), pq.k, eph.publicKey, toCk, h.id);
+  const n=s.randombytes_buf(24); a.w2=hp5B64(hp5Cat(n, s.crypto_aead_xchacha20poly1305_ietf_encrypt(key, hpCkAd(hh), null, n, kk))); return { add:a };
+}
+
+hpCpsSeal=async function(peer,dev,body,type,callId,why){
+  const xf=String(arguments[6]||'');
+  const s=hp5S(), card=hpCardOf(peer), now=Date.now(); if(!card||!Array.isArray(card.prekeys)){ if(why) why.push('nocard'); return null; }
+  const pq=hpCpsPqGet(dev,null); if(!pq){ if(why) why.push('nopq'); return null; }
+  const p=card.prekeys.find(q=>q&&q.dev===dev&&hp5PreOk(dev,q.x25519,q.notAfter,q.sig,now)); if(!p){ if(why) why.push('nopre'); return null; }
+  const me=await hp5Me(), mine=me.pre, toX=hpBytes(p.x25519), eph=s.crypto_box_keypair();
+  const raw=hp5U(String(body)); let z=await hpCpsZip(raw), zf=1; if(!z){ z=raw; zf=0; }
+  const h={v:1,f:me.id,m:me.master,fd:me.dev,ds:me.devSig,fp:{x:mine.x,n:mine.notAfter,s:mine.sig},kid:String(p.x25519).slice(0,16),to:dev,at:now,id:String(callId||''),k:String(type||''),pq:pq.id,e:hp5B64(eph.publicKey),z:zf};
+  const key=hpCpsKey(s, s.crypto_scalarmult(eph.privateKey,toX), s.crypto_scalarmult(hpBytes(mine.priv),toX), pq.k, eph.publicKey, toX, h.id);
+  const n=s.randombytes_buf(24); h.c=hp5B64(hp5Cat(n, s.crypto_aead_xchacha20poly1305_ietf_encrypt(z, hpCpsAd(h), null, n, key))); if(xf) h.x=xf;
+  const out=JSON.stringify(h); if(out.length>HP_CPS_MAX){ if(why) why.push('big'); return null; }
+  let ckWhy=''; try{ const w=hpCkWrap(s,h,key,dev,me.dev,eph); if(w.add){ const o2=JSON.stringify(Object.assign({},h,w.add)); if(o2.length<=HP_CPS_MAX){ if(h.k==='call') hpLog('通話：呼び出しに通話用の鍵の包みを添えた（端末 '+String(dev).slice(0,10)+'…・'+o2.length+' 文字）'); return o2; } ckWhy='添えると '+o2.length+' 文字で大きすぎる'; } else ckWhy=w.why; }catch(e){ ckWhy=(e&&e.message)||String(e); }
+  if(h.k==='call') hpLog('通話：呼び出しに通話用の鍵の包みを添えない（端末 '+String(dev).slice(0,10)+'…・'+ckWhy+'）');
+  return out; };
+
+async function hpCkCapOpen(text){
+  const s=hp5S(); let h=null; try{ h=JSON.parse(String(text)); }catch(e){ h=null; }
+  if(!h||h.v!==1||typeof h.c!=='string'||!h.fp||typeof h.e!=='string') throw new Error('形が違う');
+  if(typeof h.w2!=='string'||!h.fk||typeof h.ck!=='string'||typeof h.cq!=='string') throw new Error('通話用の鍵の包みが無い');
+  const k=hpCkList().find(x=>x&&typeof x.x==='string'&&x.x.slice(0,16)===h.ck&&/^[0-9a-f]{64}$/.test(String(x.priv))); if(!k) throw new Error('開ける通話用の鍵が無い');
+  if(h.to!==k.dev) throw new Error('別の端末あて');
+  const e=hpCbGet().d[h.fd]; if(!e||e.a!==h.f) throw new Error('通話の名簿にない端末');
+  if(!(await hp5IdOk(h.f,h.m,h.fd,h.ds))) throw new Error('送り手の身元を確かめられない');
+  const fk={x:h.fk.x,notAfter:h.fk.n,sig:h.fk.s}; if(!hpCkOk(h.fd,fk,Number(h.at)||0)) throw new Error('送り手の通話用の鍵を確かめられない');
+  const pq=hpCkPqGet(h.fd,h.cq); if(!pq) throw new Error('通話用の合わせ鍵が無い');
+  let key, z;
+  try{ const eph=hp5Un64(h.e), my=hpBytes(k.priv), myCk=hpBytes(k.x), w=hp5Un64(h.w2);
+    const kk=hpCkKey(s, s.crypto_scalarmult(my,eph), s.crypto_scalarmult(my,hpBytes(fk.x)), pq.k, eph, myCk, String(h.id||''));
+    key=s.crypto_aead_xchacha20poly1305_ietf_decrypt(null, w.slice(24), hpCkAd(h), w.slice(0,24), kk);
+    const ct=hp5Un64(h.c); z=s.crypto_aead_xchacha20poly1305_ietf_decrypt(null, ct.slice(24), hpCpsAd(h), ct.slice(0,24), key);
+  }catch(x){ throw new Error('封が開かない'); }
+  const raw=h.z?await hpCpsUnzip(z):z; return { from:h.f, fromMaster:h.m, fromDev:h.fd, sentAt:Number(h.at)||0, body:new TextDecoder().decode(raw), id:String(h.id||''), k:String(h.k||''), ck:1 }; }
+
+try{ if(typeof hpCpsOpen==='function'&&!hpCpsOpen.__f224){ const f=hpCpsOpen; hpCpsOpen=Object.assign(async function(text){ const r=await f.apply(this,arguments);
+    try{ if(r&&r.k==='call'){ let h=null; try{ h=JSON.parse(String(text)); }catch(x){} if(h&&typeof h.w2==='string'){ try{ const c=await hpCkCapOpen(text); hpLog('通話：呼び出しを通話用の鍵でも開けた（'+(c.body===r.body?'中身が同じ':'中身が違う')+'）'); }catch(x){ hpLog('通話：呼び出しを通話用の鍵では開けない（'+((x&&x.message)||x)+'）'); } } else hpLog('通話：呼び出しに通話用の鍵の包みが無い（送り手が前の版か、まだ鍵がそろっていない）'); } }catch(x){}
+    return r; },f,{__f224:1}); } }catch(e){}
+
