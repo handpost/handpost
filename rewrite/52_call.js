@@ -1252,3 +1252,41 @@ try{ if(typeof hpVmRow==='function'&&!hpVmRow.__f230){ const f=hpVmRow; hpVmRow=
     try{ const r=document.getElementById('set-vm'), b=r&&r.children&&r.children[0]; if(b&&b.getAttribute&&b.getAttribute('data-i18n')!=='cl_vm_set'){ b.textContent=T('cl_vm_set'); b.setAttribute('data-i18n','cl_vm_set'); } }catch(e){}
     return v; },f,{__f230:1}); } }catch(e){}
 
+const HP_VM_CANCEL_GAP=1200;
+hpVmCancel=function(){ const R=HP_VMR; if(!R||R.st==='cancel') return false; try{ if(typeof speechSynthesis!=='undefined') speechSynthesis.cancel(); }catch(e){}
+  try{ hpVmStopRec(R); }catch(e){} R.st='cancel'; const gen=HP_VMR_GEN; hpVmUi(); hpLog('通話：留守電をキャンセルした');
+  (async()=>{ try{ await hpVmSay(T('vm_cancelled'),(typeof curLang==='function')?curLang():'ja'); }catch(e){} await new Promise(z=>setTimeout(z,HP_VM_CANCEL_GAP)); try{ if(HP_VMR===R&&HP_VMR_GEN===gen) hpVmClose(); }catch(e){} })();
+  return true; };
+try{ if(typeof hpVmUi==='function'&&!hpVmUi.__f231){ const f=hpVmUi; hpVmUi=Object.assign(function(){ const v=f.apply(this,arguments);
+    try{ const R=HP_VMR, d=document.getElementById('hp-vm'); if(R&&d&&R.st==='cancel'){ if(d.__msg){ d.__msg.textContent=T('vm_cancelled'); d.__msg.className='msg'; } if(d.__band) d.__band.style.display='none'; for(const k of ['__end','__redo','__cancel']) if(d[k]) d[k].style.display='none'; if(d.__st) d.__st.style.display='none'; } }catch(e){}
+    return v; },f,{__f231:1}); } }catch(e){}
+
+const HP_DM_KEY='p2p_declmsg', HP_DM_KEEP=600e3, HP_DM_KEYS=['cl_dm_1','cl_dm_2','cl_dm_3'];
+const HP_DM_CSS='#hp-call .dm{position:absolute;left:0;right:0;bottom:calc(136px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}#hp-call .dm button{width:auto;height:auto;border-radius:18px;padding:8px 16px;font-size:.9em;background:#2b3a52;color:#fff}'
+ +'#hp-call .dmp{position:absolute;inset:0;background:rgba(10,14,20,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px}#hp-call .dmp button{width:min(92vw,420px);height:auto;border-radius:12px;padding:12px 14px;font-size:1em;background:#1b2740;color:#fff;text-align:left}#hp-call .dmp button.x{background:transparent;color:#cfd8e6;text-align:center}';
+function hpDmPend(){ try{ const o=JSON.parse(localStorage.getItem(HP_DM_KEY)||'null'); return (o&&typeof o.peer==='string'&&typeof o.text==='string'&&Date.now()-(Number(o.at)||0)<HP_DM_KEEP)?o:null; }catch(e){ return null; } }
+function hpDmPendSet(o){ try{ if(o) localStorage.setItem(HP_DM_KEY,JSON.stringify(o)); else localStorage.removeItem(HP_DM_KEY); }catch(e){} }
+
+function hpDmSend(peer,text){ try{ if(typeof ID==='undefined'||!ID||!peer||!text) return false; if(typeof hpBlocked==='function'&&hpBlocked(peer)) return false; if(typeof hpCardOf==='function'&&!hpCardOf(peer)) return false;
+    const ts=Date.now(); histAdd(peer,'s',text,ts,1); try{ if(typeof CURPEER!=='undefined'&&CURPEER===peer&&typeof addMsgAt==='function') addMsgAt('self',text,(typeof myName==='function'&&myName())||T('me'),ts,0,1); }catch(e){}
+    Promise.resolve(hpSendText(peer,text,ts)).catch(()=>{}); hpLog('通話：断りのメッセージを手紙で出した → '+nickOf(peer)); return true; }catch(e){ try{ hpLog('通話：断りのメッセージを出せない（'+((e&&e.message)||e)+'）'); }catch(x){} return false; } }
+function hpDmPick(C,text){ try{ if(!C||C.st!=='ringing') return false; const peer=C.peer, lk=!!C.lk; hpCallDecline();
+    if(lk||!hpCpsReady()){ hpDmPendSet({peer:peer,text:text,at:Date.now()}); hpLog('通話：断りのメッセージを控えた（ロックを解除したら出す）'); try{ hpToast(T('cl_dm_after'),5000); }catch(e){} return true; }
+    return hpDmSend(peer,text); }catch(e){ return false; } }
+function hpDmFlush(){ try{ const o=hpDmPend(); if(!o) return false; if(!hpCpsReady()) return false; hpDmPendSet(null); return hpDmSend(o.peer,o.text); }catch(e){ return false; } }
+function hpDmPanel(d,on){ let p=d.__dmp; if(!on){ if(p) p.style.display='none'; return; } if(!p){ p=document.createElement('div'); p.className='dmp'; d.appendChild(p); d.__dmp=p; }
+  p.textContent=''; for(const k of HP_DM_KEYS){ const b=document.createElement('button'); b.type='button'; b.textContent=T(k); b.onclick=()=>{ hpDmPanel(d,false); hpDmPick(HP_CALL,T(k)); }; p.appendChild(b); }
+  const x=document.createElement('button'); x.type='button'; x.className='x'; x.textContent=T('vc_cancel'); x.onclick=()=>hpDmPanel(d,false); p.appendChild(x); p.style.display='flex'; }
+function hpDmEl(d){ try{ if(!d||d.__dm) return d; if(document.head&&!document.getElementById('hp-dm-css')){ const st=document.createElement('style'); st.id='hp-dm-css'; st.textContent=HP_DM_CSS; document.head.appendChild(st); }
+    const w=document.createElement('div'); w.className='dm'; const b=document.createElement('button'); b.type='button'; b.textContent=T('btn_cl_dm'); b.onclick=()=>{ hpCallUnlock(); hpDmPanel(d,true); }; w.appendChild(b); d.appendChild(w); d.__dm=w; }catch(e){} return d; }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f232){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(d){ hpDmEl(d); const ring=!!(C&&C.dir==='in'&&C.st==='ringing'); if(d.__dm) d.__dm.style.display=ring?'':'none'; if(!ring) hpDmPanel(d,false); } }catch(e){} return r; },f,{__f232:1}); } }catch(e){}
+try{ if(typeof setInterval==='function'){ const t=setInterval(()=>{ try{ if(hpDmPend()) hpDmFlush(); }catch(e){} },2000); try{ if(t&&t.unref) t.unref(); }catch(e){} } }catch(e){}
+
+hpVmRing=function(C,dev){ try{ if(!C||!C.vmOn||HP_CALL!==C||C.st!=='calling'||C.dir!=='out') return false; C.vmRingDevs=C.vmRingDevs||{};
+    if(dev){ if(C.vmRingDevs[dev]) return false; C.vmRingDevs[dev]=1; } else if(C.vmRing) return false;
+    const again=!!C.vmRing; C.vmRing=Date.now(); if(C.vmT) clearTimeout(C.vmT);
+    const ms=Math.max(5000,Math.min(C.vmS*1000,HP_CALL_RING_MORE-1500)); C.vmMs=ms; C.vmT=setTimeout(()=>{ try{ if(HP_CALL===C&&C.st==='calling') hpVmAuto(C); }catch(e){} },ms);
+    hpLog(again?('通話：相手の別の端末でも鳴り始めたので、留守電までの '+Math.round(ms/1000)+' 秒を数え直す'):('通話：相手の端末で鳴り始めたので、'+Math.round(ms/1000)+' 秒出なければ留守電に切り替える')); return true; }catch(e){ return false; } };
+try{ if(typeof hpCallOnSig==='function'&&!hpCallOnSig.__f233){ const f=hpCallOnSig; hpCallOnSig=Object.assign(async function(r,o){ const C0=HP_CALL, first=!(C0&&C0.vmRing); const v=await f.apply(this,arguments);
+    try{ const C=HP_CALL; if(r&&o&&o.v===1&&o.type==='callring'&&r.fromDev&&C&&C===C0&&C.dir==='out'&&C.id===o.call&&C.peer===r.from&&C.st==='calling'&&C.rung){ if(first){ (C.vmRingDevs=C.vmRingDevs||{})[r.fromDev]=1; } else hpVmRing(C,r.fromDev); } }catch(e){} return v; },f,{__f233:1}); } }catch(e){}
+
