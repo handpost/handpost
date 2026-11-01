@@ -1290,3 +1290,12 @@ hpVmRing=function(C,dev){ try{ if(!C||!C.vmOn||HP_CALL!==C||C.st!=='calling'||C.
 try{ if(typeof hpCallOnSig==='function'&&!hpCallOnSig.__f233){ const f=hpCallOnSig; hpCallOnSig=Object.assign(async function(r,o){ const C0=HP_CALL, first=!(C0&&C0.vmRing); const v=await f.apply(this,arguments);
     try{ const C=HP_CALL; if(r&&o&&o.v===1&&o.type==='callring'&&r.fromDev&&C&&C===C0&&C.dir==='out'&&C.id===o.call&&C.peer===r.from&&C.st==='calling'&&C.rung){ if(first){ (C.vmRingDevs=C.vmRingDevs||{})[r.fromDev]=1; } else hpVmRing(C,r.fromDev); } }catch(e){} return v; },f,{__f233:1}); } }catch(e){}
 
+hpVmAuto=function(C){ try{ if(!C||HP_CALL!==C||C.st!=='calling'||C.dir!=='out') return false; C.vmTold=1;
+    hpLog('通話：'+(C.vmRing?('相手の端末が鳴り始めてから '+Math.round((C.vmMs||0)/1000)+' 秒たっても出なかったので'):(Math.round(HP_VM_CAP/1000)+' 秒たっても相手の端末が鳴り始めないので'))+'、呼び出しをやめた（出なかったと伝える。録音は［音声メッセージを出す］で）');
+    hpCallBye('timeout'); hpCallEnd('timeout',TF('vm_noans',{who:nickOf(C.peer)}));
+    (async()=>{ try{ await hpVmSay(T('vm_noans_say'),(typeof curLang==='function')?curLang():'ja'); }catch(e){} })(); return true; }catch(e){ hpLog('通話：出なかったと伝えられない（'+((e&&e.message)||e)+'）'); return false; } };
+
+try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f234){ const f=hpCallEnd; hpCallEnd=Object.assign(function(why,text){ const C=HP_CALL; const r=f.apply(this,arguments);
+    try{ if(C&&C.vmTold&&why==='timeout'){ HP_CALL=C; hpCallUi(); setTimeout(()=>{ try{ if(HP_CALL===C){ HP_CALL=null; hpCallUi(); } }catch(e){} },HP_VM_TOLD_MS); } }catch(e){} return r; },f,{__f234:1}); } }catch(e){}
+const HP_VM_TOLD_MS=6000;
+
