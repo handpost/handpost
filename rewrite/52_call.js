@@ -1412,3 +1412,27 @@ function hpCvBoot(){ try{ const w=hpCvWrapPress(); if(w&&typeof document!=='unde
 try{ if(typeof document!=='undefined'&&document&&document.addEventListener){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>{ hpCvBoot(); }); else hpCvBoot(); } }catch(e){}
 try{ if(typeof showConvList==='function'&&!showConvList.__f240){ const f=showConvList; showConvList=Object.assign(function(){ try{ hpCvWrapPress(); }catch(e){} return f.apply(this,arguments); },f,{__f240:1}); } }catch(e){}
 
+const HP_CV_ON=0;
+hpCvAdd=function(){ return false; }; hpCvArm=function(){ return false; }; hpCvTell=function(){ return 0; };
+const HP_CB_CSS='#chat-head #btn-conv-call{background:#17233c;border-color:var(--line);color:var(--ink)}';
+function hpCbCss(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-cb-css')) return false; const st=document.createElement('style'); st.id='hp-cb-css'; st.textContent=HP_CB_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
+try{ hpCbCss(); if(typeof document!=='undefined'&&document&&document.addEventListener&&document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>{ hpCbCss(); }); }catch(e){}
+try{ if(typeof hpVmUi==='function'&&!hpVmUi.__f241){ const f=hpVmUi; hpVmUi=Object.assign(function(){ const v=f.apply(this,arguments);
+    try{ const R=HP_VMR, d=document.getElementById('hp-vm'); if(R&&d&&d.__msg&&R.st==='rev'){ const t=T('vm_rev_hint'); if(d.__msg.textContent!==t){ d.__msg.textContent=t; d.__msg.className='msg'; } } }catch(e){}
+    return v; },f,{__f241:1}); } }catch(e){}
+const HP_NT_HIDE_MS=[0,1500,4000,8000];
+function hpNtHide(){ try{ if(typeof document==='undefined'||document.visibilityState!=='visible'||typeof navigator==='undefined'||!navigator.serviceWorker||!navigator.serviceWorker.getRegistration) return false;
+    navigator.serviceWorker.getRegistration().then(g=>{ if(!g||!g.getNotifications) return; for(const tg of ['hp-sig','hp-call']) g.getNotifications({tag:tg}).then(l=>{ for(const n of (l||[])){ try{ if(!(n.data&&n.data.ended)) n.close(); }catch(e){} } }).catch(()=>{}); }).catch(()=>{}); return true; }catch(e){ return false; } }
+function hpNtHideSoon(){ try{ for(const ms of HP_NT_HIDE_MS) setTimeout(hpNtHide,ms); return true; }catch(e){ return false; } }
+try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f241){ const f=hpCallEnd; hpCallEnd=Object.assign(function(){ const v=f.apply(this,arguments); try{ hpNtHideSoon(); }catch(e){} return v; },f,{__f241:1}); } }catch(e){}
+let HP_BEEP_NODES=[]; const HP_BEEP_MAX=40;
+hpCallBeep=function(f,dur,vol,at,am){ try{ const C=window.AudioContext||window.webkitAudioContext; if(!C) return; if(!HP_CALL_AC) HP_CALL_AC=new C(); const a=HP_CALL_AC; try{ if(a.state==='suspended') a.resume(); }catch(e){} const t0=a.currentTime+(at||0), o=a.createOscillator(), g=a.createGain(); o.type='sine'; o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(vol,t0+0.02); g.gain.setValueAtTime(vol,t0+Math.max(0.03,dur-0.05)); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur); o.connect(g); const ns=[o,g];
+    if(am){ const l=a.createOscillator(), lg=a.createGain(), mg=a.createGain(); l.frequency.value=am; lg.gain.value=0.5; mg.gain.value=0.5; l.connect(lg); lg.connect(mg.gain); g.connect(mg); mg.connect(a.destination); l.start(t0); l.stop(t0+dur+0.02); ns.push(l,mg); } else g.connect(a.destination);
+    o.start(t0); o.stop(t0+dur+0.02); HP_BEEP_NODES.push(ns); if(HP_BEEP_NODES.length>HP_BEEP_MAX) HP_BEEP_NODES.splice(0,HP_BEEP_NODES.length-HP_BEEP_MAX); }catch(e){} };
+function hpBeepKill(){ const l=HP_BEEP_NODES; HP_BEEP_NODES=[]; for(const ns of l){ for(const n of ns){ try{ if(n.stop) n.stop(0); }catch(e){} try{ n.disconnect(); }catch(e){} } } return l.length; }
+try{ if(typeof hpCallTone==='function'&&!hpCallTone.__f241){ const f=hpCallTone; hpCallTone=Object.assign(function(k){ try{ if(k!==HP_CALL_TONE) hpBeepKill(); }catch(e){} return f.apply(this,arguments); },f,{__f241:1}); } }catch(e){}
+
+try{ if(typeof hpCallStart==='function'&&!hpCallStart.__f241){ const f=hpCallStart; hpCallStart=Object.assign(function(){ try{ hpBeepKill(); }catch(e){} return f.apply(this,arguments); },f,{__f241:1}); } }catch(e){}
+try{ if(typeof hpCallAccept==='function'&&!hpCallAccept.__f241){ const f=hpCallAccept; hpCallAccept=Object.assign(function(){ try{ hpBeepKill(); }catch(e){} return f.apply(this,arguments); },f,{__f241:1}); } }catch(e){}
+
