@@ -1414,7 +1414,7 @@ try{ if(typeof showConvList==='function'&&!showConvList.__f240){ const f=showCon
 
 const HP_CV_ON=0;
 hpCvAdd=function(){ return false; }; hpCvArm=function(){ return false; }; hpCvTell=function(){ return 0; };
-const HP_CB_CSS='#chat-head #btn-conv-call{background:#17233c;border-color:var(--line);color:var(--ink)}';
+const HP_CB_CSS='html body #chat-head #btn-conv-call{background:#17233c;border-color:var(--line);color:var(--ink)}';
 function hpCbCss(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-cb-css')) return false; const st=document.createElement('style'); st.id='hp-cb-css'; st.textContent=HP_CB_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
 try{ hpCbCss(); if(typeof document!=='undefined'&&document&&document.addEventListener&&document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>{ hpCbCss(); }); }catch(e){}
 try{ if(typeof hpVmUi==='function'&&!hpVmUi.__f241){ const f=hpVmUi; hpVmUi=Object.assign(function(){ const v=f.apply(this,arguments);
