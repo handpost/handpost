@@ -1436,3 +1436,7 @@ try{ if(typeof hpCallTone==='function'&&!hpCallTone.__f241){ const f=hpCallTone;
 try{ if(typeof hpCallStart==='function'&&!hpCallStart.__f241){ const f=hpCallStart; hpCallStart=Object.assign(function(){ try{ hpBeepKill(); }catch(e){} return f.apply(this,arguments); },f,{__f241:1}); } }catch(e){}
 try{ if(typeof hpCallAccept==='function'&&!hpCallAccept.__f241){ const f=hpCallAccept; hpCallAccept=Object.assign(function(){ try{ hpBeepKill(); }catch(e){} return f.apply(this,arguments); },f,{__f241:1}); } }catch(e){}
 
+try{ if(typeof hpVmUi==='function'&&!hpVmUi.__f249){ const f=hpVmUi; hpVmUi=Object.assign(function(){ const v=f.apply(this,arguments);
+    try{ const R=HP_VMR, d=document.getElementById('hp-vm'); if(R&&d&&d.__msg&&R.st!=='rev'&&R.st!=='cancel'&&d.__msg.textContent===TF('vm_noans',{who:nickOf(R.peer)})) d.__msg.textContent=''; }catch(e){}
+    return v; },f,{__f249:1}); } }catch(e){}
+
