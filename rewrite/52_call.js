@@ -1151,3 +1151,72 @@ async function hpCk2Ring(peer,bodyObj,devs){
     hpLog('通話：'+HP_CPS_NAME[type]+'を通話用の鍵だけの封で通知に載せた（端末 '+caps.length+' 台のうち '+out.sent+' 台に送れた・'+caps[0].blob.length+' 文字・'+((Date.now()-t0)/1000).toFixed(1)+' 秒'+(whys.length?'・送れなかった訳 '+whys.join(' '):'')+'）'); out.why=whys; return out;
   }catch(e){ hpLog('通話：通話用の鍵だけの封を送れない（'+((e&&e.message)||e)+'）'); return out; } }
 
+const HP_LK_CSS='#hp-call.lk{z-index:10001}', HP_LK_SCAN_MS=1000;
+let HP_LK_BUSY=0; const HP_LK_FAIL=new Set();
+function hpLkKey(d){ return String((d&&d.key)||((d&&d.k)+':'+(d&&d.call))); }
+
+function hpLkOn(){ try{ return !!(typeof hpVaultLocked==='function'&&hpVaultLocked()&&!hpCpsReady()&&typeof document!=='undefined'&&document.getElementById('vault-lock')&&typeof window!=='undefined'&&window.sodium&&window.sodium.crypto_scalarmult&&hpCkMe()&&hpCkList().length); }catch(e){ return false; } }
+function hpLkName(a){ try{ const P=hpCbPerson(a); return (P&&P.n)?String(P.n):''; }catch(e){ return ''; } }
+
+async function hpLkTake(d,how){ const key=hpLkKey(d);
+  try{
+    if(!d||!d.cap||HP_CPS_SEEN.has(key)||HP_LK_FAIL.has(key)||HP_CPS_TYPES.indexOf(d.k)<0) return false;
+    const nm=HP_CPS_NAME[d.k]||'合図'; let h=null; try{ h=JSON.parse(String(d.cap)); }catch(e){ h=null; }
+    if(!h||(h.v!==2&&typeof h.w2!=='string')){ HP_LK_FAIL.add(key); hpLog('通話：ロックを解除する前には'+nm+'を開けない（通話用の鍵の包みが無い。解除したあとで開ける）'); return false; }
+    const age=Date.now()-Number(d.at||0), lim=(d.k==='call')?Math.max(60000,Math.min(600000,(Number(d.w)||60)*1000)):(HP_CPS_AGE[d.k]||90e3);
+    if(age>lim||age<-60000){ HP_CPS_SEEN.add(key); if(d.key) hpCpsStoreDel(d.key).catch(()=>{}); hpLog('通話：ロックを解除する前に見つけた'+nm+'が古い（'+Math.round(age/1000)+' 秒前。捨てた）'); return false; }
+    HP_CPS_SEEN.add(key); let r=null;
+    try{ r=await hpCkCapOpen(d.cap); }catch(e){ HP_CPS_SEEN.delete(key); HP_LK_FAIL.add(key); hpLog('通話：ロックを解除する前には'+nm+'を開けない（'+((e&&e.message)||e)+'。解除したあとで開ける）'); return false; }
+    const me=hpCkMe(), e=hpCbGet().d[r.fromDev];
+    if(!me||r.from===me.id||!e||e.own||e.a!==r.from){ HP_CPS_SEEN.delete(key); HP_LK_FAIL.add(key); hpLog('通話：ロックを解除する前には'+nm+'を受けない（自分の端末か、通話の名簿にいない人から）'); return false; }
+    if(d.key) hpCpsStoreDel(d.key).catch(()=>{});
+    let o=null; try{ o=JSON.parse(r.body); }catch(x){ o=null; }
+    hpLog('通話：ロックを解除する前に'+nm+'を通話用の鍵で開いた（'+Math.round((Date.now()-r.sentAt)/1000)+' 秒前・'+(how==='sw'?'開いている間に届いた':'控えから読んだ')+'）');
+    if(o) await hpLkOnSig(r,o); try{ hpCpsSigClose(); }catch(x){} return true;
+  }catch(e){ HP_LK_FAIL.add(key); hpLog('通話：ロックを解除する前の封でエラー（'+((e&&e.message)||e)+'）'); return false; } }
+
+async function hpLkScan(how){ if(HP_LK_BUSY||!hpLkOn()) return 0; HP_LK_BUSY=1; let n=0; try{
+    const all=await hpCpsStoreAll(), now=Date.now(), list=[], keys=new Set();
+    for(const d of all.concat(HP_CPS_PEND)){ if(!d||!d.cap) continue; const k=hpLkKey(d); if(k.slice(0,3)==='nm:'||keys.has(k)||HP_CPS_SEEN.has(k)||HP_LK_FAIL.has(k)||now-Number(d.at||0)>600e3) continue; keys.add(k); list.push(d); }
+    if(!list.length) return 0; list.sort((a,b)=>(Number(a.at)||0)-(Number(b.at)||0));
+    const ends=new Set(list.filter(d=>d.k==='callend').map(d=>String(d.call||''))), newest={}; for(const d of list.slice().reverse()){ if(d.k!=='call') continue; const f=hpCpsFrom(d.cap); if(f&&!newest[f]) newest[f]=d; }
+    for(const d of list){ const k=hpLkKey(d);
+      if(d.k==='call'){ const f=hpCpsFrom(d.cap), ended=ends.has(String(d.call||'')), older=!!(f&&newest[f]&&newest[f]!==d);
+        if(ended||older){ HP_CPS_SEEN.add(k); if(d.key) hpCpsStoreDel(d.key).catch(()=>{}); hpLog('通話：ロックを解除する前に、古い呼び出しを捨てた（'+(ended?'もう切られている':'新しい呼び出しがある')+'）'); continue; } }
+      if(!hpLkOn()) break; try{ if(await hpLkTake(d,how)) n++; }catch(e){} }
+  }catch(e){} finally{ HP_LK_BUSY=0; } return n; }
+
+async function hpLkOnSig(r,o){
+  try{
+    if(!o||o.v!==1||typeof o.call!=='string'||!/^[0-9a-f]{16}$/.test(o.call)) return;
+    const from=r.from, C=HP_CALL;
+    if(o.type==='callend'){ try{ hpCallGone(o.call); }catch(e){} if(C&&C.id===o.call&&C.peer===from&&C.st!=='ended'){ C.byeSent=true; const w=String(o.why||''); hpCallEnd('peer:'+w,w==='decline'?T('cl_declined'):w==='busy'?TF('cl_busy',{who:nickOf(from)}):w==='nopq'?T('cl_nopq'):w==='taken'?T('cl_taken'):w==='timeout'?T('cl_noans'):w==='hangup'?TF('cl_end_peer',{who:nickOf(from)}):w==='lost'?T('cl_lost'):T('cl_ended')); } return; }
+    if(o.type==='callgo'){ if(!(C&&C.dir==='in'&&C.id===o.call&&C.peer===from&&C.st==='connecting'&&C.pc&&C.cands)) return; const cs=C.cands; C.cands=null; const n=await hpCallAddCands(C,cs); hpCallIceGo(C); hpLog('通話：相手の準備が整ったので線をつなぎ始めた（'+n+'）'); return; }
+    if(o.type!=='call') return;
+    if((typeof HP_CALL_GONE!=='undefined'&&HP_CALL_GONE.has(o.call))||(C&&C.id===o.call)) return;
+    const tn=hpCallTurnOf(o.t); if(typeof o.sdp!=='string'||typeof o.fp!=='string'||extractFingerprint(o.sdp)!==o.fp||typeof o.k!=='string'||!/^[0-9a-f]{64}$/.test(o.k)||o.pq!==1||!tn){ hpLog('通話の呼び出しの形が違う（捨てた）'); return; }
+    if(!hpCallCan()){ hpCk2Ring(from,{v:1,type:'callend',call:o.call,why:'nopq'},[r.fromDev]).catch(()=>{}); hpLog('通話：この端末では二重の鍵が使えないので応えない'); return; }
+    if(C&&C.st!=='ended'){ hpCk2Ring(from,{v:1,type:'callend',call:o.call,why:'busy'},[r.fromDev]).catch(()=>{}); hpLog('通話：取り込み中なので応えない'); return; }
+    const age=Date.now()-Number(r.sentAt), w=Math.min(HP_CALL_ASK,Number(o.w)>0?Number(o.w):HP_CALL_MAXAGE); if(age>w||age<-60000){ hpLog('古い通話の合図（'+Math.round(age/1000)+' 秒前。捨てた）'); return; }
+    const N={id:o.call,peer:from,dir:'in',st:'ringing',pc:null,stream:null,dev:r.fromDev||null,key:hpCallHexU8(o.k),offer:o.sdp,turn:tn,turns:hpCallTurnsOf(o,tn),at:Date.now(),timer:null,lk:1};
+    HP_CALL=N; hpCallUi(); hpCallRing(true); N.prep=hpCallPrep(N); N.prep.catch(()=>{});
+    hpLog('通話：'+nickOf(from)+' から呼び出し（ロックを解除する前。通話の名簿で鳴らした）'); try{ hpCallCard(true); }catch(e){}
+    N.timer=setTimeout(()=>{ if(HP_CALL===N&&N.st==='ringing'){ hpCallEnd('missed',T('cl_missed')); } },Math.max(15000,Math.min(HP_CALL_RING_MORE,w-Math.max(0,age))));
+  }catch(e){ hpLog('通話の合図でエラー（'+((e&&e.message)||e)+'）'); } }
+
+try{ if(typeof nickOf==='function'&&!nickOf.__f226){ const f=nickOf; nickOf=Object.assign(function(a){ try{ if(!(typeof ID!=='undefined'&&ID&&ID.contacts)){ const n=hpLkName(a); if(n) return n; } }catch(e){} return f.apply(this,arguments); },f,{__f226:1}); } }catch(e){}
+
+try{ if(typeof hpCallSig==='function'&&!hpCallSig.__f226){ const f=hpCallSig; hpCallSig=Object.assign(async function(peer,body,devs){
+    const C=HP_CALL; if(!(C&&C.lk&&C.peer===peer&&!hpCpsReady())) return f.apply(this,arguments);
+    const type=body&&body.type; if(HP_CPS_TYPES.indexOf(type)<0) return null;
+    try{ if(type==='callans') hpCpsNamePut(body.call,nickOf(peer)).catch(()=>{}); }catch(e){}
+    const r=await hpCk2Ring(peer,body,devs); if(!(r&&Number(r.sent)>0)){ const e=new Error('通話用の鍵だけの封を送れない'); e.hpk='wait'; throw e; }
+    return {lk:1}; },f,{__f226:1}); } }catch(e){}
+
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f226){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(d){ const on=!!(C&&C.lk&&document.getElementById('vault-lock'));
+      if(on&&document.head&&!document.getElementById('hp-lk-css')){ const st=document.createElement('style'); st.id='hp-lk-css'; st.textContent=HP_LK_CSS; document.head.appendChild(st); }
+      if(d.classList) d.classList.toggle('lk',on); } }catch(e){} return r; },f,{__f226:1}); } }catch(e){}
+
+try{ if(typeof hpCpsGot==='function'&&!hpCpsGot.__f226){ const f=hpCpsGot; hpCpsGot=Object.assign(function(d){ const v=f.apply(this,arguments); try{ if(hpLkOn()) hpLkTake(d,'sw').catch(()=>{}); }catch(e){} return v; },f,{__f226:1}); } }catch(e){}
+try{ if(typeof setInterval==='function'){ const t=setInterval(()=>{ try{ if(hpLkOn()) hpLkScan('store').catch(()=>{}); }catch(e){} },HP_LK_SCAN_MS); try{ if(t&&t.unref) t.unref(); }catch(e){} } }catch(e){}
+
