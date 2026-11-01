@@ -1245,3 +1245,10 @@ function hpVmRing(C){ try{ if(!C||!C.vmOn||C.vmRing||HP_CALL!==C||C.st!=='callin
 try{ if(typeof hpCallOnSig==='function'&&!hpCallOnSig.__f229){ const f=hpCallOnSig; hpCallOnSig=Object.assign(async function(r,o){ const v=await f.apply(this,arguments);
     try{ const C=HP_CALL; if(r&&o&&o.v===1&&o.type==='callring'&&C&&C.dir==='out'&&C.id===o.call&&C.peer===r.from&&C.st==='calling'&&C.rung) hpVmRing(C); }catch(e){} return v; },f,{__f229:1}); } }catch(e){}
 
+try{ if(typeof hpVmUi==='function'&&!hpVmUi.__f230){ const f=hpVmUi; hpVmUi=Object.assign(function(){ const v=f.apply(this,arguments);
+    try{ const R=HP_VMR, d=document.getElementById('hp-vm'); if(R&&d&&d.__msg&&(R.st==='greet'||R.st==='beep')){ const t=TF('vm_noans',{who:nickOf(R.peer)}); if(d.__msg.textContent!==t){ d.__msg.textContent=t; d.__msg.className='msg'; } } }catch(e){}
+    return v; },f,{__f230:1}); } }catch(e){}
+try{ if(typeof hpVmRow==='function'&&!hpVmRow.__f230){ const f=hpVmRow; hpVmRow=Object.assign(function(){ const v=f.apply(this,arguments);
+    try{ const r=document.getElementById('set-vm'), b=r&&r.children&&r.children[0]; if(b&&b.getAttribute&&b.getAttribute('data-i18n')!=='cl_vm_set'){ b.textContent=T('cl_vm_set'); b.setAttribute('data-i18n','cl_vm_set'); } }catch(e){}
+    return v; },f,{__f230:1}); } }catch(e){}
+
