@@ -14,6 +14,9 @@ function hpSwNote(o) { try { return hpSwDb().then((db) => new Promise((res) => {
 
 function hpSwCapDb() { return new Promise((res, rej) => { try { const q = indexedDB.open('hp-cap', 1); q.onupgradeneeded = () => { try { q.result.createObjectStore('cap', { keyPath: 'key' }); } catch (x) { } }; q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error || new Error('idb')); } catch (x) { rej(x); } }); }
 function hpSwCapPut(o) { try { return hpSwCapDb().then((db) => new Promise((res) => { try { const tx = db.transaction('cap', 'readwrite'); tx.objectStore('cap').put(o); tx.oncomplete = () => { db.close(); res(true); }; tx.onerror = () => { db.close(); res(false); }; } catch (x) { try { db.close(); } catch (y) { } res(false); } })).catch(() => false); } catch (x) { return Promise.resolve(false); } }
+
+function hpSwCallHide(cs, cl) { let live = false; try { live = Array.isArray(cs) && cs.some((c) => c.visibilityState === 'visible'); } catch (x) { live = false; } if (!live) return Promise.resolve(false);
+  return self.registration.getNotifications({ tag: 'hp-call' }).then((l) => { let k = 0; for (const n of (l || [])) { try { if (!(n.data && n.data.ended)) { n.close(); k++; } } catch (x) { } } return k > 0; }).catch(() => false); }
 function hpSwCapTell(cs, o) { const m = { t: 'hp-cap', key: o.key, k: o.k, call: o.call, at: o.at, w: o.w, cap: o.cap }; try { for (const c of (cs || [])) { try { c.postMessage(m); } catch (x) { } } } catch (x) { } try { if (typeof BroadcastChannel === 'function') { const bc = new BroadcastChannel('hp-cap'); bc.postMessage(m); bc.close(); } } catch (x) { } }
 function hpSwCapRec(d, k) { return { key: k + ':' + String(d.call || ''), k: k, call: String(d.call || ''), at: Number(d.at) || 0, w: Number(d.w) || 0, cap: String(d.cap || '') }; }
 
@@ -42,6 +45,7 @@ self.addEventListener('push', (e) => {
       let front = false; try { front = cs.some((c) => c.visibilityState === 'visible' && c.focused); } catch (x) { front = false; }
       const keep = rec ? hpSwCapPut(rec).then(() => hpSwCapTell(cs, rec)) : Promise.resolve();
       return keep.then(() => self.registration.showNotification('Handpost', Object.assign({ body: body, tag: 'hp-call', renotify: true, requireInteraction: !old && !front, silent: front, data: { call: String(cl.call || '') }, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' }, front ? {} : { vibrate: old ? [200] : [400, 200, 400, 200, 400, 200, 400] })))
+        .then(() => hpSwCallHide(cs, cl))
         .then(() => hpSwNote({ t: Date.now(), at: Number(cl.at) || 0, front: front ? 1 : 0, ok: 1, n: Array.isArray(cs) ? cs.length : 0 }), (er) => hpSwNote({ t: Date.now(), at: Number(cl.at) || 0, front: front ? 1 : 0, n: Array.isArray(cs) ? cs.length : 0, ok: 0, why: String((er && er.message) || er).slice(0, 80) }));
     }).catch(() => self.registration.showNotification('Handpost', { body: body, tag: 'hp-call', renotify: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })));
     return;
