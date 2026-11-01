@@ -1407,3 +1407,8 @@ try{ if(typeof hpCallStart==='function'&&!hpCallStart.__f239){ const f=hpCallSta
 try{ if(typeof hpCallAccept==='function'&&!hpCallAccept.__f239){ const f=hpCallAccept; hpCallAccept=Object.assign(async function(){ const v=await f.apply(this,arguments); try{ if(v!==false) hpCvTell(1); }catch(e){} return v; },f,{__f239:1}); } }catch(e){}
 try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f239){ const f=hpCallEnd; hpCallEnd=Object.assign(function(){ let live=false; try{ live=hpCvMe(); }catch(e){} const v=f.apply(this,arguments); try{ if(live){ hpCvTell(0); hpCvTick(); } }catch(e){} return v; },f,{__f239:1}); } }catch(e){}
 
+function hpCvWrapPress(){ try{ if(typeof hpCtrPress==='function'&&!hpCtrPress.__f239){ const f=hpCtrPress; hpCtrPress=Object.assign(function(el,a){ const v=f.apply(this,arguments); try{ if(el&&el.className&&String(el.className).split(' ').includes('conv-item')){ hpCvAdd(el,a); hpCvArm(); } }catch(e){} return v; },f,{__f239:1}); return true; } }catch(e){} return false; }
+function hpCvBoot(){ try{ const w=hpCvWrapPress(); if(w&&typeof document!=='undefined'&&document.querySelector&&document.querySelector('#convlist .conv-item')&&typeof renderConvList==='function') renderConvList(); return w; }catch(e){ return false; } }
+try{ if(typeof document!=='undefined'&&document&&document.addEventListener){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>{ hpCvBoot(); }); else hpCvBoot(); } }catch(e){}
+try{ if(typeof showConvList==='function'&&!showConvList.__f240){ const f=showConvList; showConvList=Object.assign(function(){ try{ hpCvWrapPress(); }catch(e){} return f.apply(this,arguments); },f,{__f240:1}); } }catch(e){}
+
