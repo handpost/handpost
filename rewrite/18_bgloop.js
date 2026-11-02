@@ -1722,3 +1722,9 @@ try{ if(typeof hpConnect==='function'&&!hpConnect.__f227){ const f=hpConnect; hp
     try{ return await f.apply(this,arguments); }
     finally{ try{ if(!busy&&typeof BG_ON!=='undefined'&&BG_ON&&!POST.up&&!POST.connecting&&!POST.retryT&&!POST.waitVis&&!(typeof hpPostNone==='function'&&hpPostNone())&&!(typeof ID!=='undefined'&&!ID&&!HP_JOIN)){ hpLog('自分の郵便受けにつながっていないのに、つなぎ直しの予定が無い。入れ直す'); hpRetryLater(POST.gen); } }catch(e){} } },f,{__f227:1}); } }catch(e){}
 
+function hpWaitVisFix(why){ try{ if(typeof POST==='undefined'||!POST||!POST.waitVis||POST.waitVis!==POST.gen||!BG_ON||POST.up||POST.connecting||hpHidden()) return false;
+    POST.waitVis=0; const gen=POST.gen, d=300+hpJitter(1200); hpLog('画面はもう表にあるのに、戻るのを待っていた（'+why+'）。'+(d/1000).toFixed(1)+' 秒後につなぎ直す');
+    setTimeout(()=>{ try{ if(BG_ON&&POST.gen===gen&&!POST.up&&!POST.connecting) hpConnect(); }catch(e){} },d); return true; }catch(e){ return false; } }
+try{ if(typeof hpConnect==='function'&&!hpConnect.__f268){ const f=hpConnect; hpConnect=Object.assign(async function(){ try{ return await f.apply(this,arguments); } finally{ try{ hpWaitVisFix('つなぎの終わり'); }catch(e){} } },f,{__f268:1});
+    if(typeof setInterval==='function'){ const t=setInterval(()=>{ try{ hpWaitVisFix('見回り'); }catch(e){} },5000); try{ if(t&&t.unref) t.unref(); }catch(e){} } } }catch(e){}
+

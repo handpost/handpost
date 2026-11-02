@@ -1509,6 +1509,31 @@ hpTipNext=function(C){ try{ if(!C||HP_CALL!==C||C.st!=='calling'||C.dir!=='out')
     t.textContent=''; const h=document.createElement('h4'); h.textContent=T('cl_why_h'); const sc=document.createElement('div'); sc.className='wsc'; const p=document.createElement('p'); p.textContent=T('cl_why_all'); sc.appendChild(p); t.appendChild(h); t.appendChild(sc); t.style.display='';
     C.tipT='why'; hpWhyRun(C,sc); return true; }catch(e){ return false; } };
 
+var HP_CL3B_CSS='#hp-call.cl3{justify-content:flex-start;overflow-y:auto;padding-top:calc(env(safe-area-inset-top,0px) + 28px);padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}#hp-call.cl3>.st{min-height:4.8em}#hp-call.cl3>.hp-tip{margin-bottom:0}#hp-call .hp-tip .wsc p{padding-top:4.8em;white-space:pre-line}';
+function hpCl3bCss(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-cl3b-css')) return false; const s=document.createElement('style'); s.id='hp-cl3b-css'; s.textContent=HP_CL3B_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
+hpCl3bCss();
+
+var HP_CL3_HOLD=4000, HP_CL3_END=4000;
+function hpCl3Hold(C){ try{ if(!C||C.dir!=='out'||C.cl3K==null) return ''; const now=Date.now(); if(C.st==='talking'&&C.talkAt&&now-C.talkAt<HP_CL3_HOLD) return 'ok'; if(C.st==='ended'&&!C.talkAt&&C.cl3EndAt) return 'ng'; return ''; }catch(e){ return ''; } }
+function hpCl3Steps(d,C,E,kk,all){ const at=C.at||E, g=C.gathered||0, sn=C.sent||0, pl=C.cl3Pull||0, fmt=ms=>{ if(ms==null) return ''; const v=Math.max(0,ms)/1000; return TF('cl_wait',{n:v<1?v.toFixed(1):String(Math.floor(v))}); };
+  const dur=[g?g-at:E-at, g?(sn?sn-g:E-g):null, sn?(pl?pl-sn:E-sn):null, pl?E-pl:null];
+  d.__stp.textContent=''; d.__stp.classList&&d.__stp.classList.add('cl3s'); ['cl_step_tie','cl_step_run','cl_step_ring','cl_step_pull'].forEach((x,i)=>{ if(i){ const sp=document.createElement('b'); sp.textContent='›'; d.__stp.appendChild(sp); } const w=document.createElement('span'); w.className='s'; const e=document.createElement('i'); e.textContent=T(x); if(all||i<kk) e.className='dn'; else if(i===kk) e.className='on'; const sm=document.createElement('small'); sm.textContent=(all?dur[i]!=null:i<=kk)?fmt(dur[i]):''; w.appendChild(e); w.appendChild(sm); d.__stp.appendChild(w); }); d.__stp.__k=''; d.__stp.style.display=''; }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f267){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(!d||!d.classList||!C) return r;
+      if(C.dir==='out'&&(C.st==='calling'||C.st==='connecting')){ C.cl3K=(typeof hpCallStage==='function')?hpCallStage(C):2; return r; }
+      const h=hpCl3Hold(C); if(!h) return r; const now=Date.now(), E=h==='ok'?C.talkAt:C.cl3EndAt;
+      d.classList.add('cl3'); if(d.__wt){ d.__wt.textContent=TF(h==='ok'?'cl_hd_ok':'cl_hd_ng',{n:Math.max(0,Math.floor((E-(C.at||E))/1000))}); d.__wt.style.display=''; }
+      if(d.__stp) hpCl3Steps(d,C,E,h==='ok'?4:C.cl3K,h==='ok');
+      if(d.__tip) d.__tip.style.display='none';
+      if(h==='ok'&&!C.cl3HoldT){ C.cl3HoldT=setTimeout(()=>{ try{ if(HP_CALL===C) hpCallUi(); }catch(e){} },Math.max(50,HP_CL3_HOLD-(now-C.talkAt)+50)); hpLog('通話：つながるまで '+Math.floor((E-(C.at||E))/1000)+' 秒'); }
+    }catch(e){} return r; },f,{__f267:1}); } }catch(e){}
+try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f267){ const f=hpCallEnd; hpCallEnd=Object.assign(function(){ const C=HP_CALL; let ng=false;
+    try{ ng=!!(C&&C.st!=='ended'&&C.dir==='out'&&!C.talkAt&&C.cl3K!=null); if(ng) C.cl3EndAt=Date.now(); }catch(e){ ng=false; }
+    if(!ng) return f.apply(this,arguments);
+    const g=(typeof globalThis!=='undefined')?globalThis:window, st=g.setTimeout; let r;
+    g.setTimeout=function(fn,ms){ const a=Array.prototype.slice.call(arguments); if(ms===2200) a[1]=HP_CL3_END; return st.apply(g,a); };
+    try{ r=f.apply(this,arguments); }finally{ g.setTimeout=st; }
+    try{ hpLog('通話：つながらずに終わった（'+Math.floor((C.cl3EndAt-(C.at||C.cl3EndAt))/1000)+' 秒・'+['結ぶ','運ぶ','鳴らす','張る'][Math.max(0,Math.min(3,C.cl3K))]+'まで）'); }catch(e){} return r; },f,{__f267:1}); } }catch(e){}
+
 var HP_CBAR2_CSS='html body #hp-call-bar{background:#111a2c;border:2px solid #4a6a9c;box-shadow:0 8px 28px rgba(0,0,0,.7);width:max-content}@media (max-width:700px){html body #hp-call-bar{width:calc(100vw - 24px);max-width:calc(100vw - 24px);box-sizing:border-box;flex-wrap:wrap;row-gap:8px;column-gap:6px;justify-content:flex-end;padding:10px 10px 10px 14px}html body #hp-call-bar .t{flex:1 0 100%;white-space:normal;overflow:visible}html body #hp-call-bar button{padding:7px 10px}html body #hp-call-bar button.x{padding:7px 6px}}';
 function hpCbar2Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-cbar2-css')) return false; const s=document.createElement('style'); s.id='hp-cbar2-css'; s.textContent=HP_CBAR2_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
 hpCbar2Css();
