@@ -1440,3 +1440,9 @@ try{ if(typeof hpVmUi==='function'&&!hpVmUi.__f249){ const f=hpVmUi; hpVmUi=Obje
     try{ const R=HP_VMR, d=document.getElementById('hp-vm'); if(R&&d&&d.__msg&&R.st!=='rev'&&R.st!=='cancel'&&d.__msg.textContent===TF('vm_noans',{who:nickOf(R.peer)})) d.__msg.textContent=''; }catch(e){}
     return v; },f,{__f249:1}); } }catch(e){}
 
+const HP_BEEP_MAX2=600;
+hpRingNote=function(a,type,f,t0,dur,vol){ const o=a.createOscillator(), g=a.createGain(); o.type=type; o.frequency.value=f; g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(vol,t0+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur); o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0+dur+0.02); try{ HP_BEEP_NODES.push([o,g]); if(HP_BEEP_NODES.length>HP_BEEP_MAX2) HP_BEEP_NODES.splice(0,HP_BEEP_NODES.length-HP_BEEP_MAX2); }catch(e){} };
+try{ if(typeof hpCallRing==='function'&&!hpCallRing.__f250){ const f=hpCallRing; hpCallRing=Object.assign(function(on){ try{ hpBeepKill(); }catch(e){} return f.apply(this,arguments); },f,{__f250:1}); } }catch(e){}
+function hpBeepVis(){ try{ if(typeof document==='undefined'||document.visibilityState!=='visible') return false; const C=(typeof HP_CALL!=='undefined')?HP_CALL:null; if(C&&C.st!=='ended') return false; return hpBeepKill()>0; }catch(e){ return false; } }
+try{ if(typeof document!=='undefined'&&document&&document.addEventListener) document.addEventListener('visibilitychange',hpBeepVis); }catch(e){}
+
