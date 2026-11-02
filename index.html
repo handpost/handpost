@@ -398,7 +398,7 @@ a{color:var(--teal)}
 <script src="/jsqr.js?v=876093b184fb"></script><div id="lightbox"><img id="lightbox-img" alt=""></div><div id="qrfull"><video id="qrfull-video" playsinline></video><div class="bar"><b id="qrfull-title">QR</b><button id="qrfull-close">&#10005;</button></div><div class="hint" id="qrfull-hint"></div></div>
 <div id="hp-search" role="dialog" aria-modal="true"><div class="sbar"><span class="sic" aria-hidden="true">&#128269;</span><input type="search" id="sr-q" data-i18n-ph="ph_search" placeholder="名前・手紙の言葉で探す" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"><button class="b" id="sr-close" type="button" data-i18n="btn_sr_close">閉じる</button></div><div id="sr-scope" style="display:none"><span id="sr-who"></span><button type="button" id="sr-all" data-i18n="btn_sr_all">全員から探す</button><button type="button" id="sr-dbtn" class="sr-dl">&#128197; <span data-i18n="sr_date">日付へ飛ぶ</span></button><input type="date" id="sr-date" hidden></div><div id="sr-cal" style="display:none"></div><div id="sr-res"></div></div>
 <header>
-  <div id="hdr-actions"><button id="btn-home" style="display:none">&#8249; <span data-i18n="tab_chat">Chats</span></button><span id="hp-sbox"><button id="btn-search" type="button" title="住所録の名前と手紙を探す" data-i18n-title="tip_search">&#128269;<span class="sl" data-i18n="sr_btn">検索</span></button><button id="btn-qr" title="QR">&#128247;</button></span><button id="btn-bell" type="button" class="on" title="通知のオン・オフ（斜線＝音も通知も出さない）" data-i18n-title="tip_bell" aria-pressed="true">&#128276;</button><button id="btn-menu" title="Menu">&#9776;<span class="badge" id="menu-badge"></span></button></div>
+  <div id="hdr-actions"><button id="btn-home" style="display:none">&#8249; <span data-i18n="tab_chat">Chats</span></button><span id="hp-sbox"><button id="btn-search" type="button" title="友達の名前と手紙を探す" data-i18n-title="tip_search">&#128269;<span class="sl" data-i18n="sr_btn">検索</span></button><button id="btn-qr" title="QR">&#128247;</button></span><button id="btn-bell" type="button" class="on" title="通知のオン・オフ（斜線＝音も通知も出さない）" data-i18n-title="tip_bell" aria-pressed="true">&#128276;</button><button id="btn-menu" title="Menu">&#9776;<span class="badge" id="menu-badge"></span></button></div>
   <div id="hdr-top"><h1>Handpost</h1><span id="me-chip" style="display:none"><svg class="me-ic" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="5" r="3" fill="currentColor"/><path d="M2 15c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5z" fill="currentColor"/></svg><span id="me-name" class="unset" role="button" tabindex="0"></span><span id="me-role" style="display:none"></span></span><button id="me-qr" type="button" title="招待状の QR" data-i18n-title="tip_me_qr" style="display:none"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M1 1h6v6H1zM2 2v4h4V2zM3 3h2v2H3zM9 1h6v6H9zM10 2v4h4V2zM11 3h2v2h-2zM1 9h6v6H1zM2 10v4h4v-4zM3 11h2v2H3zM9 9h2v2H9zM11 11h2v2h-2zM13 9h2v2h-2zM9 13h2v2H9zM13 13h2v2h-2z"/></svg><span class="me-qr-t" data-i18n="me_qr_t">招待</span></button></div>
   <div id="myname-wrap" style="display:none"><button id="me-icon" class="unset" type="button">?</button></div>
   <span id="addr" class="mono" title="Tap to copy" style="display:none">No identity loaded</span>
@@ -460,18 +460,18 @@ a{color:var(--teal)}
 
   </div>
   <div class="card">
-    <h2 data-i18n="ct_add">住所録に追加する</h2>
+    <h2 data-i18n="ct_add">友達に追加する</h2>
     <div class="row"><input type="text" id="add-addr" class="mono" data-i18n-ph="ph_addr" placeholder="招待状のリンクを貼る" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="b pri" id="btn-add-contact" data-i18n="btn_card_paste">貼り付け</button></div>
     <input type="text" id="add-nick" style="display:none" tabindex="-1" aria-hidden="true">
     <div class="row"><button class="b" id="btn-scan" data-i18n="btn_scan">QRを読み取る（カメラ）</button></div>
     <video id="qrscan" playsinline></video>
-    <div class="note" data-i18n="nt_contacts">住所録の相手とだけやり取りできます。住所録に無い相手からの手紙は「申請」に届きます。</div>
+    <div class="note" data-i18n="nt_contacts">友達とだけやり取りできます。友達でない相手からの手紙は「申請」に届きます。</div>
   </div>
   <div id="req-entry" role="button" tabindex="0"></div>
 </section>
 
 <section id="p-req">
-  <div class="row"><button class="b" id="btn-req-back" type="button" data-i18n="btn_req_back">‹ 住所録</button></div>
+  <div class="row"><button class="b" id="btn-req-back" type="button" data-i18n="btn_req_back">‹ 友達</button></div>
   <div class="note" data-i18n="nt_req">連絡先に無い相手から届いたメッセージです。承認すると連絡先に追加され、以降は通常受信します。</div>
   <div id="req-list"></div>
 </section>
@@ -507,7 +507,7 @@ a{color:var(--teal)}
     <div class="note" id="xm-st" style="margin-top:4px;white-space:pre-line"></div>
     <div class="row" style="margin-top:6px"><button class="b pri" id="btn-xm-pick" data-i18n="btn_xm_pick">Xaman で支払う口座を選ぶ</button></div>
     <div class="note" data-i18n="nt_xm">郵便受けのリース代（EVR）を払う Xahau の口座です。Xaman でサインインして選びます。借りるときも延ばすときも、そのつど Xaman で承認します（承認しないかぎり払われません）。</div>
-    <div class="note" data-i18n="nt_xm_own">住所録の相手に、この口座の残高や取引が見えることがあります。気になる場合は、Xaman で家賃用の口座を別に作って払えます。</div>
+    <div class="note" data-i18n="nt_xm_own">友達に、この口座の残高や取引が見えることがあります。気になる場合は、Xaman で家賃用の口座を別に作って払えます。</div>
   </div>
   <div class="card" id="post-pay" style="display:none">
     <h2 data-i18n="pay_title">リース代の支払い記録</h2>
@@ -542,7 +542,7 @@ a{color:var(--teal)}
 
   <div class="card" id="post-move" style="display:none">
     <h2 data-i18n="pt_move">移設</h2>
-    <div class="note" data-i18n="nt_pt_move">別のホストで新しい郵便受けを借りて移ります。住所録の全員と自分のほかの端末に、新しい場所を自動で知らせます。前の郵便受けは延長せず、期限で切れるに任せます。</div>
+    <div class="note" data-i18n="nt_pt_move">別のホストで新しい郵便受けを借りて移ります。すべての友達と自分のほかの端末に、新しい場所を自動で知らせます。前の郵便受けは延長せず、期限で切れるに任せます。</div>
     <div class="row"><button class="b" id="btn-pt-move" data-i18n="btn_pt_move">新しい郵便受けへ移す</button></div>
   </div>
   <div class="card" id="post-spare" style="display:none">
@@ -588,7 +588,7 @@ a{color:var(--teal)}
   </div>
   <div class="card">
     <h2 data-i18n="id_forget">この端末から消す</h2>
-    <div class="note" data-i18n="nt_forget">この端末の中の鍵・住所録・会話・写真を消します。</div>
+    <div class="note" data-i18n="nt_forget">この端末の中の鍵・友達の一覧・会話・写真を消します。</div>
     <div class="row" style="margin-top:8px"><button class="b warn" id="btn-id-clear" data-i18n="btn_clear">この端末のデータを消す</button></div>
   </div>
   </details>
@@ -655,10 +655,10 @@ a{color:var(--teal)}
 <script src="rewrite/17_rtc.js?v=e9ce74eba869"></script>
 <script src="rewrite/18_bgloop.js?v=f0919f6e2efe"></script>
 <script src="keep/19_draft.js?v=f6f94869ca05"></script>
-<script src="keep/22_i18n.js?v=d9e51a00730f"></script>
-<script src="keep/22_i18n_fr.js?v=c584a7b1e593"></script>
-<script src="keep/22_i18n_de.js?v=37aa24b6799a"></script>
-<script src="keep/22_i18n_pl.js?v=aa158c35a64c"></script>
+<script src="keep/22_i18n.js?v=a9c1fb759d12"></script>
+<script src="keep/22_i18n_fr.js?v=3f66438b3269"></script>
+<script src="keep/22_i18n_de.js?v=39e17c1244ad"></script>
+<script src="keep/22_i18n_pl.js?v=532bc4c13a9d"></script>
 <script src="keep/23_ui.js?v=cbf6b41f8866"></script>
 <script src="keep/24_qr.js?v=60fba8abce21"></script>
 <script src="rewrite/27_vault.js?v=8cc71c3a4e5e"></script>
@@ -676,7 +676,7 @@ a{color:var(--teal)}
 <script src="rewrite/39_onetab.js?v=619c7639d696"></script>
 <script src="rewrite/40_linkqr.js?v=bf82c09e8fd9"></script>
 <script src="rewrite/41_scene.js?v=71b3363a31d8"></script>
-<script src="rewrite/52_call.js?v=a3fd7b429777"></script>
+<script src="rewrite/52_call.js?v=0878ca197964"></script>
 <script src="rewrite/43_postmove.js?v=02fe1427a06a"></script>
 <script src="rewrite/42_rent.js?v=d894da300e54"></script>
 <script src="rewrite/51_flow.js?v=37fa0755aeed"></script>
@@ -686,7 +686,7 @@ a{color:var(--teal)}
 <script src="rewrite/47_rootkey.js?v=ce5d9843d373"></script>
 <script src="rewrite/46_roster.js?v=7fcf862c11f5"></script>
 <script src="rewrite/45_invface.js?v=daef1738f436"></script>
-<script src="rewrite/44_postui.js?v=990161542c7e"></script>
+<script src="rewrite/44_postui.js?v=ddcab16ea2fc"></script>
 <script src="rewrite/25_wiring.js?v=0448b203a517"></script>
 <script src="keep/26_sound.js?v=dd1c7e5d5ba6"></script>
 </body>
