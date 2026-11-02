@@ -835,13 +835,13 @@ const HP_VM_KEY='p2p_vmsec', HP_VM_SECS=['0','20','30','45','60'], HP_VM_DEF='30
 function hpVmSec(){ try{ const v=String(localStorage.getItem(HP_VM_KEY)||''); return Number(HP_VM_SECS.indexOf(v)>=0?v:HP_VM_DEF); }catch(e){ return Number(HP_VM_DEF); } }
 function hpVmSecSet(v){ try{ if(HP_VM_SECS.indexOf(String(v))>=0){ localStorage.setItem(HP_VM_KEY,String(v)); return true; } }catch(e){} return false; }
 function hpVmPrime(){ try{ if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined') return false; const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); return true; }catch(e){ return false; } }
-function hpVmAuto(C){ try{ if(!C||HP_CALL!==C||C.st!=='calling'||C.dir!=='out') return false; C.vm=1; hpLog('通話：'+(C.vmS||'')+' 秒たっても出なかったので、留守電に切り替えた');
-    hpCallBye('timeout'); hpCallEnd('timeout',T('cl_noans')); if(HP_CALL===C){ HP_CALL=null; hpCallUi(); } hpVmGo(C.peer).catch(()=>{}); return true; }catch(e){ hpLog('通話：留守電に切り替えられない（'+((e&&e.message)||e)+'）'); return false; } }
+function hpVmAuto(C){ try{ if(!C||HP_CALL!==C||C.st!=='calling'||C.dir!=='out') return false; C.vm=1; hpLog('通話：'+(C.vmS||'')+' 秒たっても出なかったので、音声メッセージに切り替えた');
+    hpCallBye('timeout'); hpCallEnd('timeout',T('cl_noans')); if(HP_CALL===C){ HP_CALL=null; hpCallUi(); } hpVmGo(C.peer).catch(()=>{}); return true; }catch(e){ hpLog('通話：音声メッセージに切り替えられない（'+((e&&e.message)||e)+'）'); return false; } }
 function hpVmArm(C){ try{ const s=hpVmSec(); if(!s||!C||C.dir!=='out'||C.vmOn) return false; C.vmOn=1; C.vmS=s; hpVmPrime(); C.vmT=setTimeout(()=>hpVmAuto(C),s*1000); return true; }catch(e){ return false; } }
 function hpVmRow(){ try{ if(typeof document==='undefined') return false; const c=document.getElementById('set-call'); if(!c||document.getElementById('set-vm')) return false;
     const r=document.createElement('div'); r.className='kv'; r.id='set-vm'; r.style.marginTop='8px'; const b=document.createElement('b'); b.textContent=T('cl_vm_l'); b.setAttribute('data-i18n','cl_vm_l'); r.appendChild(b);
     const s=document.createElement('select'); s.style.cssText='background:#1b2740;border:none;border-radius:6px;color:inherit;padding:4px 6px'; for(const v of HP_VM_SECS){ const o=document.createElement('option'); o.value=v; o.textContent=T('cl_vm_'+v); o.setAttribute('data-i18n','cl_vm_'+v); s.appendChild(o); }
-    s.value=String(hpVmSec()); s.onchange=()=>{ if(hpVmSecSet(s.value)) hpLog('設定：留守電 '+(s.value==='0'?'使わない':s.value+' 秒で切り替える')); }; r.appendChild(s); c.appendChild(r); return true; }catch(e){ return false; } }
+    s.value=String(hpVmSec()); s.onchange=()=>{ if(hpVmSecSet(s.value)) hpLog('設定：音声メッセージ '+(s.value==='0'?'使わない':s.value+' 秒で切り替える')); }; r.appendChild(s); c.appendChild(r); return true; }catch(e){ return false; } }
 try{ if(typeof hpCallStart==='function'&&!hpCallStart.__f219){ const f=hpCallStart; hpCallStart=Object.assign(function(peer){ const p=f.apply(this,arguments);
     try{ const C=HP_CALL; if(C&&C.dir==='out'&&C.st==='calling'&&C.peer===String(peer||'').trim()) hpVmArm(C); }catch(e){} return p; },f,{__f219:1}); } }catch(e){}
 try{ if(typeof hpCallBar==='function'&&!hpCallBar.__f219){ const f=hpCallBar; hpCallBar=Object.assign(function(C){ if(C&&C.vm) return f.call(this,null); return f.apply(this,arguments); },f,{__f219:1}); } }catch(e){}
@@ -866,28 +866,28 @@ function hpVmUi(){ try{ const R=HP_VMR; let d=document.getElementById('hp-vm'); 
     d.__who.textContent=nickOf(R.peer); d.__st.textContent=''; const rec=(R.st==='rec');
     if(rec){ const dot=document.createElement('span'); dot.className='dot'; dot.textContent='●'; d.__st.appendChild(dot); d.__st.appendChild(document.createTextNode(TF('vc_rec',{t:hpVcClock(Date.now()-R.t0),max:hpVcClock(HP_VC_MAX)}))); }
     else d.__st.textContent=T(R.st==='send'?'vm_st_send':'vm_st_greet');
-    d.__msg.textContent=(R.st==='greet')?T('vm_greet'):''; d.__end.style.display=rec?'':'none'; d.__redo.style.display=rec?'':'none'; d.__cancel.style.display=(R.st==='send')?'none':''; }catch(e){ try{ hpLog('通話：留守電の画面を出せない（'+((e&&e.message)||e)+'）'); }catch(x){} } }
+    d.__msg.textContent=(R.st==='greet')?T('vm_greet'):''; d.__end.style.display=rec?'':'none'; d.__redo.style.display=rec?'':'none'; d.__cancel.style.display=(R.st==='send')?'none':''; }catch(e){ try{ hpLog('通話：音声メッセージの画面を出せない（'+((e&&e.message)||e)+'）'); }catch(x){} } }
 function hpVmStopRec(R){ try{ if(!R) return; if(R.tick){ clearInterval(R.tick); R.tick=null; } if(R.cap){ clearTimeout(R.cap); R.cap=null; } if(R.rec){ R.rec.onstop=null; R.rec.ondataavailable=null; if(R.rec.state!=='inactive') R.rec.stop(); } R.rec=null; if(R.stream){ R.stream.getTracks().forEach(t=>t.stop()); } R.stream=null; }catch(e){} }
 function hpVmClose(){ const R=HP_VMR; HP_VMR=null; HP_VMR_GEN++; try{ hpVmStopRec(R); if(R&&R.own&&R.ac&&R.ac.close) Promise.resolve(R.ac.close()).catch(()=>{}); }catch(e){} hpVmUi(); }
 async function hpVmRec(R){ try{ if(HP_VMR!==R) return false; await hpVmBeep(R.ac); if(HP_VMR!==R) return false; const ty=hpVcType();
-    if(!ty||typeof navigator==='undefined'||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ try{ hpToast(T('vc_nosup'),5000); }catch(e){} hpLog('通話：留守電を録音できない（この端末では録音できない）'); hpVmClose(); return false; }
+    if(!ty||typeof navigator==='undefined'||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ try{ hpToast(T('vc_nosup'),5000); }catch(e){} hpLog('通話：音声メッセージを録音できない（この端末では録音できない）'); hpVmClose(); return false; }
     let s=null; try{ s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }catch(e){ try{ hpToast(hpVcErr(e),8000); }catch(_){} hpVmClose(); return false; }
     if(HP_VMR!==R){ try{ s.getTracks().forEach(t=>t.stop()); }catch(e){} return false; }
     const rec=new MediaRecorder(s,{mimeType:ty.m,audioBitsPerSecond:HP_VC_KB}); R.stream=s; R.rec=rec; R.ty=ty; R.parts=[]; R.t0=Date.now(); R.st='rec';
     rec.ondataavailable=e=>{ if(e.data&&e.data.size&&R.rec===rec) R.parts.push(e.data); }; rec.start(1000);
-    R.tick=setInterval(hpVmUi,500); R.cap=setTimeout(()=>{ hpVmEnd().catch(()=>{}); },HP_VC_MAX); hpVmUi(); hpLog('通話：留守電の録音を始めた'); return true; }catch(e){ hpLog('通話：留守電の録音を始められない（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } }
+    R.tick=setInterval(hpVmUi,500); R.cap=setTimeout(()=>{ hpVmEnd().catch(()=>{}); },HP_VC_MAX); hpVmUi(); hpLog('通話：音声メッセージの録音を始めた'); return true; }catch(e){ hpLog('通話：音声メッセージの録音を始められない（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } }
 async function hpVmEnd(){ const R=HP_VMR; if(!R||R.st!=='rec'||!R.rec) return false; R.st='send'; const rec=R.rec, ms=Date.now()-R.t0; if(R.tick){ clearInterval(R.tick); R.tick=null; } if(R.cap){ clearTimeout(R.cap); R.cap=null; } hpVmUi();
   try{ await new Promise(res=>{ rec.onstop=()=>res(true); try{ if(rec.state!=='inactive') rec.stop(); else res(true); }catch(e){ res(false); } setTimeout(()=>res(false),3000); });
     if(HP_VMR!==R) return false; const at=Date.now(), f=new File(R.parts,hpVcName(ms,at,R.ty.e),{type:R.ty.m.split(';')[0]}); hpVmStopRec(R);
     try{ if(typeof openConversation==='function') openConversation(R.peer); }catch(e){} if(typeof sendFile==='function') await sendFile(f);
-    hpLog('通話：留守電を送った（'+hpVcClock(ms)+'）'); hpVmClose(); return true; }catch(e){ hpLog('通話：留守電を送れなかった（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } }
-async function hpVmRedo(){ const R=HP_VMR; if(!R||R.st!=='rec') return false; hpVmStopRec(R); R.st='beep'; R.parts=[]; hpVmUi(); hpLog('通話：留守電を録り直す'); return hpVmRec(R); }
-function hpVmCancel(){ const R=HP_VMR; if(!R) return false; try{ if(typeof speechSynthesis!=='undefined') speechSynthesis.cancel(); }catch(e){} hpLog('通話：留守電をキャンセルした'); hpVmClose(); return true; }
+    hpLog('通話：音声メッセージを送った（'+hpVcClock(ms)+'）'); hpVmClose(); return true; }catch(e){ hpLog('通話：音声メッセージを送れなかった（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } }
+async function hpVmRedo(){ const R=HP_VMR; if(!R||R.st!=='rec') return false; hpVmStopRec(R); R.st='beep'; R.parts=[]; hpVmUi(); hpLog('通話：音声メッセージを録り直す'); return hpVmRec(R); }
+function hpVmCancel(){ const R=HP_VMR; if(!R) return false; try{ if(typeof speechSynthesis!=='undefined') speechSynthesis.cancel(); }catch(e){} hpLog('通話：音声メッセージをキャンセルした'); hpVmClose(); return true; }
 hpVmGo=async function(peer){ try{ if(!peer||HP_VMR) return false; let ac=null, own=false; try{ if(typeof HP_CALL_AC!=='undefined'&&HP_CALL_AC){ ac=HP_CALL_AC; if(ac.state==='suspended'&&ac.resume) Promise.resolve(ac.resume()).catch(()=>{}); } }catch(e){ ac=null; }
     if(!ac){ try{ const A=(typeof AudioContext!=='undefined')?AudioContext:((typeof webkitAudioContext!=='undefined')?webkitAudioContext:null); if(A){ ac=new A(); own=true; if(ac.resume) Promise.resolve(ac.resume()).catch(()=>{}); } }catch(e){ ac=null; } }
     const R={peer:String(peer),st:'greet',ac:ac,own:own,gen:++HP_VMR_GEN}; HP_VMR=R; hpVmUi();
     const lang=(typeof curLang==='function')?curLang():'ja', said=await hpVmSay(T('vm_greet'),lang); if(HP_VMR!==R) return false;
-    hpLog('通話：留守電の応答の声'+(said?'を読み上げた（'+(HP_VM_LANG[lang]||'en-US')+'）':'は読み上げられなかった（画面に文を出した）')); R.st='beep'; hpVmUi(); return await hpVmRec(R); }catch(e){ hpLog('通話：留守電を始められない（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } };
+    hpLog('通話：音声メッセージの応答の声'+(said?'を読み上げた（'+(HP_VM_LANG[lang]||'en-US')+'）':'は読み上げられなかった（画面に文を出した）')); R.st='beep'; hpVmUi(); return await hpVmRec(R); }catch(e){ hpLog('通話：音声メッセージを始められない（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } };
 
 const HP_VMB_CSS='#hp-vm .vmb{display:none;flex-direction:column;align-items:stretch;gap:6px;width:min(92vw,420px);box-sizing:border-box;border-radius:12px;padding:8px 10px;background:rgba(226,59,59,.20);border:2px solid #ff5a5a;animation:hpvmglow 1.4s ease-in-out infinite;text-align:left}'
  +'@keyframes hpvmglow{50%{box-shadow:0 0 0 4px rgba(255,90,90,.35)}}#hp-vm .vmb .vc-h{display:flex;align-items:center;font-size:13px;font-weight:700;color:#ff8a8a}#hp-vm .vmb .vc-r{display:flex;align-items:center;gap:8px}'
@@ -910,11 +910,11 @@ function hpVmBand(d,R){ let b=d.__band; if(!b){ b=document.createElement('div');
 hpVmUi=function(){ try{ const R=HP_VMR; let d=document.getElementById('hp-vm'); if(!R){ if(d) d.style.display='none'; return; } d=hpVmEl(); hpVmBandCss(); d.style.display='flex';
     d.__who.textContent=nickOf(R.peer); const rec=(R.st==='rec'), send=(R.st==='send'); hpVmBand(d,R);
     d.__st.style.display=rec?'none':''; d.__st.textContent=rec?'':T(send?'vm_st_send':'vm_st_greet'); d.__msg.textContent=(R.st==='greet')?T('vm_greet'):'';
-    d.__end.style.display='none'; d.__redo.style.display=rec?'':'none'; d.__cancel.style.display=send?'none':''; }catch(e){ try{ hpLog('通話：留守電の画面を出せない（'+((e&&e.message)||e)+'）'); }catch(x){} } };
+    d.__end.style.display='none'; d.__redo.style.display=rec?'':'none'; d.__cancel.style.display=send?'none':''; }catch(e){ try{ hpLog('通話：音声メッセージの画面を出せない（'+((e&&e.message)||e)+'）'); }catch(x){} } };
 
 function hpVmSayMax(t){ return Math.max(HP_VM_SAY_MAX,3000+String(t||'').length*220); }
 hpVmSay=function(text,lang){ return new Promise(res=>{ let done=false, started=false, tries=0, why='', nv=0; const bc=HP_VM_LANG[lang]||'en-US';
-    const end=v=>{ if(done) return; done=true; try{ hpLog('通話：留守電の読み上げ '+(v?'できた':'できない')+'（'+bc+'・声 '+nv+'・'+(tries)+' 回'+(why?'・'+why:'')+'）'); }catch(e){} res(v); };
+    const end=v=>{ if(done) return; done=true; try{ hpLog('通話：音声メッセージの読み上げ '+(v?'できた':'できない')+'（'+bc+'・声 '+nv+'・'+(tries)+' 回'+(why?'・'+why:'')+'）'); }catch(e){} res(v); };
     try{ const ss=(typeof speechSynthesis!=='undefined')?speechSynthesis:null; if(!ss||typeof SpeechSynthesisUtterance==='undefined'){ why='読み上げの仕組みが無い'; return end(false); }
       const go=()=>{ if(done) return; tries++; const u=new SpeechSynthesisUtterance(text); u.lang=bc; u.volume=1; u.rate=1;
         try{ const vs=ss.getVoices()||[]; nv=vs.length; const v=vs.find(x=>x&&x.lang===bc)||vs.find(x=>x&&String(x.lang||'').replace('_','-').slice(0,2)===bc.slice(0,2)); if(v) u.voice=v; }catch(e){}
@@ -947,16 +947,16 @@ function hpVmRevBand(d,R){ let b=d.__band; if(!b){ b=document.createElement('div
 hpVmEnd=async function(){ const R=HP_VMR; if(!R||R.st!=='rec'||!R.rec) return false; const rec=R.rec, ms=Date.now()-R.t0; R.st='stop'; if(R.tick){ clearInterval(R.tick); R.tick=null; } if(R.cap){ clearTimeout(R.cap); R.cap=null; } hpVmUi();
   try{ await new Promise(res=>{ rec.onstop=()=>res(true); try{ if(rec.state!=='inactive') rec.stop(); else res(true); }catch(e){ res(false); } setTimeout(()=>res(false),3000); });
     if(HP_VMR!==R) return false; const f=new File(R.parts,hpVcName(ms,Date.now(),R.ty.e),{type:R.ty.m.split(';')[0]}); hpVmStopRec(R);
-    R.f=f; R.ms=ms; try{ R.url=URL.createObjectURL(f); }catch(e){ R.url=''; } R.st='rev'; hpVmUi(); hpLog('通話：留守電の録音を終えた（'+hpVcClock(ms)+'。送る前に聞ける）'); return true; }catch(e){ hpLog('通話：留守電の録音をまとめられない（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } };
+    R.f=f; R.ms=ms; try{ R.url=URL.createObjectURL(f); }catch(e){ R.url=''; } R.st='rev'; hpVmUi(); hpLog('通話：音声メッセージの録音を終えた（'+hpVcClock(ms)+'。送る前に聞ける）'); return true; }catch(e){ hpLog('通話：音声メッセージの録音をまとめられない（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } };
 async function hpVmSend(){ const R=HP_VMR; if(!R||R.st!=='rev'||!R.f) return false; const f=R.f, ms=R.ms; R.st='send'; try{ if(R.au) R.au.pause(); }catch(e){} hpVmUi();
-  try{ try{ if(typeof openConversation==='function') openConversation(R.peer); }catch(e){} if(typeof sendFile==='function') await sendFile(f); hpLog('通話：留守電を送った（'+hpVcClock(ms)+'）'); hpVmClose(); return true; }catch(e){ hpLog('通話：留守電を送れなかった（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } }
-hpVmRedo=async function(){ const R=HP_VMR; if(!R||(R.st!=='rec'&&R.st!=='rev')) return false; hpVmRevDrop(R); hpVmStopRec(R); R.st='beep'; R.parts=[]; hpVmUi(); hpLog('通話：留守電を録り直す'); return hpVmRec(R); };
+  try{ try{ if(typeof openConversation==='function') openConversation(R.peer); }catch(e){} if(typeof sendFile==='function') await sendFile(f); hpLog('通話：音声メッセージを送った（'+hpVcClock(ms)+'）'); hpVmClose(); return true; }catch(e){ hpLog('通話：音声メッセージを送れなかった（'+((e&&e.message)||e)+'）'); hpVmClose(); return false; } }
+hpVmRedo=async function(){ const R=HP_VMR; if(!R||(R.st!=='rec'&&R.st!=='rev')) return false; hpVmRevDrop(R); hpVmStopRec(R); R.st='beep'; R.parts=[]; hpVmUi(); hpLog('通話：音声メッセージを録り直す'); return hpVmRec(R); };
 try{ if(typeof hpVmClose==='function'&&!hpVmClose.__f222){ const f=hpVmClose; hpVmClose=Object.assign(function(){ try{ hpVmRevDrop(HP_VMR); }catch(e){} return f.apply(this,arguments); },f,{__f222:1}); } }catch(e){}
 hpVmUi=function(){ try{ const R=HP_VMR; let d=document.getElementById('hp-vm'); if(!R){ if(d) d.style.display='none'; return; } d=hpVmEl(); hpVmBandCss(); d.style.display='flex';
     d.__who.textContent=nickOf(R.peer); const rec=(R.st==='rec'), rev=(R.st==='rev'), send=(R.st==='send');
     if(rev&&R.f) hpVmRevBand(d,R); else { if(d.__band&&d.__band.__f){ d.__band.__f=null; d.__band.__au=null; d.__band.className='vmb'; } hpVmBand(d,R); }
     d.__st.style.display=send?'':'none'; d.__st.textContent=send?T('vm_st_send'):''; if(d.__msg.__on!==(R.st==='greet')){ d.__msg.__on=(R.st==='greet'); hpVmMsg(d.__msg,d.__msg.__on); }
-    d.__end.style.display='none'; d.__redo.style.display=(rec||rev)?'':'none'; d.__cancel.style.display=send?'none':''; }catch(e){ try{ hpLog('通話：留守電の画面を出せない（'+((e&&e.message)||e)+'）'); }catch(x){} } };
+    d.__end.style.display='none'; d.__redo.style.display=(rec||rev)?'':'none'; d.__cancel.style.display=send?'none':''; }catch(e){ try{ hpLog('通話：音声メッセージの画面を出せない（'+((e&&e.message)||e)+'）'); }catch(x){} } };
 
 const HP_CK_KEY='p2p_callkey', HP_CB_KEY='p2p_callbook', HP_CK_ROT=30*86400e3, HP_CK_LIFE=60*86400e3, HP_CB_MAX=400, HP_CB_PRUNE_MS=600e3;
 let HP_CB_PRUNED=0;
@@ -1235,13 +1235,13 @@ try{ if(typeof hpVmUi==='function'&&!hpVmUi.__f228){ const f=hpVmUi; hpVmUi=Obje
 
 const HP_VM_CAP=60e3;
 hpVmAuto=function(C){ try{ if(!C||HP_CALL!==C||C.st!=='calling'||C.dir!=='out') return false; C.vm=1;
-    hpLog('通話：'+(C.vmRing?('相手の端末が鳴り始めてから '+Math.round((C.vmMs||0)/1000)+' 秒たっても出なかったので'):(Math.round(HP_VM_CAP/1000)+' 秒たっても相手の端末が鳴り始めないので'))+'、留守電に切り替えた');
-    hpCallBye('timeout'); hpCallEnd('timeout',T('cl_noans')); if(HP_CALL===C){ HP_CALL=null; hpCallUi(); } hpVmGo(C.peer).catch(()=>{}); return true; }catch(e){ hpLog('通話：留守電に切り替えられない（'+((e&&e.message)||e)+'）'); return false; } };
+    hpLog('通話：'+(C.vmRing?('相手の端末が鳴り始めてから '+Math.round((C.vmMs||0)/1000)+' 秒たっても出なかったので'):(Math.round(HP_VM_CAP/1000)+' 秒たっても相手の端末が鳴り始めないので'))+'、音声メッセージに切り替えた');
+    hpCallBye('timeout'); hpCallEnd('timeout',T('cl_noans')); if(HP_CALL===C){ HP_CALL=null; hpCallUi(); } hpVmGo(C.peer).catch(()=>{}); return true; }catch(e){ hpLog('通話：音声メッセージに切り替えられない（'+((e&&e.message)||e)+'）'); return false; } };
 hpVmArm=function(C){ try{ const s=hpVmSec(); if(!s||!C||C.dir!=='out'||C.vmOn) return false; C.vmOn=1; C.vmS=s; hpVmPrime();
     C.vmT=setTimeout(()=>{ try{ if(HP_CALL===C&&C.st==='calling'&&!C.vmRing) hpVmAuto(C); }catch(e){} },HP_VM_CAP); return true; }catch(e){ return false; } };
 function hpVmRing(C){ try{ if(!C||!C.vmOn||C.vmRing||HP_CALL!==C||C.st!=='calling'||C.dir!=='out') return false; C.vmRing=Date.now(); if(C.vmT) clearTimeout(C.vmT);
     const ms=Math.max(5000,Math.min(C.vmS*1000,HP_CALL_RING_MORE-1500)); C.vmMs=ms; C.vmT=setTimeout(()=>{ try{ if(HP_CALL===C&&C.st==='calling') hpVmAuto(C); }catch(e){} },ms);
-    hpLog('通話：相手の端末で鳴り始めたので、'+Math.round(ms/1000)+' 秒出なければ留守電に切り替える'); return true; }catch(e){ return false; } }
+    hpLog('通話：相手の端末で鳴り始めたので、'+Math.round(ms/1000)+' 秒出なければ音声メッセージに切り替える'); return true; }catch(e){ return false; } }
 try{ if(typeof hpCallOnSig==='function'&&!hpCallOnSig.__f229){ const f=hpCallOnSig; hpCallOnSig=Object.assign(async function(r,o){ const v=await f.apply(this,arguments);
     try{ const C=HP_CALL; if(r&&o&&o.v===1&&o.type==='callring'&&C&&C.dir==='out'&&C.id===o.call&&C.peer===r.from&&C.st==='calling'&&C.rung) hpVmRing(C); }catch(e){} return v; },f,{__f229:1}); } }catch(e){}
 
@@ -1254,7 +1254,7 @@ try{ if(typeof hpVmRow==='function'&&!hpVmRow.__f230){ const f=hpVmRow; hpVmRow=
 
 const HP_VM_CANCEL_GAP=1200;
 hpVmCancel=function(){ const R=HP_VMR; if(!R||R.st==='cancel') return false; try{ if(typeof speechSynthesis!=='undefined') speechSynthesis.cancel(); }catch(e){}
-  try{ hpVmStopRec(R); }catch(e){} R.st='cancel'; const gen=HP_VMR_GEN; hpVmUi(); hpLog('通話：留守電をキャンセルした');
+  try{ hpVmStopRec(R); }catch(e){} R.st='cancel'; const gen=HP_VMR_GEN; hpVmUi(); hpLog('通話：音声メッセージをキャンセルした');
   (async()=>{ try{ await hpVmSay(T('vm_cancelled'),(typeof curLang==='function')?curLang():'ja'); }catch(e){} await new Promise(z=>setTimeout(z,HP_VM_CANCEL_GAP)); try{ if(HP_VMR===R&&HP_VMR_GEN===gen) hpVmClose(); }catch(e){} })();
   return true; };
 try{ if(typeof hpVmUi==='function'&&!hpVmUi.__f231){ const f=hpVmUi; hpVmUi=Object.assign(function(){ const v=f.apply(this,arguments);
@@ -1286,7 +1286,7 @@ hpVmRing=function(C,dev){ try{ if(!C||!C.vmOn||HP_CALL!==C||C.st!=='calling'||C.
     if(dev){ if(C.vmRingDevs[dev]) return false; C.vmRingDevs[dev]=1; } else if(C.vmRing) return false;
     const again=!!C.vmRing; C.vmRing=Date.now(); if(C.vmT) clearTimeout(C.vmT);
     const ms=Math.max(5000,Math.min(C.vmS*1000,HP_CALL_RING_MORE-1500)); C.vmMs=ms; C.vmT=setTimeout(()=>{ try{ if(HP_CALL===C&&C.st==='calling') hpVmAuto(C); }catch(e){} },ms);
-    hpLog(again?('通話：相手の別の端末でも鳴り始めたので、留守電までの '+Math.round(ms/1000)+' 秒を数え直す'):('通話：相手の端末で鳴り始めたので、'+Math.round(ms/1000)+' 秒出なければ留守電に切り替える')); return true; }catch(e){ return false; } };
+    hpLog(again?('通話：相手の別の端末でも鳴り始めたので、音声メッセージまでの '+Math.round(ms/1000)+' 秒を数え直す'):('通話：相手の端末で鳴り始めたので、'+Math.round(ms/1000)+' 秒出なければ音声メッセージに切り替える')); return true; }catch(e){ return false; } };
 try{ if(typeof hpCallOnSig==='function'&&!hpCallOnSig.__f233){ const f=hpCallOnSig; hpCallOnSig=Object.assign(async function(r,o){ const C0=HP_CALL, first=!(C0&&C0.vmRing); const v=await f.apply(this,arguments);
     try{ const C=HP_CALL; if(r&&o&&o.v===1&&o.type==='callring'&&r.fromDev&&C&&C===C0&&C.dir==='out'&&C.id===o.call&&C.peer===r.from&&C.st==='calling'&&C.rung){ if(first){ (C.vmRingDevs=C.vmRingDevs||{})[r.fromDev]=1; } else hpVmRing(C,r.fromDev); } }catch(e){} return v; },f,{__f233:1}); } }catch(e){}
 
@@ -1445,4 +1445,24 @@ hpRingNote=function(a,type,f,t0,dur,vol){ const o=a.createOscillator(), g=a.crea
 try{ if(typeof hpCallRing==='function'&&!hpCallRing.__f250){ const f=hpCallRing; hpCallRing=Object.assign(function(on){ try{ hpBeepKill(); }catch(e){} return f.apply(this,arguments); },f,{__f250:1}); } }catch(e){}
 function hpBeepVis(){ try{ if(typeof document==='undefined'||document.visibilityState!=='visible') return false; const C=(typeof HP_CALL!=='undefined')?HP_CALL:null; if(C&&C.st!=='ended') return false; return hpBeepKill()>0; }catch(e){ return false; } }
 try{ if(typeof document!=='undefined'&&document&&document.addEventListener) document.addEventListener('visibilitychange',hpBeepVis); }catch(e){}
+
+var HP_VM_WAKE_MS=1000;
+async function hpVmAcWake(R){ try{ if(!R) return 'none'; const was=R.ac?String(R.ac.state||'?'):'none';
+    if(!R.ac||R.ac.state==='closed'){ const A=(typeof AudioContext!=='undefined')?AudioContext:((typeof webkitAudioContext!=='undefined')?webkitAudioContext:null); if(A){ R.ac=new A(); R.own=true; } }
+    const ac=R.ac; if(ac&&ac.state==='suspended'&&ac.resume) await Promise.race([Promise.resolve(ac.resume()).catch(()=>{}),new Promise(r=>setTimeout(r,HP_VM_WAKE_MS))]);
+    return was+'→'+(R.ac?String(R.ac.state||'?'):'none'); }catch(e){ return 'err'; } }
+try{ if(typeof hpVmRedo==='function'&&!hpVmRedo.__f252){ const f=hpVmRedo; hpVmRedo=Object.assign(async function(){ const R=HP_VMR; try{ if(R&&(R.st==='rec'||R.st==='rev')) hpLog('通話：音声メッセージを録り直す前に音の口を起こした（'+(await hpVmAcWake(R))+'）'); }catch(e){} return f.apply(this,arguments); },f,{__f252:1}); } }catch(e){}
+
+var HP_TIP_KEYS=['cl_tip_1','cl_tip_2','cl_tip_3','cl_tip_4','cl_tip_5','cl_tip_6','cl_tip_7'], HP_TIP_MS=8000;
+var HP_TIP_CSS='#hp-call .hp-tip{margin:12px auto 0;max-width:min(92vw,440px);font-size:13px;line-height:1.6;color:var(--dim,#9fb0c8);text-align:center;white-space:normal}';
+function hpTipMs(s){ const n=String(s||'').length; return n>90?16000:(n>50?12000:HP_TIP_MS); }
+function hpTipEl(d){ try{ let t=d.__tip; if(!t){ t=document.createElement('div'); t.className='hp-tip'; d.__tip=t; }
+    if(d.__st&&d.__st.parentNode){ if(t.previousSibling!==d.__st) d.__st.parentNode.insertBefore(t,d.__st.nextSibling); } else if(!t.parentNode) d.appendChild(t);
+    if(document.head&&!document.getElementById('hp-tip-css')){ const s=document.createElement('style'); s.id='hp-tip-css'; s.textContent=HP_TIP_CSS; document.head.appendChild(s); } return t; }catch(e){ return null; } }
+function hpTipStop(C){ try{ if(C&&C.tipT){ clearTimeout(C.tipT); C.tipT=null; } }catch(e){} }
+function hpTipNext(C){ try{ if(!C||HP_CALL!==C||C.st!=='calling'||C.dir!=='out'){ hpTipStop(C); return false; } const d=document.getElementById('hp-call'), t=d?hpTipEl(d):null; if(!t) return false;
+    const i=(C.tipI||0)%HP_TIP_KEYS.length, s=T(HP_TIP_KEYS[i]); C.tipI=i+1; t.textContent=s; t.style.display=''; C.tipT=setTimeout(()=>{ C.tipT=null; hpTipNext(C); },hpTipMs(s)); return true; }catch(e){ return false; } }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f254){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'), on=!!(C&&C.st==='calling'&&C.dir==='out');
+      if(on){ if(!C.tipT) hpTipNext(C); else if(d&&d.__tip) hpTipEl(d); }
+      else { if(C) hpTipStop(C); if(d&&d.__tip){ d.__tip.textContent=''; d.__tip.style.display='none'; } } }catch(e){} return r; },f,{__f254:1}); } }catch(e){}
 
