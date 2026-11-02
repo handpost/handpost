@@ -46,7 +46,7 @@ function histRender(a){
   const h=histLoad(a);
   $('#msgs').innerHTML='';
   if(h.length===0)return;
-  for(const m of h){ if(m.d==='v'){ const s=hpVoidEl(a,m.ts); if(s) $('#msgs').appendChild(s); continue; } addMsgAt(m.d==='s'?'self':'peer', m.t, m.d==='s'?(myName()||T('me')):nickOf(a), m.ts, m.x, m.p, (typeof hpReadOff==='function'&&hpReadOff())?0:m.k, m.img, m.file); }
+  for(const m of h){ if(m.d==='c'){ const s=(typeof hpChEl==='function')?hpChEl(a,m):null; if(s) $('#msgs').appendChild(s); continue; }   if(m.d==='v'){ const s=hpVoidEl(a,m.ts); if(s) $('#msgs').appendChild(s); continue; } addMsgAt(m.d==='s'?'self':'peer', m.t, m.d==='s'?(myName()||T('me')):nickOf(a), m.ts, m.x, m.p, (typeof hpReadOff==='function'&&hpReadOff())?0:m.k, m.img, m.file); }
   if(typeof hpOnConvRender==='function'){ try{ hpOnConvRender(a); }catch(e){} }
   if(UNREAD_ADDR===a && UNREAD_AT>0){
     let idx=-1;
