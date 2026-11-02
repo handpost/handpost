@@ -1466,3 +1466,9 @@ try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f254){ const f=hpCallUi; hpCal
       if(on){ if(!C.tipT) hpTipNext(C); else if(d&&d.__tip) hpTipEl(d); }
       else { if(C) hpTipStop(C); if(d&&d.__tip){ d.__tip.textContent=''; d.__tip.style.display='none'; } } }catch(e){} return r; },f,{__f254:1}); } }catch(e){}
 
+HP_TIP_KEYS=['cl_why_1','cl_why_2','cl_why_3','cl_why_4'];
+
+var HP_CBAR2_CSS='html body #hp-call-bar{background:#111a2c;border:2px solid #4a6a9c;box-shadow:0 8px 28px rgba(0,0,0,.7);width:max-content}@media (max-width:700px){html body #hp-call-bar{width:calc(100vw - 24px);max-width:calc(100vw - 24px);box-sizing:border-box;flex-wrap:wrap;row-gap:8px;column-gap:6px;justify-content:flex-end;padding:10px 10px 10px 14px}html body #hp-call-bar .t{flex:1 0 100%;white-space:normal;overflow:visible}html body #hp-call-bar button{padding:7px 10px}html body #hp-call-bar button.x{padding:7px 6px}}';
+function hpCbar2Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-cbar2-css')) return false; const s=document.createElement('style'); s.id='hp-cbar2-css'; s.textContent=HP_CBAR2_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
+hpCbar2Css();
+
