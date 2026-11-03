@@ -1622,3 +1622,8 @@ function hpListTime(ts,now){ try{ const d=new Date(Number(ts)), n=new Date(Numbe
     if(dd<=0) return (typeof hpClock==='function')?hpClock(d.getTime()):F({hour:'numeric',minute:'2-digit'}); if(dd===1) return T('day_yday'); if(dd<7) return F({weekday:'long'});
     if(d.getFullYear()===n.getFullYear()) return F(L==='ja'?{month:'numeric',day:'numeric'}:{month:'short',day:'numeric'}); return F({year:'numeric',month:'2-digit',day:'2-digit'}); }catch(e){ return (typeof fmtTS==='function')?fmtTS(Number(ts)):''; } }
 
+var HP_CFIT_CSS='#hp-call{justify-content:flex-start;overflow-y:auto;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(136px + env(safe-area-inset-bottom,0px));box-sizing:border-box;-webkit-overflow-scrolling:touch}#hp-call>*{flex-shrink:0}#hp-call::before,#hp-call::after{content:"";flex:1 1 0;min-height:0}#hp-call::after{order:99}#hp-call::before{order:-1}';
+function hpCfitCss(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-cfit-css')) return false; const s=document.createElement('style'); s.id='hp-cfit-css'; s.textContent=HP_CFIT_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f285){ const f=hpCallUi; hpCallUi=Object.assign(function(){ try{ hpCfitCss(); }catch(e){} return f.apply(this,arguments); },f,{__f285:1}); } }catch(e){}
+try{ if(typeof hpRingAc==='function'&&!hpRingAc.__f285){ const f=hpRingAc; hpRingAc=Object.assign(function(){ const a=f.apply(this,arguments); try{ if(a&&a.state==='interrupted'&&a.resume){ const pr=a.resume(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(e){} return a; },f,{__f285:1}); } }catch(e){}
+
