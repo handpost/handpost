@@ -917,7 +917,7 @@ hpVmSay=function(text,lang){ return new Promise(res=>{ let done=false, started=f
     const end=v=>{ if(done) return; done=true; try{ hpLog('通話：音声メッセージの読み上げ '+(v?'できた':'できない')+'（'+bc+'・声 '+nv+'・'+(tries)+' 回'+(why?'・'+why:'')+'）'); }catch(e){} res(v); };
     try{ const ss=(typeof speechSynthesis!=='undefined')?speechSynthesis:null; if(!ss||typeof SpeechSynthesisUtterance==='undefined'){ why='読み上げの仕組みが無い'; return end(false); }
       const go=()=>{ if(done) return; tries++; const u=new SpeechSynthesisUtterance(text); u.lang=bc; u.volume=1; u.rate=1;
-        try{ const vs=ss.getVoices()||[]; nv=vs.length; const v=vs.find(x=>x&&x.lang===bc)||vs.find(x=>x&&String(x.lang||'').replace('_','-').slice(0,2)===bc.slice(0,2)); if(v) u.voice=v; }catch(e){}
+        try{ const vs=ss.getVoices()||[]; nv=vs.length; const v=((typeof hpVmVoice==='function')?hpVmVoice(vs,bc):null)||vs.find(x=>x&&x.lang===bc)||vs.find(x=>x&&String(x.lang||'').replace('_','-').slice(0,2)===bc.slice(0,2)); if(v) u.voice=v; }catch(e){}
         u.onstart=()=>{ started=true; }; u.onend=()=>end(true); u.onerror=e=>{ why=String((e&&e.error)||'error'); if(started||(why!=='interrupted'&&why!=='canceled')) end(false); };
         HP_VM_U=u; try{ if(ss.paused) ss.resume(); }catch(e){} ss.speak(u);
         setTimeout(()=>{ if(done||started) return; let busy=false; try{ busy=!!ss.speaking; }catch(e){} if(busy) return; if(tries<2){ why='始まらない'; try{ ss.cancel(); }catch(e){} setTimeout(go,200); } },HP_VM_RETRY_MS); };
@@ -1626,4 +1626,13 @@ var HP_CFIT_CSS='#hp-call{justify-content:flex-start;overflow-y:auto;padding-top
 function hpCfitCss(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-cfit-css')) return false; const s=document.createElement('style'); s.id='hp-cfit-css'; s.textContent=HP_CFIT_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f285){ const f=hpCallUi; hpCallUi=Object.assign(function(){ try{ hpCfitCss(); }catch(e){} return f.apply(this,arguments); },f,{__f285:1}); } }catch(e){}
 try{ if(typeof hpRingAc==='function'&&!hpRingAc.__f285){ const f=hpRingAc; hpRingAc=Object.assign(function(){ const a=f.apply(this,arguments); try{ if(a&&a.state==='interrupted'&&a.resume){ const pr=a.resume(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(e){} return a; },f,{__f285:1}); } }catch(e){}
+
+const HP_VMV_ODD=/\b(albert|bahh|bells|boing|bubbles|cellos|eddy|flo|fred|grandma|grandpa|jester|junior|organ|ralph|reed|rocko|sandy|shelley|superstar|trinoids|whisper|wobble|zarvox|bad news|good news|hysterical|pipe organ)\b/i;
+let HP_VMV_LAST='';
+function hpVmVoiceScore(v,bc){ try{ if(!v) return -1e9; const lg=String(v.lang||'').replace('_','-'), nm=String(v.name||'')+' '+String(v.voiceURI||''); let s=0;
+    if(lg.toLowerCase()===String(bc).toLowerCase()) s+=100; else if(lg.slice(0,2).toLowerCase()===String(bc).slice(0,2).toLowerCase()) s+=50; else return -1e9;
+    if(HP_VMV_ODD.test(String(v.name||''))) s-=300; if(/premium/i.test(nm)) s+=40; if(/enhanced|拡張/i.test(nm)) s+=30; if(/natural|neural|online/i.test(nm)) s+=30; if(/siri/i.test(nm)) s+=25; if(/google/i.test(nm)) s+=15;
+    if(/compact|eloquence/i.test(nm)) s-=10; if(v.localService) s+=2; if(v.default) s+=1; return s; }catch(e){ return -1e9; } }
+function hpVmVoice(vs,bc){ try{ let best=null, bs=-1e9; for(const v of (vs||[])){ const s=hpVmVoiceScore(v,bc); if(s>bs){ bs=s; best=v; } } if(!best||bs<0) return null;
+    const k=bc+':'+String(best.name||''); if(k!==HP_VMV_LAST){ HP_VMV_LAST=k; try{ hpLog('通話：応答の声は '+String(best.name||'?')+'（'+bc+'・'+bs+' 点・声 '+(vs||[]).length+'）'); }catch(e){} } return best; }catch(e){ return null; } }
 
