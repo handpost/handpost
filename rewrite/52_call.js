@@ -1506,3 +1506,14 @@ function hpCallHmDay(t,now){ try{ const d=new Date(Number(t)), n=new Date(Number
     return (same?'':(d.getMonth()+1)+'/'+d.getDate()+' ')+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }catch(e){ return '?'; } }
 hpCallHm=function(t){ return hpCallHmDay(t,Date.now()); };
 
+var HP_CH_O_CSS='html body .m.sys.hp-ch.miss{border:2px solid #e6a23c;border-radius:14px;padding:10px 14px;margin:12px auto;background:rgba(230,162,60,.10);color:#f3c27a;font-size:15px;font-weight:700;line-height:1.5}html body .m.sys.hp-ch.miss button{font-weight:700}';
+function hpChOutKind(C){ if(!C) return ''; if(C.talkAt) return 'oans'; const w=String(C.why||''); if(/^(peer:)?timeout$/.test(w)) return 'onoans'; if(w==='peer:decline') return 'odecl'; if(w==='peer:busy') return 'obusy'; if(w==='hangup') return 'ocancel'; return 'ofail'; }
+function hpChOutRow(C){ const r=hpChOutKind(C); if(!r) return null; const o={d:'c',t:'',ts:Number(C.at)||Date.now(),cl:{r:r}}; if(r==='oans') o.cl.s=Math.max(0,Math.round((Date.now()-C.talkAt)/1000)); return o; }
+function hpChOut(m){ return !!(m&&m.cl&&/^o/.test(String(m.cl.r||''))); }
+function hpChOCss(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-ch-o-css')) return false; const s=document.createElement('style'); s.id='hp-ch-o-css'; s.textContent=HP_CH_O_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
+try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__cho){ const f=hpCallEnd; hpCallEnd=Object.assign(function(){ const C=HP_CALL, was=C&&C.st; const r=f.apply(this,arguments);
+    try{ if(C&&C.dir==='out'&&was!=='ended'&&C.st==='ended'&&!C.chDone&&C.peer){ C.chDone=1; const o=hpChOutRow(C); if(o) hpChSave(C.peer,o); } }catch(e){} return r; },f,{__cho:1}); } }catch(e){}
+hpChText=function(m){ const c=(m&&m.cl)||{}; const k={ans:'ch_ans',miss:'ch_miss',decl:'ch_decl',taken:'ch_taken',fail:'ch_fail',oans:'ch_oans',onoans:'ch_onoans',odecl:'ch_odecl',obusy:'ch_obusy',ocancel:'ch_ocancel',ofail:'ch_ofail'}[c.r]||'ch_miss'; return TF(k,{d:(typeof hpCallFmt==='function')?hpCallFmt((Number(c.s)||0)*1000):String(c.s||0)}); };
+try{ if(typeof hpChEl==='function'&&!hpChEl.__cho){ const f=hpChEl; hpChEl=Object.assign(function(a,m){ const s=f.apply(this,arguments); try{ if(s&&m&&m.cl&&m.cl.r==='miss'){ hpChOCss(); const b=s.querySelector?s.querySelector('button'):null; if(b&&b.classList) b.classList.add('pri'); } }catch(e){} return s; },f,{__cho:1}); } }catch(e){}
+try{ if(typeof hpChSave==='function'&&!hpChSave.__cho){ const f=hpChSave; hpChSave=Object.assign(function(peer,o){ const v=f.apply(this,arguments); try{ if(v&&hpChOut(o)) hpLog('通話：'+nickOf(peer)+' へかけた通話を手紙に残した（'+o.cl.r+(o.cl.s!=null?'・'+o.cl.s+' 秒':'')+'）'); }catch(e){} return v; },f,{__cho:1}); } }catch(e){}
+
