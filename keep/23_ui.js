@@ -151,7 +151,7 @@ function renderConvList(){
     const av=document.createElement('div'); av.className='av'; av.textContent=String(r.c.nick||'?').slice(0,1).toUpperCase();
     const body=document.createElement('div'); body.className='body';
     const nm=document.createElement('div'); nm.className='name'; const n1=document.createElement('span'); n1.textContent=r.c.nick||hpIdShort(r.c.address);   nm.appendChild(n1);
-    if(r.last){ const tm=document.createElement('time'); tm.textContent=fmtTS(r.last.ts); nm.appendChild(tm); }
+    if(r.last){ const tm=document.createElement('time'); tm.textContent=(typeof hpListTime==='function')?hpListTime(r.last.ts):fmtTS(r.last.ts); tm.title=fmtTS(r.last.ts); nm.appendChild(tm);   }
     const pv=document.createElement('div'); pv.className='prev'; { const dd=(typeof hpDeadPeer==='function')&&hpDeadPeer(r.c.address), bb=(typeof hpBlkOn==='function')&&hpBlkOn(r.c.address); pv.textContent=(dd?T('conv_dead')+' ':bb?T('conv_blocked')+' ':'')+convPreview(r.pv); }
     try{ if(typeof hpAvFill==='function') hpAvFill(av,r.c); }catch(e){}   body.appendChild(nm); body.appendChild(pv); it.appendChild(av); it.appendChild(body);
     if(r.unread){ const ub=document.createElement('span'); ub.className='unread'; ub.textContent=String(r.unread); it.appendChild(ub); }
