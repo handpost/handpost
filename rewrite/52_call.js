@@ -1517,3 +1517,11 @@ hpChText=function(m){ const c=(m&&m.cl)||{}; const k={ans:'ch_ans',miss:'ch_miss
 try{ if(typeof hpChEl==='function'&&!hpChEl.__cho){ const f=hpChEl; hpChEl=Object.assign(function(a,m){ const s=f.apply(this,arguments); try{ if(s&&m&&m.cl&&m.cl.r==='miss'){ hpChOCss(); const b=s.querySelector?s.querySelector('button'):null; if(b&&b.classList) b.classList.add('pri'); } }catch(e){} return s; },f,{__cho:1}); } }catch(e){}
 try{ if(typeof hpChSave==='function'&&!hpChSave.__cho){ const f=hpChSave; hpChSave=Object.assign(function(peer,o){ const v=f.apply(this,arguments); try{ if(v&&hpChOut(o)) hpLog('通話：'+nickOf(peer)+' へかけた通話を手紙に残した（'+o.cl.r+(o.cl.s!=null?'・'+o.cl.s+' 秒':'')+'）'); }catch(e){} return v; },f,{__cho:1}); } }catch(e){}
 
+var HP_CH_NEAR=180000;
+function hpBarWant(C){ try{ if(!C) return true; if(C.dir==='in') return false; if(C.dir!=='out') return false; if(C.talkAt) return false; if(String(C.why||'')==='hangup') return false; return true; }catch(e){ return true; } }
+function hpChMissEnsure(peer,at){ try{ if(!peer) return false; const t=Number(at)||Date.now(), near=m=>m&&m.d==='c'&&m.cl&&!/^o/.test(String(m.cl.r||''))&&Math.abs(Number(m.ts)-t)<HP_CH_NEAR;
+    if(typeof HP_CH_Q!=='undefined'&&HP_CH_Q.some(x=>x&&x[0]===peer&&near(x[1]))) return false; if(typeof hpChReady==='function'&&hpChReady()&&histLoad(peer).some(near)) return false;
+    return hpChSave(peer,{d:'c',t:'',ts:t,cl:{r:'miss'}}); }catch(e){ return false; } }
+try{ if(typeof hpCallBar==='function'&&!hpCallBar.__f280){ const f=hpCallBar; hpCallBar=Object.assign(function(C){ if(C&&!hpBarWant(C)){ try{ hpLog('通話：終わりの帯は出さない（'+(C.dir==='in'?'かかってきた通話':C.dir==='out'?'かけた通話・'+(C.talkAt?'話し終えた':'取りやめた'):'出られなかった呼び出し')+'。手紙の 1 行で知らせる）'); }catch(e){} return f.call(this,null); } return f.apply(this,arguments); },f,{__f280:1}); } }catch(e){}
+try{ if(typeof hpCallMissedBar==='function'&&!hpCallMissedBar.__f280){ const f=hpCallMissedBar; hpCallMissedBar=Object.assign(function(peer,at){ try{ if(peer&&!(typeof hpBlocked==='function'&&hpBlocked(peer))) hpChMissEnsure(peer,at); }catch(e){} return f.apply(this,arguments); },f,{__f280:1}); } }catch(e){}
+
