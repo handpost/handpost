@@ -1638,6 +1638,15 @@ try{ if(typeof hpTipNext==='function'&&!hpTipNext.__f287){ const f=hpTipNext; hp
         h.onclick=e=>{ try{ e&&e.stopPropagation&&e.stopPropagation(); }catch(_){} C.whyOpen=!C.whyOpen; hpWhyFold(C,t,!!C.whyOpen); };
         hpWhyFold(C,t,!!C.whyOpen); } }catch(e){} return r; },f,{__f287:1}); } }catch(e){}
 
+function hpCpsDiag(text,e){ try{ const h=JSON.parse(String(text)); if(!h||typeof h!=='object') return ''; const now=Date.now(), fd=String(h.fd||''), pq=String(h.pq||''), age=t=>Math.round((now-(Number(t)||0))/1000);
+    const L=((typeof hpCpsPqAll==='function')?hpCpsPqAll()[fd]:null)||[], K=((typeof hpCkPqAll==='function')?hpCkPqAll()[fd]:null)||[], nw=L[0], has=L.some(x=>x&&x.id===pq);
+    const o=[(HP_CPS_NAME&&HP_CPS_NAME[h.k])||String(h.k||'?'),'送り手の端末 '+fd.slice(0,10)+'…','封の鍵 '+pq.slice(0,8)+(has?'（控えにある）':'（控えに無い）'),'控え '+L.length+' 件'+(nw?'（新しいもの '+age(nw.at)+' 秒前・'+(nw.r?'受け取った':'送った')+'手紙の鍵）':''),'封は '+age(h.at)+' 秒前'];
+    if(typeof h.w2==='string') o.push('通話用の包みあり（鍵 '+String(h.cq||'').slice(0,8)+(K.some(x=>x&&x.id===h.cq)?'・控えにある':'・控えに無い')+'・通話用の控え '+K.length+' 件）'); else o.push('通話用の包みなし');
+    return o.join('・'); }catch(x){ return ''; } }
+try{ if(typeof hpCpsOpen==='function'&&!hpCpsOpen.__f289){ const f=hpCpsOpen; hpCpsOpen=Object.assign(async function(text){ try{ return await f.apply(this,arguments); }catch(e){
+      let w=''; try{ const h=JSON.parse(String(text)); if(h&&typeof h.w2==='string'&&typeof hpCkCapOpen==='function'){ try{ await hpCkCapOpen(text); }catch(x){ w='・包みで開けない理由：'+((x&&x.message)||x); } } }catch(x){}
+      const dg=hpCpsDiag(text,e); const m=String((e&&e.message)||e)+(dg?'・'+dg:'')+w; const e2=new Error(m); throw e2; } },f,{__f289:1}); } }catch(e){}
+
 const HP_VMV_ODD=/\b(albert|bahh|bells|boing|bubbles|cellos|eddy|flo|fred|grandma|grandpa|jester|junior|organ|ralph|reed|rocko|sandy|shelley|superstar|trinoids|whisper|wobble|zarvox|bad news|good news|hysterical|pipe organ)\b/i;
 let HP_VMV_LAST='';
 function hpVmVoiceScore(v,bc){ try{ if(!v) return -1e9; const lg=String(v.lang||'').replace('_','-'), nm=String(v.name||'')+' '+String(v.voiceURI||''); let s=0;
