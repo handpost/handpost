@@ -742,6 +742,7 @@ async function hpCpsRing(peer,bodyObj,devs){
 try{ if(typeof hpCallSigPost==='function'&&!hpCallSigPost.__f209){ const f=hpCallSigPost; hpCallSigPost=Object.assign(async function(peer,body,devs){
     const type=body&&body.type; if(HP_CPS_TYPES.indexOf(type)<0) return f.apply(this,arguments);
     if(type==='call'){ let r=null; try{ r=await hpWithin(hpCpsRing(peer,body,devs),HP_CPS_CALL_WAIT,'通知の問い合わせ'); }catch(e){ r=null; } return f.call(this,peer,body,devs,(r&&r.devs.length)?{rang:r.devs}:null); }
+    if(type==='callend'){ const a=arguments, rp=hpCpsRing(peer,body,devs); try{ if(typeof hpByeHold==='function') hpByeHold(rp); }catch(e){} try{ await hpWithin(rp,(typeof HP_BYE_END_WAIT==='number')?HP_BYE_END_WAIT:3000,'通知の問い合わせ'); }catch(e){} return f.apply(this,a); }
     hpCpsRing(peer,body,devs).catch(()=>{}); return f.apply(this,arguments); },f,{__f209:1}); } }catch(e){}
 
 const HP_CPS_DB='hp-cap', HP_CPS_PEND=[], HP_CPS_SEEN=new Set(); let HP_CPS_BOOT=0;
@@ -1655,4 +1656,11 @@ function hpVmVoiceScore(v,bc){ try{ if(!v) return -1e9; const lg=String(v.lang||
     if(/compact|eloquence/i.test(nm)) s-=10; if(v.localService) s+=2; if(v.default) s+=1; return s; }catch(e){ return -1e9; } }
 function hpVmVoice(vs,bc){ try{ let best=null, bs=-1e9; for(const v of (vs||[])){ const s=hpVmVoiceScore(v,bc); if(s>bs){ bs=s; best=v; } } if(!best||bs<0) return null;
     const k=bc+':'+String(best.name||''); if(k!==HP_VMV_LAST){ HP_VMV_LAST=k; try{ hpLog('通話：応答の声は '+String(best.name||'?')+'（'+bc+'・'+bs+' 点・声 '+(vs||[]).length+'）'); }catch(e){} } return best; }catch(e){ return null; } }
+
+var HP_BYE_END_WAIT=3000, HP_BYE_HOLD_MAX=3500, HP_BYE_HOLD=null;
+function hpByeHold(p){ const H={at:Date.now(),n:0}; let done=false; const end=()=>{ if(done) return; done=true; if(HP_BYE_HOLD===H) HP_BYE_HOLD=null; hpByeFlush(H); }; HP_BYE_HOLD=H;
+  try{ Promise.resolve(p).then(end,end); }catch(e){ end(); } try{ setTimeout(end,HP_BYE_HOLD_MAX); }catch(e){} return H; }
+function hpByeFlush(H){ try{ if(HP_BYE_HOLD||typeof HP_CH_Q==='undefined'||!HP_CH_Q.length) return 0; if(typeof hpChReady==='function'&&!hpChReady()){ if(typeof hpChArm==='function') hpChArm(); return 0; }
+    const q=HP_CH_Q.splice(0); for(const x of q) hpChSave(x[0],x[1]); if(H&&H.n) try{ hpLog('通話：手紙の 1 行は「切った」を通知に載せてから残した（'+((Date.now()-H.at)/1000).toFixed(1)+' 秒待った）'); }catch(e){} return q.length; }catch(e){ return 0; } }
+try{ if(typeof hpChSave==='function'&&!hpChSave.__f290){ const f=hpChSave; hpChSave=Object.assign(function(peer,o){ try{ const H=HP_BYE_HOLD; if(H&&peer&&o&&Date.now()-H.at<HP_BYE_HOLD_MAX+500){ HP_CH_Q.push([peer,o]); H.n++; return false; } }catch(e){} return f.apply(this,arguments); },f,{__f290:1}); } }catch(e){}
 
