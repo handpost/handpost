@@ -1,6 +1,6 @@
 # Third-party components
 
-Handpost's own code is licensed under the GNU AGPL-3.0 (`LICENSE`). The components below are included as they are and remain under their own authors' copyrights and licenses; the AGPL-3.0 does not extend to them.
+Handpost's own code is licensed under the PolyForm Noncommercial License 1.0.0 (`LICENSE`). The components below are included as they are and remain under their own authors' copyrights and licenses; the PolyForm Noncommercial License does not extend to them.
 
 | Component | Location | License | Source |
 |---|---|---|---|

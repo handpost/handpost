@@ -6,4 +6,5 @@ Handpost is a messaging app that works like letters. Open https://handpost.page 
 
 - The files here are exactly what handpost.page serves (GitHub Pages).
 - `SHA256SUMS` lists the SHA-256 of every file.
-- License: GNU AGPL-3.0 (`LICENSE`). Third-party components in `lib/` and `jsqr.js` remain under their own authors' licenses.
+- License: PolyForm Noncommercial 1.0.0 (`LICENSE`). Personal and other noncommercial use is permitted; commercial use is not. Versions published up to v268 (November 2026) were released under the GNU AGPL-3.0, and those copies remain under it. Third-party components in `lib/` and `jsqr.js` remain under their own authors' licenses.
+- Terms of Use: shown in the app when you first open it, and under Safety in Help.
