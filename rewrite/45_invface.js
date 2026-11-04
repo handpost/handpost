@@ -255,4 +255,11 @@ hpIfRotate=(function(f){ return async function(why){
   HP_IF_CANT=''; return await f.apply(this,arguments); }; })(hpIfRotate);
 hpIfLine=(function(f){ return function(){ if(HP_IF_CANT) return HP_IF_CANT; return f.apply(this,arguments); }; })(hpIfLine);
 
+var HP_IF_T0=0;
+try{ if(typeof hpIfDrop==='function'&&!hpIfDrop.__f299){ const f=hpIfDrop; hpIfDrop=Object.assign(async function(old){
+    try{ if(HP_INV_CUR&&HP_INV_CUR.kind==='face'&&HP_INV_CUR!==old){ try{ hpInvDraw(); }catch(e){} try{ hpIfQuickDraw(); }catch(e){} hpIfShownLog(); } }catch(e){}
+    return f.apply(this,arguments); },{__f299:1}); } }catch(e){}
+function hpIfShownLog(){ try{ if(!HP_IF_T0) return; const s=(Date.now()-HP_IF_T0)/1000; HP_IF_T0=0; hpLog('目の前用の QR を出した（'+s.toFixed(1)+' 秒）'); }catch(e){} }
+try{ if(typeof hpIfRotate==='function'&&!hpIfRotate.__f299){ const f=hpIfRotate; hpIfRotate=Object.assign(async function(why){ if(!HP_IF_BUSY) HP_IF_T0=Date.now(); try{ return await f.apply(this,arguments); } finally{ try{ if(HP_INV_CUR&&HP_INV_CUR.kind==='face'&&!HP_IF_ERR) hpIfShownLog(); }catch(e){} HP_IF_T0=0; } },{__f299:1}); } }catch(e){}
+
 try{ hpIfBoot(); }catch(e){}
