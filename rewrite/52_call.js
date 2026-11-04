@@ -1801,7 +1801,7 @@ var HP_CBT_CSS='#hp-call .vbtns{bottom:calc(150px + env(safe-area-inset-bottom,0
  +'#hp-call button.on .cb-ic{background:#fff;color:#111}#hp-call .btns .cb-ic{width:72px;height:72px}#hp-call .btns button.end .cb-ic{background:#e5484d}#hp-call .btns button.ans .cb-ic{background:#2e9c5c}#hp-call .btns .cb-ic svg{width:30px;height:30px}'
  +'#hp-call .vbtns button span,#hp-call .btns button span{display:block;font-size:12px;margin:0;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}#hp-call .btns{gap:56px}#hp-call .sp{display:none!important}'
  +'#hp-call .lvbox{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;width:96px;height:128px;border-radius:12px;overflow:hidden;z-index:2;display:none;border:1px solid rgba(255,255,255,.35);background:#000}#hp-call.cam .lvbox{display:block}'
- +'#hp-call .lvbox #hp-call-lv{position:absolute!important;left:50%;top:50%;inset:auto;width:auto;height:auto;max-width:none;border:0;border-radius:0;display:block!important;z-index:0;object-fit:fill}'
+ +'#hp-call .lvbox #hp-call-lv{position:absolute!important;inset:auto;left:50%;top:50%;/* bk36f310: inset を先に（後ろにあると left・top が auto に戻り、左上にずれていた） */width:auto;height:auto;max-width:none;border:0;border-radius:0;display:block!important;z-index:0;object-fit:fill}'
  +'#hp-call.pre .lvbox{inset:0;top:0;right:0;width:100%;height:100%;border-radius:0;border:0;z-index:-1;display:block}';
 var HP_CBT_SVG={
   mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>',
@@ -1869,4 +1869,22 @@ try{ if(typeof setInterval==='function'&&typeof HP_SL!=='undefined') setInterval
 try{ if(typeof hpSlSend==='function'&&!hpSlSend.__f309){ const f=hpSlSend; hpSlSend=Object.assign(function(peer,body,devs){ try{ for(const s of hpSlOf(peer)) hpV309SlRx(s); }catch(e){} const got=f.apply(this,arguments);
     try{ if(!got||!got.length) return got; const sus=hpSlOf(peer).filter(s=>s&&s.dev&&got.indexOf(s.dev)>=0&&hpV309SlSus(s)).map(s=>s.dev); if(!sus.length) return got;
       hpLog('通話：画面が裏にいたあと糸から何も届いていないので、郵便受けでも送る（'+String(body&&body.type)+'・端末 '+sus.length+' 台）'); return got.filter(d=>sus.indexOf(d)<0); }catch(e){ return got; } },f,{__f309:1}); } }catch(e){}
+
+var HP_BC_KEY='hp_bc', HP_HB_KEY='hp_hb', HP_UI_KEY='hp_ui', HP_BC_MAX=40;
+function hpBcNow(){ const d=new Date(), p=(n,w)=>String(n).padStart(w||2,'0'); return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())+'.'+p(d.getMilliseconds(),3); }
+function hpBc(s){ try{ let a=[]; try{ a=JSON.parse(localStorage.getItem(HP_BC_KEY)||'[]'); }catch(e){ a=[]; } if(!Array.isArray(a)) a=[]; a.push(hpBcNow()+' '+String(s).slice(0,160)); if(a.length>HP_BC_MAX) a=a.slice(-HP_BC_MAX); localStorage.setItem(HP_BC_KEY,JSON.stringify(a)); return true; }catch(e){ return false; } }
+function hpBcBeat(){ try{ const C=HP_CALL; if(!C||C.st==='ended'){ localStorage.removeItem(HP_HB_KEY); return false; } localStorage.setItem(HP_HB_KEY,JSON.stringify({t:Date.now(),at:hpBcNow(),st:C.st,cam:!!C.cam,vid:!!C.vOn,vis:(typeof document!=='undefined'&&document.visibilityState)||''})); return true; }catch(e){ return false; } }
+function hpBcBoot(){ try{ const hb=JSON.parse(localStorage.getItem(HP_HB_KEY)||'null'); if(!hb||!(Number(hb.t)>0)) return 0; localStorage.removeItem(HP_HB_KEY); if(Date.now()-Number(hb.t)>864e5) return 0;
+    let a=[]; try{ a=JSON.parse(localStorage.getItem(HP_BC_KEY)||'[]'); }catch(e){ a=[]; } let ui=''; try{ ui=String(localStorage.getItem(HP_UI_KEY)||''); }catch(e){}
+    hpLog('通話：前回は通話の途中で止まった（最後の脈 '+hb.at+'・'+hb.st+(hb.cam?'・カメラあり':'')+(hb.vid?'・映像あり':'')+'・画面 '+hb.vis+'・描き直し '+(ui||'?')+'）');
+    const last=(Array.isArray(a)?a:[]).slice(-10); for(const x of last) hpLog('通話：　前回の足跡 '+x); return last.length+1; }catch(e){ return 0; } }
+try{ if(typeof log==='function'&&!log.__f311){ const f=log; log=Object.assign(function(m){ try{ const s=String(m); if(s.indexOf('通話：')>=0||s.indexOf('画面の誤り：')>=0) hpBc(s.replace(/^post: /,'')); }catch(e){} return f.apply(this,arguments); },f,{__f311:1}); } }catch(e){}
+try{ hpVidCam=(function(f){ if(typeof f!=='function'||f.__f311) return f; return Object.assign(function(){ hpBc('→ hpVidCam'); const r=f.apply(this,arguments); return (r&&r.then)?r.then(v=>{ hpBc('← hpVidCam '+v); return v; },e=>{ hpBc('× hpVidCam '+(e&&e.message||e)); throw e; }):r; },f,{__f311:1}); })(hpVidCam); }catch(e){}
+try{ hpVidAttach=(function(f){ if(typeof f!=='function'||f.__f311) return f; return Object.assign(function(){ hpBc('→ hpVidAttach'); const r=f.apply(this,arguments); return (r&&r.then)?r.then(v=>{ hpBc('← hpVidAttach '+v); return v; },e=>{ hpBc('× hpVidAttach '+(e&&e.message||e)); throw e; }):r; },f,{__f311:1}); })(hpVidAttach); }catch(e){}
+try{ hpVidPreview=(function(f){ if(typeof f!=='function'||f.__f311) return f; return Object.assign(function(){ hpBc('→ hpVidPreview'); const r=f.apply(this,arguments); return (r&&r.then)?r.then(v=>{ hpBc('← hpVidPreview '+v); return v; },e=>{ hpBc('× hpVidPreview '+(e&&e.message||e)); throw e; }):r; },f,{__f311:1}); })(hpVidPreview); }catch(e){}
+try{ hpVidLimit=(function(f){ if(typeof f!=='function'||f.__f311) return f; return Object.assign(function(){ hpBc('→ hpVidLimit'); const r=f.apply(this,arguments); return (r&&r.then)?r.then(v=>{ hpBc('← hpVidLimit '+v); return v; }):r; },f,{__f311:1}); })(hpVidLimit); }catch(e){}
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f311){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const C=HP_CALL, on=!!(C&&C.st!=='ended'); if(on){ try{ localStorage.setItem(HP_UI_KEY,'→ '+hpBcNow()); }catch(e){} } const r=f.apply(this,arguments); if(on){ try{ localStorage.setItem(HP_UI_KEY,'← '+hpBcNow()); }catch(e){} } return r; },f,{__f311:1}); } }catch(e){}
+try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f311){ const f=hpCallEnd; hpCallEnd=Object.assign(function(){ const r=f.apply(this,arguments); try{ localStorage.removeItem(HP_HB_KEY); }catch(e){} return r; },f,{__f311:1}); } }catch(e){}
+try{ if(typeof setInterval==='function'&&typeof window!=='undefined'&&!window.__hpBcT) window.__hpBcT=setInterval(hpBcBeat,1000); }catch(e){}
+try{ hpBcBoot(); }catch(e){}
 
