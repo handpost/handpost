@@ -1,15 +1,23 @@
 'use strict';
 function hpWkKey(raw){ return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']); }
+function hpWkHead(frame, len){ return Math.min(len, frame && frame.type === 'key' ? 10 : 3); }
 function hpWkSetup(readable, writable, o){
-  const kp = hpWkKey(o.key), salt = new Uint8Array(o.salt), enc = (o.op === 'enc'); let n = 0, bad = 0;
+  const kp = hpWkKey(o.key), salt = new Uint8Array(o.salt), enc = (o.op === 'enc'), vid = (o.kind === 'video'); let n = 0, bad = 0;
   const tf = new TransformStream({ async transform(frame, ctl){
     try{
       const key = await kp, data = new Uint8Array(frame.data);
       if(enc){
         const iv = new Uint8Array(12); iv.set(salt, 0); const c = (n++) >>> 0; iv[8] = c >>> 24; iv[9] = (c >>> 16) & 255; iv[10] = (c >>> 8) & 255; iv[11] = c & 255;
+        if(vid){ const h = hpWkHead(frame, data.length), head = data.subarray(0, h);
+          const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv, additionalData: head }, key, data.subarray(h)));
+          const out = new Uint8Array(h + 4 + ct.length); out.set(head, 0); out.set(iv.subarray(8), h); out.set(ct, h + 4); frame.data = out.buffer; ctl.enqueue(frame); return; }
         const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, data));
         const out = new Uint8Array(4 + ct.length); out.set(iv.subarray(8), 0); out.set(ct, 4); frame.data = out.buffer;
       } else {
+        if(vid){ const h = hpWkHead(frame, data.length); if(data.length < h + 4 + 16){ bad++; return; }
+          const iv = new Uint8Array(12); iv.set(salt, 0); iv.set(data.subarray(h, h + 4), 8);
+          const pt = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv, additionalData: data.subarray(0, h) }, key, data.subarray(h + 4)));
+          const out = new Uint8Array(h + pt.length); out.set(data.subarray(0, h), 0); out.set(pt, h); frame.data = out.buffer; ctl.enqueue(frame); return; }
         if(data.length < 4 + 16){ bad++; return; }
         const iv = new Uint8Array(12); iv.set(salt, 0); iv.set(data.subarray(0, 4), 8);
         frame.data = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, data.subarray(4));

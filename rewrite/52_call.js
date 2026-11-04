@@ -1666,3 +1666,73 @@ try{ if(typeof hpChSave==='function'&&!hpChSave.__f290){ const f=hpChSave; hpChS
 
 function hpNoIp(s){ try{ return String(s==null?'':s).replace(/\d{1,3}(?:\.\d{1,3}){3}/g,'*').replace(/[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7}/gi,'*'); }catch(e){ return ''; } }
 
+var HP_VID_ON=true, HP_VID_BPS=500000, HP_VID_FPS=24;
+var HP_VID_CSS='#hp-call-rv{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;background:#000;display:none}#hp-call.vid #hp-call-rv{display:block}#hp-call.vid{background:#000}'
+ +'#hp-call.vid>*:not(.who):not(.st):not(.btns):not(.tap):not(.vbtns):not(video):not(audio){display:none!important}#hp-call.vid .who,#hp-call.vid .st{text-shadow:0 1px 4px #000}'
+ +'#hp-call-lv{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;width:96px;height:128px;object-fit:cover;border-radius:12px;z-index:2;display:none;border:1px solid rgba(255,255,255,.35);background:#000}#hp-call.cam #hp-call-lv{display:block}#hp-call-lv.me{transform:scaleX(-1)}'
+ +'#hp-call .vbtns{position:absolute;left:0;right:0;bottom:calc(150px + env(safe-area-inset-bottom,0px));display:flex;gap:22px;justify-content:center;transition:opacity .3s}#hp-call .vbtns button{width:58px;height:58px;font-size:1.3em}#hp-call.dim .vbtns{opacity:0;pointer-events:none}';
+function hpVidTr(pc){ try{ return (pc&&pc.getTransceivers?pc.getTransceivers():[]).find(t=>t&&t.receiver&&t.receiver.track&&t.receiver.track.kind==='video'&&!t.stopped)||null; }catch(e){ return null; } }
+function hpVidCodec(t){ try{ if(!t||typeof t.setCodecPreferences!=='function'||typeof RTCRtpReceiver==='undefined'||!RTCRtpReceiver.getCapabilities) return false; const cs=(RTCRtpReceiver.getCapabilities('video')||{}).codecs||[];
+    const vp8=cs.filter(c=>/\/vp8$/i.test(c.mimeType)), ex=cs.filter(c=>/\/(rtx|red|ulpfec)$/i.test(c.mimeType)); if(!vp8.length) return false; t.setCodecPreferences(vp8.concat(ex)); return true; }catch(e){ return false; } }
+function hpVidAdd(pc){ try{ if(!HP_VID_ON||!pc||pc.__hpv||pc.localDescription||pc.remoteDescription||typeof pc.addTransceiver!=='function') return false; pc.__hpv=1; const t=pc.addTransceiver('video',{direction:'sendrecv'}); hpVidCodec(t); return true; }catch(e){ return false; } }
+function hpVidAns(pc){ try{ if(!pc||pc.signalingState!=='have-remote-offer') return 0; let n=0; for(const t of pc.getTransceivers()){ try{ if(t.receiver&&t.receiver.track&&t.receiver.track.kind==='video'){ t.direction='sendrecv'; hpVidCodec(t); n++; } }catch(e){} } return n; }catch(e){ return 0; } }
+function hpVidSalt(d){ const s=new Uint8Array(8); s[0]=d; s[1]=1; return s; }
+function hpVidCryApply(x,op,key,salt){ const w=hpCallWorker(), o={op:op,key:key.slice(0),salt:salt,kind:'video'};
+  if(typeof RTCRtpScriptTransform==='function'){ x.transform=new RTCRtpScriptTransform(w,o); return 'script'; }
+  const es=x.createEncodedStreams(); w.postMessage(Object.assign(o,{readable:es.readable,writable:es.writable}),[es.readable,es.writable]); return 'legacy'; }
+function hpVidCry(C,pc){ try{ if(!C||!C.key||!pc) return 0; const me=C.dir==='out'?1:2, you=C.dir==='out'?2:1; C.cry=C.cry||{}; C.cryW=C.cryW||new WeakSet(); let n=0;
+    for(const t of pc.getTransceivers()){ if(!(t.receiver&&t.receiver.track&&t.receiver.track.kind==='video')) continue; const s=t.sender, r=t.receiver;
+      if(s&&!C.cryW.has(s)){ C.cryW.add(s); C.cry['vs'+Object.keys(C.cry).length]=hpVidCryApply(s,'enc',C.key,hpVidSalt(me)); n++; }
+      if(r&&!C.cryW.has(r)){ C.cryW.add(r); C.cry['vr'+Object.keys(C.cry).length]=hpVidCryApply(r,'dec',C.key,hpVidSalt(you)); n++; } } return n; }catch(e){ try{ hpLog('通話：映像に二重の鍵を掛けられない（'+((e&&e.message)||e)+'）'); }catch(x){} return 0; } }
+
+function hpVidGuard(pc){ try{ if(!pc||pc.__hpg) return false; pc.__hpg=1; let h=null; try{ const cur=pc.ontrack; if(cur){ h=cur; pc.ontrack=null; } }catch(e){}
+    Object.defineProperty(pc,'ontrack',{configurable:true,get(){ return h; },set(fn){ h=(typeof fn==='function')?fn:null; }});
+    pc.addEventListener('track',e=>{ try{ if(e&&e.track&&e.track.kind==='video') return; if(h) h.call(pc,e); }catch(x){} }); return true; }catch(e){ return false; } }
+function hpVidAudioOnly(pc){ try{ const ts=pc.getReceivers().map(r=>r.track).filter(t=>t&&t.kind==='audio'); return ts.length?new MediaStream(ts):null; }catch(e){ return null; } }
+
+try{ if(typeof hpCallIceN==='function'&&!hpCallIceN.__f300){ const f=hpCallIceN; hpCallIceN=Object.assign(function(){ const c=f.apply(this,arguments); try{ if(c&&HP_VID_ON) c.bundlePolicy='max-bundle'; }catch(e){} return c; },{__f300:1}); } }catch(e){}
+
+try{ if(typeof hpCallCryptoOn==='function'&&!hpCallCryptoOn.__f300){ const f=hpCallCryptoOn; hpCallCryptoOn=Object.assign(function(C){ try{ if(C&&C.pc){ if(C.dir==='out'&&C.pc.signalingState==='stable') hpVidAdd(C.pc); else hpVidAns(C.pc); } }catch(e){} const r=f.apply(this,arguments); try{ if(C&&C.pc) hpVidCry(C,C.pc); }catch(e){} return r; },f,{__f300:1}); } }catch(e){}
+try{ if(typeof hpCallWire==='function'&&!hpCallWire.__f300){ const f=hpCallWire; hpCallWire=Object.assign(function(C){ try{ if(C&&C.pc) hpVidGuard(C.pc); }catch(e){} return f.apply(this,arguments); },f,{__f300:1}); } }catch(e){}
+
+hpPreCry=function(C,pc){ try{ if(!C||!C.key||!pc) return 0; try{ if(pc.signalingState==='stable'&&!pc.localDescription) hpVidAdd(pc); else hpVidAns(pc); }catch(e){} try{ hpVidGuard(pc); }catch(e){}
+    const me=C.dir==='out'?1:2, you=C.dir==='out'?2:1; C.cry=C.cry||{}; C.cryW=C.cryW||new WeakSet(); let n=0;
+    for(const t of pc.getTransceivers()){ const vid=!!(t.receiver&&t.receiver.track&&t.receiver.track.kind==='video'); if(vid) continue; const s=t.sender, r=t.receiver;
+      if(s&&!C.cryW.has(s)){ C.cryW.add(s); C.cry['ps'+Object.keys(C.cry).length]=hpCallCryptoApply(s,'enc',C.key,hpCallSalt(me)); n++; } if(r&&!C.cryW.has(r)){ C.cryW.add(r); C.cry['pr'+Object.keys(C.cry).length]=hpCallCryptoApply(r,'dec',C.key,hpCallSalt(you)); n++; } }
+    return n+hpVidCry(C,pc); }catch(e){ hpLog('通話：裏の線に二重の鍵を掛けられない（'+((e&&e.message)||e)+'）'); return 0; } };
+hpPreCry.__f300=1;
+try{ if(typeof hpPreAdopt==='function'&&!hpPreAdopt.__f300){ const f=hpPreAdopt; hpPreAdopt=Object.assign(async function(C,P){ try{ if(P&&P.pc){ const s=hpVidAudioOnly(P.pc); if(s) P.stream=s; } }catch(e){} return f.apply(this,arguments); },{__f300:1}); } }catch(e){}
+try{ if(typeof hpPreAccept==='function'&&!hpPreAccept.__f300){ const f=hpPreAccept; hpPreAccept=Object.assign(async function(C){ try{ const P=C&&C.pre1; if(P&&P.pc){ const s=hpVidAudioOnly(P.pc); if(s) P.stream=s; } }catch(e){} return f.apply(this,arguments); },{__f300:1}); } }catch(e){}
+
+async function hpVidGet(face){ return navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:face||'user',width:{ideal:640},height:{ideal:360},frameRate:{ideal:HP_VID_FPS,max:HP_VID_FPS}}}); }
+async function hpVidLimit(snd){ try{ const p=snd.getParameters(); if(!p.encodings||!p.encodings.length) p.encodings=[{}]; p.encodings[0].maxBitrate=HP_VID_BPS; p.encodings[0].maxFramerate=HP_VID_FPS; await snd.setParameters(p); return true; }catch(e){ return false; } }
+function hpVidCanSend(C){ try{ const t=hpVidTr(C&&C.pc); return !!(t&&(!t.currentDirection||/send/.test(t.currentDirection))); }catch(e){ return false; } }
+async function hpVidCam(C,on,face){ if(!C||!C.pc||C.st!=='talking'||C.camBusy) return false; C.camBusy=true; try{
+    const t=hpVidTr(C.pc); if(!t||!hpVidCanSend(C)){ try{ hpToast(T('cl_cam_old'),6000); }catch(e){} hpLog('通話：相手の線に映像の口が無い（相手の版が古い）'); return false; }
+    if(!on){ await t.sender.replaceTrack(null); hpVidStop(C); hpLog('通話：カメラを切った'); return true; }
+    const f=face||C.face||'user', s=await hpVidGet(f), vt=s.getVideoTracks()[0]; if(HP_CALL!==C||C.st!=='talking'){ s.getTracks().forEach(x=>x.stop()); return false; } if(!vt) throw new Error('映像が無い');
+    await t.sender.replaceTrack(vt); await hpVidLimit(t.sender); hpVidCry(C,C.pc); const old=C.cam; C.cam=vt; C.camS=s; C.face=f; try{ if(old&&old!==vt) old.stop(); }catch(e){}
+    vt.addEventListener('ended',()=>{ try{ if(HP_CALL===C&&C.cam===vt){ hpLog('通話：カメラが止められた'); t.sender.replaceTrack(null).catch(()=>{}); hpVidStop(C); hpCallUi(); } }catch(e){} });
+    const st=vt.getSettings?vt.getSettings():{}; hpLog('通話：カメラを入れた（'+(f==='user'?'前':'後ろ')+'・'+(st.width||'?')+'×'+(st.height||'?')+'）'); return true;
+  }catch(e){ const m=String((e&&e.message)||e); hpLog('通話：カメラを使えない（'+m+'）'); try{ hpToast(/NotAllowed|Permission|denied/i.test(m)?T('cl_nocam'):TF('cl_cam_err',{m:m}),6000); }catch(x){} return false; }
+  finally{ C.camBusy=false; try{ hpCallUi(); }catch(e){} } }
+function hpVidStop(C){ try{ if(C&&C.cam){ try{ C.cam.stop(); }catch(e){} } if(C){ C.cam=null; C.camS=null; } const lv=document.getElementById('hp-call-lv'); if(lv) lv.srcObject=null; }catch(e){} }
+
+async function hpVidPeek(C){ try{ if(!C||HP_CALL!==C||C.st!=='talking'||!C.pc) return false; const t=hpVidTr(C.pc); if(!t) return false; let fr=0; const st=await t.receiver.getStats(); st.forEach(r=>{ if(r.type==='inbound-rtp') fr=Math.max(fr,Number(r.framesDecoded)||0); });
+    const now=Date.now(); if(fr>(C.vFr||0)){ C.vFr=fr; C.vAt=now; if(!C.vLog){ C.vLog=1; hpLog('通話：相手の映像が届いた'); } } const on=!!(C.vAt&&now-C.vAt<2000); if(on!==!!C.vOn){ C.vOn=on; if(!on&&C.vLog) hpLog('通話：相手の映像が止まった'); hpCallUi(); } return on; }catch(e){ return false; } }
+function hpVidEls(d){ try{ if(!d) return; if(document.head&&!document.getElementById('hp-vid-css')){ const s=document.createElement('style'); s.id='hp-vid-css'; s.textContent=HP_VID_CSS; document.head.appendChild(s); }
+    if(!d.__rv){ const v=document.createElement('video'); v.id='hp-call-rv'; v.muted=true; v.autoplay=true; v.setAttribute('playsinline',''); v.playsInline=true; d.insertBefore(v,d.firstChild); d.__rv=v; }
+    if(!d.__lv){ const v=document.createElement('video'); v.id='hp-call-lv'; v.muted=true; v.autoplay=true; v.setAttribute('playsinline',''); v.playsInline=true; d.appendChild(v); d.__lv=v; }
+    if(!d.__vb){ const row=document.createElement('div'); row.className='vbtns'; const mk=(icon,k,fn)=>{ const b=document.createElement('button'); b.type='button'; b.className='opt'; b.appendChild(document.createTextNode(icon)); const s=document.createElement('span'); s.textContent=T(k); b.appendChild(s); b.onclick=(typeof hpCallGuard==='function')?hpCallGuard(d,fn):fn; row.appendChild(b); return b; };
+      d.__cam=mk('\u{1F4F7}','cl_cam',()=>{ const C=HP_CALL; if(C) hpVidCam(C,!C.cam).catch(()=>{}); }); d.__flip=mk('\u{1F504}','cl_flip',()=>{ const C=HP_CALL; if(C&&C.cam) hpVidCam(C,true,C.face==='user'?'environment':'user').catch(()=>{}); }); d.appendChild(row); d.__vb=row; }
+  }catch(e){} }
+function hpVidUi(C,d){ try{ if(!d) return; hpVidEls(d); const talk=!!(C&&C.st==='talking'&&C.pc&&hpVidTr(C.pc));
+    d.__vb.style.display=talk?'':'none'; d.__cam.classList.toggle('on',!!(C&&C.cam)); d.__flip.style.display=(talk&&C.cam)?'':'none';
+    const rt=talk?hpVidTr(C.pc):null, tr=rt&&rt.receiver&&rt.receiver.track; if(tr&&d.__rvT!==tr){ d.__rvT=tr; d.__rv.srcObject=new MediaStream([tr]); try{ const p=d.__rv.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} } if(!talk&&d.__rvT){ d.__rvT=null; d.__rv.srcObject=null; }
+    const vid=!!(talk&&C.vOn); d.classList.toggle('vid',vid);
+    const cam=!!(talk&&C.cam); d.classList.toggle('cam',cam); if(cam&&d.__lvT!==C.cam){ d.__lvT=C.cam; d.__lv.srcObject=new MediaStream([C.cam]); try{ const p=d.__lv.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} } if(!cam&&d.__lvT){ d.__lvT=null; d.__lv.srcObject=null; } d.__lv.classList.toggle('me',!!(C&&C.face!=='environment'));
+    if(talk&&!C.vPoll){ C.vPoll=setInterval(()=>{ if(HP_CALL!==C||C.st!=='talking'){ clearInterval(C.vPoll); C.vPoll=null; return; } hpVidPeek(C); },1000); }
+  }catch(e){} }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f300){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(d) hpVidUi(C&&C.st!=='ended'?C:null,d); }catch(e){} return r; },f,{__f300:1}); } }catch(e){}
+try{ if(typeof hpCallClose==='function'&&!hpCallClose.__f300){ const f=hpCallClose; hpCallClose=Object.assign(function(C){ try{ hpVidStop(C); if(C&&C.vPoll){ clearInterval(C.vPoll); C.vPoll=null; } if(C){ C.vOn=false; } }catch(e){} return f.apply(this,arguments); },f,{__f300:1}); } }catch(e){}
+
