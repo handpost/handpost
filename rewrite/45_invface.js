@@ -297,4 +297,15 @@ function hpIfPreTick(){ try{ const now=Date.now(); if(typeof POST==='undefined'|
     hpIfPreMake().catch(()=>{}); return 'make'; }catch(e){ return ''; } }
 try{ if(!HP_IF_PRE_T&&typeof setInterval==='function') HP_IF_PRE_T=setInterval(hpIfPreTick,3000); }catch(e){}
 
+var HP_CTAV_CSS='body .ctav{width:58px!important;height:58px!important;flex:0 0 58px!important;font-size:22px}';
+function hpIfPreSave(){ try{ const now=Date.now(); let a=[]; try{ a=JSON.parse(localStorage.getItem('hp_ifpre')||'[]'); }catch(e){ a=[]; } if(!Array.isArray(a)) a=[];
+    a=a.filter(x=>x&&typeof x.id==='string'&&Number(x.exp)>now); if(HP_IF_PRE&&HP_IF_PRE.id&&!a.some(x=>x.id===HP_IF_PRE.id)) a.push({id:HP_IF_PRE.id,exp:HP_IF_PRE.exp}); localStorage.setItem('hp_ifpre',JSON.stringify(a.slice(-8))); return a; }catch(e){ return []; } }
+function hpIfPreOld(){ try{ const now=Date.now(); const a=JSON.parse(localStorage.getItem('hp_ifpre')||'[]'); return Array.isArray(a)?a.filter(x=>x&&typeof x.id==='string'&&Number(x.exp)>now&&!(HP_IF_PRE&&HP_IF_PRE.id===x.id)):[]; }catch(e){ return []; } }
+function hpIfPreForget(id){ try{ const a=JSON.parse(localStorage.getItem('hp_ifpre')||'[]'); if(Array.isArray(a)) localStorage.setItem('hp_ifpre',JSON.stringify(a.filter(x=>x&&x.id!==id))); }catch(e){} }
+try{ for(const x of hpIfPreOld()) HP_IF_IDS.add(x.id); }catch(e){}
+try{ if(typeof hpIfPreMake==='function'&&!hpIfPreMake.__f308){ const f=hpIfPreMake; hpIfPreMake=Object.assign(async function(){ const olds=hpIfPreOld(); const v=await f.apply(this,arguments);
+    try{ if(v&&HP_IF_PRE&&HP_IF_PRE.id){ HP_IF_IDS.add(HP_IF_PRE.id); hpIfPreSave(); for(const x of olds){ if(x.id===HP_IF_PRE.id) continue; try{ await hpInvReq({op:'idel',id:x.id}); }catch(e){} HP_IF_IDS.delete(x.id); hpIfPreForget(x.id); } } }catch(e){} return v; },f,{__f308:1}); } }catch(e){}
+try{ if(typeof hpIfPreUse==='function'&&!hpIfPreUse.__f308){ const f=hpIfPreUse; hpIfPreUse=Object.assign(function(){ const id=HP_IF_PRE&&HP_IF_PRE.id; const r=f.apply(this,arguments); try{ if(r&&id) hpIfPreForget(id); }catch(e){} return r; },f,{__f308:1}); } }catch(e){}
+try{ if(typeof document!=='undefined'&&document.head&&!document.getElementById('hp-ctav-css')){ const s=document.createElement('style'); s.id='hp-ctav-css'; s.textContent=HP_CTAV_CSS; document.head.appendChild(s); } }catch(e){}
+
 try{ hpIfBoot(); }catch(e){}

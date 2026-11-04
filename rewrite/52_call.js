@@ -1668,7 +1668,7 @@ function hpNoIp(s){ try{ return String(s==null?'':s).replace(/\d{1,3}(?:\.\d{1,3
 
 var HP_VID_ON=true, HP_VID_BPS=500000, HP_VID_FPS=24;
 var HP_VID_CSS='#hp-call-rv{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;background:#000;display:none}#hp-call.vid #hp-call-rv{display:block}#hp-call.vid{background:#000}'
- +'#hp-call.vid>*:not(.who):not(.st):not(.btns):not(.tap):not(.vbtns):not(video):not(audio){display:none!important}#hp-call.vid .who,#hp-call.vid .st{text-shadow:0 1px 4px #000}'
+ +'#hp-call.vid>*:not(.who):not(.st):not(.btns):not(.tap):not(.vbtns):not(video):not(audio):not(.lvbox){display:none!important}#hp-call.vid .who,#hp-call.vid .st{text-shadow:0 1px 4px #000}'
  +'#hp-call-lv{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;width:96px;height:128px;object-fit:cover;border-radius:12px;z-index:2;display:none;border:1px solid rgba(255,255,255,.35);background:#000}#hp-call.cam #hp-call-lv{display:block}#hp-call-lv.me{transform:scaleX(-1)}'
  +'#hp-call .vbtns{position:absolute;left:0;right:0;bottom:calc(150px + env(safe-area-inset-bottom,0px));display:flex;gap:22px;justify-content:center;transition:opacity .3s}#hp-call .vbtns button{width:58px;height:58px;font-size:1.3em}#hp-call.dim .vbtns{opacity:0;pointer-events:none}';
 function hpVidTr(pc){ try{ return (pc&&pc.getTransceivers?pc.getTransceivers():[]).find(t=>t&&t.receiver&&t.receiver.track&&t.receiver.track.kind==='video'&&!t.stopped)||null; }catch(e){ return null; } }
@@ -1749,7 +1749,7 @@ try{ if(typeof hpVmAuto==='function'&&!hpVmAuto.__f302){ const f=hpVmAuto; hpVmA
 var HP_VID_NEXT=0;
 var HP_VID_CSS2='#btn-conv-vcall{margin-left:4px;background:var(--teal);border-color:var(--teal);color:#06231d}'
  +'#hp-call.pre{background:#000}#hp-call.pre #hp-call-lv{display:block;position:fixed;inset:0;top:0;right:0;width:100%;height:100%;border-radius:0;border:0;z-index:-1}'
- +'#hp-call.pre>*:not(.who):not(.st):not(.btns):not(.tap):not(.vbtns):not(video):not(audio):not(.vlab){display:none!important}#hp-call.pre .who,#hp-call.pre .st{text-shadow:0 1px 4px #000}'
+ +'#hp-call.pre>*:not(.who):not(.st):not(.btns):not(.tap):not(.vbtns):not(video):not(audio):not(.vlab):not(.lvbox){display:none!important}#hp-call.pre .who,#hp-call.pre .st{text-shadow:0 1px 4px #000}'
  +'#hp-call .vlab{display:none;font-size:.9em;opacity:.85;margin-top:-8px}#hp-call.vin .vlab{display:block}';
 function hpVidIcon(px){ const N='http://www.w3.org/2000/svg', g=document.createElementNS(N,'svg'); g.setAttribute('viewBox','0 0 24 24'); g.setAttribute('width',String(px||18)); g.setAttribute('height',String(px||18)); g.setAttribute('fill','none'); g.setAttribute('stroke','currentColor'); g.setAttribute('stroke-width','2'); g.setAttribute('stroke-linecap','round'); g.setAttribute('stroke-linejoin','round');
   const r=document.createElementNS(N,'rect'); r.setAttribute('x','2'); r.setAttribute('y','6'); r.setAttribute('width','14'); r.setAttribute('height','12'); r.setAttribute('rx','2'); const p=document.createElementNS(N,'path'); p.setAttribute('d','M16 10l6-4v12l-6-4z'); g.appendChild(r); g.appendChild(p); return g; }
@@ -1797,7 +1797,7 @@ try{ setTimeout(()=>{ try{ hpVidBtn(); }catch(e){} },0); }catch(e){}
 
 var HP_CBT_CSS='#hp-call .vbtns{bottom:calc(150px + env(safe-area-inset-bottom,0px));gap:18px;align-items:flex-start}'
  +'#hp-call .vbtns button,#hp-call .vbtns button.opt,#hp-call .vbtns button.opt.on,#hp-call .btns button,#hp-call .btns button.end,#hp-call .btns button.ans{width:76px;height:auto;border-radius:0;background:none;color:#fff;display:flex;flex-direction:column;align-items:center;gap:7px;padding:0;font-size:1em}'
- +'#hp-call .cb-ic{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}#hp-call .cb-ic svg{width:28px;height:28px}'
+ +'#hp-call .cb-ic{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center}/* bk36f309: ぼかしをやめた */#hp-call .cb-ic svg{width:28px;height:28px}'
  +'#hp-call button.on .cb-ic{background:#fff;color:#111}#hp-call .btns .cb-ic{width:72px;height:72px}#hp-call .btns button.end .cb-ic{background:#e5484d}#hp-call .btns button.ans .cb-ic{background:#2e9c5c}#hp-call .btns .cb-ic svg{width:30px;height:30px}'
  +'#hp-call .vbtns button span,#hp-call .btns button span{display:block;font-size:12px;margin:0;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}#hp-call .btns{gap:56px}#hp-call .sp{display:none!important}'
  +'#hp-call .lvbox{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;width:96px;height:128px;border-radius:12px;overflow:hidden;z-index:2;display:none;border:1px solid rgba(255,255,255,.35);background:#000}#hp-call.cam .lvbox{display:block}'
@@ -1820,7 +1820,7 @@ function hpCbtSet(b,k){ try{ if(!b) return false; let ic=b.querySelector(':scope
 function hpLvFit(d){ try{ const v=d&&d.__lv, box=d&&d.__lvbox; if(!v||!box) return; const bw=box.clientWidth||96, bh=box.clientHeight||128, vw=v.videoWidth, vh=v.videoHeight; if(!vw||!vh) return; const s=Math.max(bw/vw,bh/vh);
     v.style.width=Math.ceil(vw*s)+'px'; v.style.height=Math.ceil(vh*s)+'px'; v.style.transform='translate(-50%,-50%)'+(v.classList.contains('me')?' scaleX(-1)':''); }catch(e){} }
 function hpCbtLayout(d){ try{ if(!d||!d.__vb) return; if(document.head&&!document.getElementById('hp-cbt-css')){ const s=document.createElement('style'); s.id='hp-cbt-css'; s.textContent=HP_CBT_CSS; document.head.appendChild(s); }
-    const row=d.__vb; const want=[d.__mute,d.__cam,d.__flip,d.__spk].filter(Boolean); for(const b of want){ if(b.parentNode!==row||row.lastChild!==b) row.appendChild(b); }
+    const row=d.__vb; const want=[d.__mute,d.__cam,d.__flip,d.__spk].filter(Boolean); const cur=Array.from(row.children); if(want.some((b,i)=>cur[i]!==b)) for(const b of want) row.appendChild(b);
     if(d.__lv&&!d.__lvbox){ const box=document.createElement('div'); box.className='lvbox'; d.__lv.parentNode.insertBefore(box,d.__lv); box.appendChild(d.__lv); d.__lvbox=box; d.__lv.addEventListener('resize',()=>hpLvFit(d)); d.__lv.addEventListener('loadedmetadata',()=>hpLvFit(d)); }
     if(d.__cam){ const s=d.__cam.querySelector('span'); if(s) s.textContent=T('cl_vbtn'); } }catch(e){} }
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f304){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(!d||!C||C.st==='ended') return r; hpCbtLayout(d);
@@ -1838,4 +1838,35 @@ try{ setTimeout(()=>{ try{ hpVidBtn(); }catch(e){} },0); }catch(e){}
 try{ if(typeof hpVidCam==='function'&&!hpVidCam.__f304){ const f=hpVidCam; hpVidCam=Object.assign(async function(C,on){ let old=null; try{ if(C&&on!==false&&C.cam&&!C.camBusy){ old=C.cam; C.cam=null; C.camSent=false; } }catch(e){}
     const v=await f.apply(this,arguments); try{ if(old){ if(v&&C.cam&&C.cam!==old){ try{ old.stop(); }catch(e){} } else if(!C.cam){ C.cam=old; } } }catch(e){} return v; },f,{__f304:1}); } }catch(e){}
 try{ if(typeof hpVidAttach==='function'&&!hpVidAttach.__f304){ const f=hpVidAttach; hpVidAttach=Object.assign(function(C){ if(C&&C.camBusy) return Promise.resolve(false); return f.apply(this,arguments); },f,{__f304:1}); } }catch(e){}
+
+var HP_V309_ERRN=0, HP_V309_ERRS=new Set();
+function hpV309Err(s){ try{ s=String(s||'').replace(/\s+/g,' ').slice(0,200); if(!s||HP_V309_ERRS.has(s)||HP_V309_ERRN>=20) return false; HP_V309_ERRS.add(s); HP_V309_ERRN++; if(typeof hpLog==='function') hpLog('画面の誤り：'+s); return true; }catch(e){ return false; } }
+try{ if(typeof window!=='undefined'&&window.addEventListener&&!window.__hpV309){ window.__hpV309=1;
+  window.addEventListener('error',e=>{ try{ hpV309Err((e&&e.message||'?')+' '+String(e&&e.filename||'').split('/').pop()+':'+(e&&e.lineno||0)); }catch(x){} });
+  window.addEventListener('unhandledrejection',e=>{ try{ const r=e&&e.reason; hpV309Err('（約束）'+(r&&r.message||r)); }catch(x){} }); } }catch(e){}
+function hpV309Play(v){ try{ if(!v||!v.srcObject||!v.paused) return false; if(!(v.offsetWidth||v.offsetHeight)) return false; const p=v.play(); if(p&&p.catch) p.catch(()=>{}); return true; }catch(e){ return false; } }
+var HP_V309_CSS='#hp-call.vid .opt .cb-ic,#hp-call.pre .opt .cb-ic{background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.28)}';
+function hpV309Css(){ try{ if(document.head&&!document.getElementById('hp-v309-css')){ const s=document.createElement('style'); s.id='hp-v309-css'; s.textContent=HP_V309_CSS; document.head.appendChild(s); } }catch(e){} }
+
+function hpV309Look(C,d){ try{ if(!C||!d||C.v309L||!d.classList.contains('vid')) return; C.v309L=1; setTimeout(()=>{ try{ if(HP_CALL!==C) return; const v=d.__rv, l=d.__lv; hpLog('通話：映像の様子（相手 '+(v?(v.paused?'止まっている':'動いている')+'・'+v.videoWidth+'×'+v.videoHeight+'・'+v.readyState:'無し')+'／自分 '+(l&&l.srcObject?(l.paused?'止まっている':'動いている')+'・'+l.videoWidth+'×'+l.videoHeight:'無し')+'）'); }catch(e){} },1500); }catch(e){} }
+function hpV309IsVid(C){ return !!(C&&(C.vid||C.cam||C.vOn||C.wantCam)); }
+try{ if(typeof hpCallDimArm==='function'&&!hpCallDimArm.__f309){ const f=hpCallDimArm; hpCallDimArm=Object.assign(function(d){ try{ if(d&&hpV309IsVid(HP_CALL)){ if(d.__dimT){ clearTimeout(d.__dimT); d.__dimT=null; } d.classList.remove('dim'); return; } }catch(e){} return f.apply(this,arguments); },f,{__f309:1}); } }catch(e){}
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f309){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(d&&C&&C.st!=='ended'){ hpV309Css(); if(hpV309IsVid(C)&&d.classList.contains('dim')) d.classList.remove('dim'); hpV309Play(d.__rv); hpV309Play(d.__lv); hpV309Look(C,d); } }catch(e){} return r; },f,{__f309:1}); } }catch(e){}
+try{ if(typeof hpCallClose==='function'&&!hpCallClose.__f309){ const f=hpCallClose; hpCallClose=Object.assign(function(C){ try{ const d=document.getElementById('hp-call'); for(const v of [d&&d.__rv,d&&d.__lv]){ if(v){ try{ v.pause(); }catch(e){} v.srcObject=null; } } if(d){ d.__rvT=null; d.__lvT=null; }
+      const pc=C&&C.pc; if(pc&&typeof pc.close==='function'&&!pc.__v309){ pc.__v309=1; const cl=pc.close.bind(pc); pc.close=function(){ const t0=Date.now(); try{ hpLog('通話：線を閉じに行った'); }catch(e){} let r; try{ r=cl(); }catch(e){} try{ hpLog('通話：線を閉じた（'+(Date.now()-t0)+' ms）'); }catch(e){} return r; }; } }catch(e){}
+    return f.apply(this,arguments); },f,{__f309:1}); } }catch(e){}
+try{ if(typeof hpCallHangup==='function'&&!hpCallHangup.__f309){ const f=hpCallHangup; hpCallHangup=Object.assign(function(){ const C=HP_CALL;
+    try{ if(C) hpLog('通話：［切る］を押した（'+C.st+(C.cam?'・カメラあり':'')+(C.vOn?'・映像あり':'')+'）'); if(typeof hpLgSave==='function') hpLgSave(Date.now()); }catch(e){}
+    let r; try{ r=f.apply(this,arguments); }catch(e){ hpV309Err('切る '+(e&&e.message||e)); }
+    try{ if(C) setTimeout(()=>{ try{ if(HP_CALL!==C||C.st==='ended') return; hpLog('通話：［切る］のあと画面が残っていたので閉じた（'+C.st+'）'); try{ if(C.cam) C.cam.stop(); }catch(e){} try{ if(C.stream) C.stream.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} }); }catch(e){} C.st='ended'; HP_CALL=null; const d=document.getElementById('hp-call'); if(d){ d.style.display='none'; d.classList.remove('vid','cam','pre','dim'); } try{ hpCallRing(false); }catch(e){} }catch(e){} },4000); }catch(e){}
+    return r; },f,{__f309:1}); } }catch(e){}
+
+var HP_V309_HID=0;
+try{ if(typeof document!=='undefined'&&document.addEventListener&&!document.__hpV309){ document.__hpV309=1; document.addEventListener('visibilitychange',()=>{ try{ if(document.visibilityState==='hidden') HP_V309_HID=Date.now(); }catch(e){} }); } }catch(e){}
+function hpV309SlRx(s){ try{ if(s&&s.dc&&!s.dc.__v309){ s.dc.__v309=1; s.rxAt=Date.now(); s.dc.addEventListener('message',()=>{ s.rxAt=Date.now(); }); } }catch(e){} }
+function hpV309SlSus(s){ return !!(s&&HP_V309_HID&&HP_V309_HID>=(Number(s.rxAt)||0)); }
+try{ if(typeof setInterval==='function'&&typeof HP_SL!=='undefined') setInterval(()=>{ try{ for(const k of Object.keys(HP_SL)) hpV309SlRx(HP_SL[k]); }catch(e){} },2000); }catch(e){}
+try{ if(typeof hpSlSend==='function'&&!hpSlSend.__f309){ const f=hpSlSend; hpSlSend=Object.assign(function(peer,body,devs){ try{ for(const s of hpSlOf(peer)) hpV309SlRx(s); }catch(e){} const got=f.apply(this,arguments);
+    try{ if(!got||!got.length) return got; const sus=hpSlOf(peer).filter(s=>s&&s.dev&&got.indexOf(s.dev)>=0&&hpV309SlSus(s)).map(s=>s.dev); if(!sus.length) return got;
+      hpLog('通話：画面が裏にいたあと糸から何も届いていないので、郵便受けでも送る（'+String(body&&body.type)+'・端末 '+sus.length+' 台）'); return got.filter(d=>sus.indexOf(d)<0); }catch(e){ return got; } },f,{__f309:1}); } }catch(e){}
 
