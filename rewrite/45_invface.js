@@ -262,4 +262,39 @@ try{ if(typeof hpIfDrop==='function'&&!hpIfDrop.__f299){ const f=hpIfDrop; hpIfD
 function hpIfShownLog(){ try{ if(!HP_IF_T0) return; const s=(Date.now()-HP_IF_T0)/1000; HP_IF_T0=0; hpLog('目の前用の QR を出した（'+s.toFixed(1)+' 秒）'); }catch(e){} }
 try{ if(typeof hpIfRotate==='function'&&!hpIfRotate.__f299){ const f=hpIfRotate; hpIfRotate=Object.assign(async function(why){ if(!HP_IF_BUSY) HP_IF_T0=Date.now(); try{ return await f.apply(this,arguments); } finally{ try{ if(HP_INV_CUR&&HP_INV_CUR.kind==='face'&&!HP_IF_ERR) hpIfShownLog(); }catch(e){} HP_IF_T0=0; } },{__f299:1}); } }catch(e){}
 
+var HP_IF_PRE=null, HP_IF_PRE_BUSY=false, HP_IF_PRE_TRY=0, HP_IF_UP_AT=0, HP_IF_PRE_T=null;
+var HP_IF_PRE_TTL=13*60e3, HP_IF_PRE_EVERY=10*60e3, HP_IF_PRE_UPWAIT=20e3, HP_IF_PRE_GAP=60e3;
+function hpIfPreOk(p,now){ return !!(p&&!p.used&&p.exp-(now||Date.now())>=HP_IF_TTL); }
+async function hpIfPreMake(){ if(HP_IF_PRE_BUSY) return false; HP_IF_PRE_BUSY=true; HP_IF_PRE_TRY=Date.now(); const old=HP_IF_PRE; try{
+    if(!ID||!POST.up||POST.notOwner) return false; const host=hpInvHost(POST.url); if(!host) return false; await hpReady();
+    const card=hpIfCardMark(await hpCard(),true), sec=hp5S().randombytes_buf(32), K=hpInvKeys(sec), exp=Date.now()+HP_IF_PRE_TTL;
+    const r=await hpInvReq({ op:'iset', id:K.id, exp:exp, box:hpInvSeal(card, ID.address, K) });
+    HP_IF_PRE={ link:hpInvLink(ID.address, host, sec), exp:Number(r.exp)||exp, id:K.id, v:hpHex(K.v), used:0, kind:'face', at:Date.now() };
+    hpLog('目の前用の QR を先に作っておいた '+K.id.slice(0,8)+'（［QR］ですぐ出す）');
+    if(old&&old!==HP_IF_PRE){ try{ await hpInvReq({op:'idel', id:old.id}); }catch(e){} }
+    return true; }catch(e){ hpLog('目の前用の QR を先に作れない '+String((e&&e.message)||e)+'（1 分あけてもう一度）'); return false; } finally{ HP_IF_PRE_BUSY=false; } }
+function hpIfPreUse(){ try{ const p=HP_IF_PRE, now=Date.now(); if(!hpIfPreOk(p,now)) return null; HP_IF_PRE=null;
+    try{ hpInvKeep({ id:p.id, v:p.v, exp:p.exp, at:now, kind:'face' }); }catch(e){} const cur={ link:p.link, exp:p.exp, id:p.id, used:0, kind:'face', at:now };
+    HP_INV_CUR=cur; HP_IF_IDS.add(p.id); if(HP_INV_LIST&&Array.isArray(HP_INV_LIST.items)) HP_INV_LIST.items.push({ id:p.id, exp:p.exp, used:0 }); return cur; }catch(e){ return null; } }
+try{ if(typeof hpIfRotate==='function'&&!hpIfRotate.__f301){ const f=hpIfRotate; hpIfRotate=Object.assign(async function(why){
+    try{ if((why==='出した'||why==='つながった')&&!HP_IF_BUSY&&!hpIfCant()&&hpIfPreOk(HP_IF_PRE)){ const old=(HP_INV_CUR&&HP_INV_CUR.kind==='face')?HP_INV_CUR:null;
+        if(hpIfPreUse()){ HP_IF_AT=Date.now(); HP_IF_ERR=''; HP_IF_CANT=''; try{ hpInvDraw(); }catch(e){} try{ hpIfQuickDraw(); }catch(e){} hpLog('目の前用の QR を出した（先に作っておいた分・0.0 秒）'); HP_IF_T0=0;
+          if(old&&!old.used) hpIfDrop(old).catch(()=>{}); return true; } } }catch(e){}
+    return f.apply(this,arguments); },{__f301:1}); } }catch(e){}
+
+function hpIfWaitText(){ try{ if(POST.up) return ''; const at=Number(POST.nextAt)||0, ms=at-Date.now(); if(!POST.connecting&&ms>0){ return ms>=60e3?TF('if_wait_min',{m:Math.ceil(ms/60e3)}):TF('if_wait_sec',{s:Math.max(1,Math.ceil(ms/1000))}); } return T('if_wait_conn'); }catch(e){ return ''; } }
+function hpIfWaiting(){ try{ return !!(HP_IF_ON&&typeof POST!=='undefined'&&POST&&!POST.up&&!HP_IF_CANT&&!(HP_INV_CUR&&HP_INV_CUR.kind==='face'&&HP_INV_CUR.exp>Date.now())); }catch(e){ return false; } }
+try{ if(typeof hpIfLine==='function'&&!hpIfLine.__f301){ const f=hpIfLine; hpIfLine=Object.assign(function(){ try{ if(hpIfWaiting()) return hpIfWaitText(); }catch(e){} return f.apply(this,arguments); },{__f301:1}); } }catch(e){}
+try{ if(typeof hpIfQuickWait==='function'&&!hpIfQuickWait.__f301){ const f=hpIfQuickWait; hpIfQuickWait=Object.assign(function(shown){ try{ if(!shown&&hpIfWaiting()) return true; }catch(e){} return f.apply(this,arguments); },{__f301:1}); } }catch(e){}
+function hpIfPreTick(){ try{ const now=Date.now(); if(typeof POST==='undefined'||!POST) return '';
+    if(POST.up){ if(!HP_IF_UP_AT) HP_IF_UP_AT=now; } else HP_IF_UP_AT=0;
+    const vis=!(typeof document!=='undefined'&&document.visibilityState==='hidden');
+    if(HP_IF_ON&&vis&&POST.up&&!HP_IF_BUSY&&HP_IF_ERR&&!HP_IF_CANT&&!(HP_INV_CUR&&HP_INV_CUR.kind==='face'&&HP_INV_CUR.exp>now)&&hpIfSeen()){ hpIfRotate('つながった'); return 'go'; }
+    if(hpIfWaiting()&&hpIfSeen()){ try{ hpIfText(); hpIfQuickDraw(); }catch(e){} }
+    if(!vis||!POST.up||POST.notOwner||!ID||HP_IF_ON||HP_IF_PRE_BUSY||HP_IF_BUSY||hpIfCant()) return 'idle';
+    if(HP_IF_PRE&&hpIfPreOk(HP_IF_PRE,now)&&now-HP_IF_PRE.at<HP_IF_PRE_EVERY) return 'have';
+    if(now-HP_IF_UP_AT<HP_IF_PRE_UPWAIT||now-HP_IF_PRE_TRY<HP_IF_PRE_GAP) return 'wait';
+    hpIfPreMake().catch(()=>{}); return 'make'; }catch(e){ return ''; } }
+try{ if(!HP_IF_PRE_T&&typeof setInterval==='function') HP_IF_PRE_T=setInterval(hpIfPreTick,3000); }catch(e){}
+
 try{ hpIfBoot(); }catch(e){}

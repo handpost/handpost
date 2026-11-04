@@ -1736,3 +1736,13 @@ function hpVidUi(C,d){ try{ if(!d) return; hpVidEls(d); const talk=!!(C&&C.st===
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f300){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(d) hpVidUi(C&&C.st!=='ended'?C:null,d); }catch(e){} return r; },f,{__f300:1}); } }catch(e){}
 try{ if(typeof hpCallClose==='function'&&!hpCallClose.__f300){ const f=hpCallClose; hpCallClose=Object.assign(function(C){ try{ hpVidStop(C); if(C&&C.vPoll){ clearInterval(C.vPoll); C.vPoll=null; } if(C){ C.vOn=false; } }catch(e){} return f.apply(this,arguments); },f,{__f300:1}); } }catch(e){}
 
+var HP_VM_SAY_DELAY=0, HP_VM_SAY_GEN=0;
+try{ if(typeof hpVmSay==='function'&&!hpVmSay.__f302){ const f=hpVmSay; hpVmSay=Object.assign(function(text,lang){ const self=this, gen=++HP_VM_SAY_GEN, wait=HP_VM_SAY_DELAY|0; HP_VM_SAY_DELAY=0;
+    return new Promise(res=>{ let tries=0, fin=false; const done=v=>{ if(fin) return; fin=true; res(v); };
+      const run=()=>{ if(fin||gen!==HP_VM_SAY_GEN) return done(false); tries++; const my=tries; let spoke=false, cut=false;
+        const t=setInterval(()=>{ try{ if(fin||my!==tries){ clearInterval(t); return; } const sp=!!(typeof speechSynthesis!=='undefined'&&speechSynthesis.speaking); if(sp){ spoke=true; return; }
+            if(spoke&&tries<2){ cut=true; clearInterval(t); hpLog('通話：読み上げが途中で切れた。最初から読み直す'); try{ speechSynthesis.cancel(); }catch(e){} setTimeout(run,350); } }catch(e){ clearInterval(t); } },250);
+        Promise.resolve(f.call(self,text,lang)).then(v=>{ clearInterval(t); if(cut||my!==tries) return; done(v); },()=>{ clearInterval(t); if(!cut&&my===tries) done(false); }); };
+      if(wait>0) setTimeout(run,wait); else run(); }); },{__f302:1}); } }catch(e){}
+try{ if(typeof hpVmAuto==='function'&&!hpVmAuto.__f302){ const f=hpVmAuto; hpVmAuto=Object.assign(function(){ HP_VM_SAY_DELAY=900; try{ return f.apply(this,arguments); } finally{ HP_VM_SAY_DELAY=0; } },{__f302:1}); } }catch(e){}
+
