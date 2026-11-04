@@ -1795,3 +1795,47 @@ function hpVidBtn(){ try{ const h=document.getElementById('chat-head'), cb=docum
 try{ if(typeof hpCallBtn==='function'&&!hpCallBtn.__f303){ const f=hpCallBtn; hpCallBtn=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpVidBtn(); }catch(e){} return r; },f,{__f303:1}); } }catch(e){}
 try{ setTimeout(()=>{ try{ hpVidBtn(); }catch(e){} },0); }catch(e){}
 
+var HP_CBT_CSS='#hp-call .vbtns{bottom:calc(150px + env(safe-area-inset-bottom,0px));gap:18px;align-items:flex-start}'
+ +'#hp-call .vbtns button,#hp-call .vbtns button.opt,#hp-call .vbtns button.opt.on,#hp-call .btns button,#hp-call .btns button.end,#hp-call .btns button.ans{width:76px;height:auto;border-radius:0;background:none;color:#fff;display:flex;flex-direction:column;align-items:center;gap:7px;padding:0;font-size:1em}'
+ +'#hp-call .cb-ic{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}#hp-call .cb-ic svg{width:28px;height:28px}'
+ +'#hp-call button.on .cb-ic{background:#fff;color:#111}#hp-call .btns .cb-ic{width:72px;height:72px}#hp-call .btns button.end .cb-ic{background:#e5484d}#hp-call .btns button.ans .cb-ic{background:#2e9c5c}#hp-call .btns .cb-ic svg{width:30px;height:30px}'
+ +'#hp-call .vbtns button span,#hp-call .btns button span{display:block;font-size:12px;margin:0;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}#hp-call .btns{gap:56px}#hp-call .sp{display:none!important}'
+ +'#hp-call .lvbox{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;width:96px;height:128px;border-radius:12px;overflow:hidden;z-index:2;display:none;border:1px solid rgba(255,255,255,.35);background:#000}#hp-call.cam .lvbox{display:block}'
+ +'#hp-call .lvbox #hp-call-lv{position:absolute!important;left:50%;top:50%;inset:auto;width:auto;height:auto;max-width:none;border:0;border-radius:0;display:block!important;z-index:0;object-fit:fill}'
+ +'#hp-call.pre .lvbox{inset:0;top:0;right:0;width:100%;height:100%;border-radius:0;border:0;z-index:-1;display:block}';
+var HP_CBT_SVG={
+  mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>',
+  micoff:'<path d="M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.6"/><path d="M17 16.9A7 7 0 0 1 5 12v-2M19 10v2a7 7 0 0 1-.1 1.2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="2" x2="22" y2="22"/>',
+  vid:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-4v12l-6-4z"/>',
+  vidoff:'<path d="M16 16v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5 0h3a2 2 0 0 1 2 2v3.3l1 1 5-3.3v10"/><line x1="2" y1="2" x2="22" y2="22"/>',
+  flip:'<path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13.5a3 3 0 0 1 5-2.2M15 12.5a3 3 0 0 1-5 2.2"/><polyline points="14 10 14 11.5 12.5 11.5"/><polyline points="10 16 10 14.5 11.5 14.5"/>',
+  spk:'<path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>',
+  hang:'<path transform="rotate(135 12 12)" d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+  ans:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>'};
+function hpCbtIcon(k){ const N='http://www.w3.org/2000/svg', g=document.createElementNS(N,'svg'); g.setAttribute('viewBox','0 0 24 24'); g.setAttribute('fill','none'); g.setAttribute('stroke','currentColor'); g.setAttribute('stroke-width','2'); g.setAttribute('stroke-linecap','round'); g.setAttribute('stroke-linejoin','round'); g.innerHTML=HP_CBT_SVG[k]||''; g.setAttribute('data-k',k); return g; }
+
+function hpCbtSet(b,k){ try{ if(!b) return false; let ic=b.querySelector(':scope > .cb-ic'); if(!ic){ for(const n of Array.from(b.childNodes)){ if(!(n.nodeType===1&&n.tagName==='SPAN')) b.removeChild(n); } ic=document.createElement('i'); ic.className='cb-ic'; b.insertBefore(ic,b.firstChild); }
+    const cur=ic.firstChild; if(cur&&cur.getAttribute&&cur.getAttribute('data-k')===k) return true; ic.textContent=''; ic.appendChild(hpCbtIcon(k)); return true; }catch(e){ return false; } }
+
+function hpLvFit(d){ try{ const v=d&&d.__lv, box=d&&d.__lvbox; if(!v||!box) return; const bw=box.clientWidth||96, bh=box.clientHeight||128, vw=v.videoWidth, vh=v.videoHeight; if(!vw||!vh) return; const s=Math.max(bw/vw,bh/vh);
+    v.style.width=Math.ceil(vw*s)+'px'; v.style.height=Math.ceil(vh*s)+'px'; v.style.transform='translate(-50%,-50%)'+(v.classList.contains('me')?' scaleX(-1)':''); }catch(e){} }
+function hpCbtLayout(d){ try{ if(!d||!d.__vb) return; if(document.head&&!document.getElementById('hp-cbt-css')){ const s=document.createElement('style'); s.id='hp-cbt-css'; s.textContent=HP_CBT_CSS; document.head.appendChild(s); }
+    const row=d.__vb; const want=[d.__mute,d.__cam,d.__flip,d.__spk].filter(Boolean); for(const b of want){ if(b.parentNode!==row||row.lastChild!==b) row.appendChild(b); }
+    if(d.__lv&&!d.__lvbox){ const box=document.createElement('div'); box.className='lvbox'; d.__lv.parentNode.insertBefore(box,d.__lv); box.appendChild(d.__lv); d.__lvbox=box; d.__lv.addEventListener('resize',()=>hpLvFit(d)); d.__lv.addEventListener('loadedmetadata',()=>hpLvFit(d)); }
+    if(d.__cam){ const s=d.__cam.querySelector('span'); if(s) s.textContent=T('cl_vbtn'); } }catch(e){} }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f304){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(!d||!C||C.st==='ended') return r; hpCbtLayout(d);
+      hpCbtSet(d.__mute,C.muted?'micoff':'mic'); hpCbtSet(d.__cam,(C.cam||(C.st!=='talking'&&C.wantCam))?'vid':'vidoff'); hpCbtSet(d.__flip,'flip'); hpCbtSet(d.__spk,'spk'); hpCbtSet(d.__end,'hang'); hpCbtSet(d.__dec,'hang'); hpCbtSet(d.__ans,'ans');
+      const talk=C.st==='talking'&&!!(C.pc&&typeof hpVidTr==='function'&&hpVidTr(C.pc)), before=!!(C.vid&&(C.st==='ringing'||C.st==='calling'||C.st==='connecting')), mOn=!!(d.__mute&&d.__mute.style.display!=='none');
+      if(d.__cam) d.__cam.style.display=(talk||before)?'':'none'; if(d.__vb) d.__vb.style.display=(talk||before||mOn)?'':'none'; if(d.__flip) d.__flip.style.display=(talk&&C.cam)?'':'none';
+      hpLvFit(d); }catch(e){} return r; },f,{__f304:1}); } }catch(e){}
+
+try{ if(typeof hpVidBtn==='function'&&!hpVidBtn.__f304){ const f=hpVidBtn; hpVidBtn=Object.assign(function(){ const r=f.apply(this,arguments); try{ const cb=document.getElementById('btn-conv-call'), b=document.getElementById('btn-conv-vcall'), h=document.getElementById('chat-head'); if(!cb||!b||!h) return r;
+      b.className=cb.className; const cs=getComputedStyle(cb); for(const p of ['background-color','border','border-radius','color','padding','vertical-align','align-self','box-sizing']) b.style.setProperty(p,cs.getPropertyValue(p));
+      if(cb.offsetWidth) b.style.width=cb.offsetWidth+'px'; if(cb.offsetHeight) b.style.height=cb.offsetHeight+'px'; const gap=parseFloat(getComputedStyle(h).columnGap)||0; b.style.marginLeft=Math.max(0,8-gap)+'px'; b.style.marginTop=cs.marginTop; b.style.marginBottom=cs.marginBottom;
+      const ci=cb.querySelector('svg'), vi=b.querySelector('svg'); if(ci&&vi){ vi.setAttribute('width',ci.getAttribute('width')||'18'); vi.setAttribute('height',ci.getAttribute('height')||'18'); } }catch(e){} return r; },f,{__f304:1}); } }catch(e){}
+try{ setTimeout(()=>{ try{ hpVidBtn(); }catch(e){} },0); }catch(e){}
+
+try{ if(typeof hpVidCam==='function'&&!hpVidCam.__f304){ const f=hpVidCam; hpVidCam=Object.assign(async function(C,on){ let old=null; try{ if(C&&on!==false&&C.cam&&!C.camBusy){ old=C.cam; C.cam=null; C.camSent=false; } }catch(e){}
+    const v=await f.apply(this,arguments); try{ if(old){ if(v&&C.cam&&C.cam!==old){ try{ old.stop(); }catch(e){} } else if(!C.cam){ C.cam=old; } } }catch(e){} return v; },f,{__f304:1}); } }catch(e){}
+try{ if(typeof hpVidAttach==='function'&&!hpVidAttach.__f304){ const f=hpVidAttach; hpVidAttach=Object.assign(function(C){ if(C&&C.camBusy) return Promise.resolve(false); return f.apply(this,arguments); },f,{__f304:1}); } }catch(e){}
+

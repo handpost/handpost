@@ -79,7 +79,7 @@ self.addEventListener('push', (e) => {
 
   let lw = null; try { lw = self.clients.matchAll({ type: 'window', includeUncontrolled: true }); } catch (x) { lw = null; }
   e.waitUntil(Promise.resolve(lw || []).catch(() => []).then((cs) => {
-    let front = false; try { front = Array.isArray(cs) && cs.some((c) => c.visibilityState === 'visible' && c.focused); } catch (x) { front = false; }
+    let front = false; try { front = Array.isArray(cs) && cs.some((c) => c.visibilityState === 'visible'); } catch (x) { front = false; }
     if (!front) return self.registration.showNotification('Handpost', { body: body, tag: 'hp-letter', renotify: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' });
     return self.registration.showNotification('Handpost', { body: body, tag: 'hp-letter', silent: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })
       .then(() => self.registration.getNotifications({ tag: 'hp-letter' })).then((l) => { for (const n of (l || [])) n.close(); }).catch(() => { });
