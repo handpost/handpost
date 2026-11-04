@@ -1888,3 +1888,11 @@ try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f311){ const f=hpCallEnd; hp
 try{ if(typeof setInterval==='function'&&typeof window!=='undefined'&&!window.__hpBcT) window.__hpBcT=setInterval(hpBcBeat,1000); }catch(e){}
 try{ hpBcBoot(); }catch(e){}
 
+var HP_V312_CSS='#hp-call.vin .vlab{display:none!important}#btn-conv-vcall{margin-right:20px!important}';
+function hpV312Css(){ try{ if(document.head&&!document.getElementById('hp-v312-css')){ const s=document.createElement('style'); s.id='hp-v312-css'; s.textContent=HP_V312_CSS; document.head.appendChild(s); } }catch(e){} }
+try{ hpV312Css(); }catch(e){}
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f312){ const f=hpCallUi; hpCallUi=Object.assign(function(){ try{ const C=HP_CALL; if(C&&C.vid&&C.dir==='in'&&!C.v312){ C.v312=1; C.wantCam=0; } }catch(e){}
+    const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(!d||!C) return r; hpV312Css();
+      if(C.vid&&C.dir==='in'&&C.st==='ringing'&&d.__st){ const t=TF('cl_incoming_v',{who:nickOf(C.peer)}); if(d.__st.textContent!==t) d.__st.textContent=t; }
+      if(C.dir==='in'&&C.vid&&C.st!=='talking'&&C.st!=='ended'&&d.__vb) d.__vb.style.display='none'; }catch(e){} return r; },f,{__f312:1}); } }catch(e){}
+
