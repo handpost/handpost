@@ -1746,3 +1746,52 @@ try{ if(typeof hpVmSay==='function'&&!hpVmSay.__f302){ const f=hpVmSay; hpVmSay=
       if(wait>0) setTimeout(run,wait); else run(); }); },{__f302:1}); } }catch(e){}
 try{ if(typeof hpVmAuto==='function'&&!hpVmAuto.__f302){ const f=hpVmAuto; hpVmAuto=Object.assign(function(){ HP_VM_SAY_DELAY=900; try{ return f.apply(this,arguments); } finally{ HP_VM_SAY_DELAY=0; } },{__f302:1}); } }catch(e){}
 
+var HP_VID_NEXT=0;
+var HP_VID_CSS2='#btn-conv-vcall{margin-left:4px;background:var(--teal);border-color:var(--teal);color:#06231d}'
+ +'#hp-call.pre{background:#000}#hp-call.pre #hp-call-lv{display:block;position:fixed;inset:0;top:0;right:0;width:100%;height:100%;border-radius:0;border:0;z-index:-1}'
+ +'#hp-call.pre>*:not(.who):not(.st):not(.btns):not(.tap):not(.vbtns):not(video):not(audio):not(.vlab){display:none!important}#hp-call.pre .who,#hp-call.pre .st{text-shadow:0 1px 4px #000}'
+ +'#hp-call .vlab{display:none;font-size:.9em;opacity:.85;margin-top:-8px}#hp-call.vin .vlab{display:block}';
+function hpVidIcon(px){ const N='http://www.w3.org/2000/svg', g=document.createElementNS(N,'svg'); g.setAttribute('viewBox','0 0 24 24'); g.setAttribute('width',String(px||18)); g.setAttribute('height',String(px||18)); g.setAttribute('fill','none'); g.setAttribute('stroke','currentColor'); g.setAttribute('stroke-width','2'); g.setAttribute('stroke-linecap','round'); g.setAttribute('stroke-linejoin','round');
+  const r=document.createElementNS(N,'rect'); r.setAttribute('x','2'); r.setAttribute('y','6'); r.setAttribute('width','14'); r.setAttribute('height','12'); r.setAttribute('rx','2'); const p=document.createElementNS(N,'path'); p.setAttribute('d','M16 10l6-4v12l-6-4z'); g.appendChild(r); g.appendChild(p); return g; }
+function hpVidCallStart(peer){ HP_VID_NEXT=1; try{ return hpCallStart(peer); } finally{ HP_VID_NEXT=0; } }
+
+try{ if(typeof hpCallStart==='function'&&!hpCallStart.__f303){ const f=hpCallStart; hpCallStart=Object.assign(function(peer){ const vid=!!HP_VID_NEXT; HP_VID_NEXT=0; const p=f.apply(this,arguments);
+    try{ const C=HP_CALL; if(vid&&C&&C.dir==='out'&&C.st==='calling'&&!C.vid){ C.vid=1; C.wantCam=1; hpVidPreview(C).catch(()=>{}); hpLog('通話：ビデオ通話で呼び出す'); hpCallUi(); } }catch(e){} return p; },f,{__f303:1}); } }catch(e){}
+async function hpVidPreview(C){ if(!C||C.cam||C.camBusy) return false; C.camBusy=true; try{ const f=C.face||'user', s=await hpVidGet(f), vt=s.getVideoTracks()[0]; if(HP_CALL!==C||C.st==='ended'||!C.wantCam){ s.getTracks().forEach(x=>x.stop()); return false; }
+    C.cam=vt; C.camS=s; C.face=f; C.camSent=false; vt.addEventListener('ended',()=>{ try{ if(HP_CALL===C&&C.cam===vt){ hpVidStop(C); hpCallUi(); } }catch(e){} }); return true;
+  }catch(e){ const m=String((e&&e.message)||e); hpLog('通話：カメラを使えない（'+m+'）'); try{ hpToast(/NotAllowed|Permission|denied/i.test(m)?T('cl_nocam'):TF('cl_cam_err',{m:m}),6000); }catch(x){} C.wantCam=0; return false; } finally{ C.camBusy=false; try{ hpCallUi(); }catch(e){} } }
+
+async function hpVidAttach(C){ if(!C||!C.cam||C.camSent||C.camAtt||C.st!=='talking'||!C.pc) return false; C.camAtt=true; try{ const t=hpVidTr(C.pc); if(!t||!hpVidCanSend(C)){ hpLog('通話：相手の線に映像の口が無い（相手の版が古い）'); try{ hpToast(T('cl_cam_old'),6000); }catch(e){} return false; }
+    await t.sender.replaceTrack(C.cam); await hpVidLimit(t.sender); hpVidCry(C,C.pc); C.camSent=true; const st=C.cam.getSettings?C.cam.getSettings():{}; hpLog('通話：カメラを入れた（'+(C.face==='environment'?'後ろ':'前')+'・'+(st.width||'?')+'×'+(st.height||'?')+'・ビデオ通話）'); return true;
+  }catch(e){ hpLog('通話：カメラを送れない（'+((e&&e.message)||e)+'）'); return false; } finally{ C.camAtt=false; try{ hpCallUi(); }catch(e){} } }
+
+try{ if(typeof hpCallSig==='function'&&!hpCallSig.__f303){ const f=hpCallSig; hpCallSig=Object.assign(function(peer,body){ try{ const C=HP_CALL; if(body&&body.type==='call'&&C&&C.vid&&C.id===body.call) body.vid=1; }catch(e){} return f.apply(this,arguments); },f,{__f303:1}); } }catch(e){}
+try{ if(typeof hpCallOnSig==='function'&&!hpCallOnSig.__f303){ const f=hpCallOnSig; hpCallOnSig=Object.assign(async function(r,o){ const v=await f.apply(this,arguments);
+    try{ const N=HP_CALL; if(o&&o.type==='call'&&o.vid===1&&N&&N.dir==='in'&&N.id===o.call&&!N.vid){ N.vid=1; N.wantCam=1; hpLog('通話：ビデオ通話で呼ばれた'); hpCallUi(); } }catch(e){} return v; },f,{__f303:1}); } }catch(e){}
+
+try{ if(typeof hpCallAccept==='function'&&!hpCallAccept.__f303){ const f=hpCallAccept; hpCallAccept=Object.assign(async function(){ const C=HP_CALL; try{ if(C&&C.dir==='in'&&C.st==='ringing'&&C.vid&&C.wantCam) hpVidPreview(C).catch(()=>{}); }catch(e){} return f.apply(this,arguments); },f,{__f303:1}); } }catch(e){}
+
+function hpVidCamBtn(){ const C=HP_CALL; if(!C) return; if(C.st==='talking'){ if(C.cam&&!C.camSent) return; hpVidCam(C,!C.cam).catch(()=>{}); return; }
+  if(C.st==='ringing'||C.st==='calling'||C.st==='connecting'){ C.wantCam=C.wantCam?0:1; if(!C.wantCam) hpVidStop(C); else if(C.st!=='ringing') hpVidPreview(C).catch(()=>{}); hpLog('通話：カメラを'+(C.wantCam?'入れる':'切る')+'（話す前）'); hpCallUi(); } }
+try{ if(typeof hpVidUi==='function'&&!hpVidUi.__f303){ const f=hpVidUi; hpVidUi=Object.assign(function(C,d){ f.apply(this,arguments); try{ if(!d) return;
+    if(document.head&&!document.getElementById('hp-vid-css2')){ const s=document.createElement('style'); s.id='hp-vid-css2'; s.textContent=HP_VID_CSS2; document.head.appendChild(s); }
+    if(!d.__vlab){ const l=document.createElement('div'); l.className='vlab'; l.textContent=T('cl_vid_in'); const st=d.__st; if(st&&st.parentNode===d) d.insertBefore(l,st.nextSibling); else d.appendChild(l); d.__vlab=l; }
+    if(d.__cam&&!d.__cam.__f303){ d.__cam.__f303=1; d.__cam.onclick=(typeof hpCallGuard==='function')?hpCallGuard(d,hpVidCamBtn):hpVidCamBtn; }
+    const before=!!(C&&C.vid&&(C.st==='ringing'||C.st==='calling'||C.st==='connecting'));
+    d.classList.toggle('vin',!!(C&&C.vid&&C.dir==='in'&&C.st==='ringing'));
+    if(before){ d.__vb.style.display=''; d.__cam.classList.toggle('on',!!C.wantCam); d.__flip.style.display='none'; }
+    const pre=!!(before&&C.dir==='out'&&C.cam); d.classList.toggle('pre',pre); if(pre){ d.classList.add('cam'); if(d.__lvT!==C.cam){ d.__lvT=C.cam; d.__lv.srcObject=new MediaStream([C.cam]); try{ const p=d.__lv.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} } d.__lv.classList.toggle('me',C.face!=='environment'); }
+    if(C&&C.st==='talking'&&C.cam&&!C.camSent&&!C.camAtt) hpVidAttach(C).catch(()=>{});
+    if(C&&C.st==='talking'&&C.dir==='in'&&C.vid&&C.wantCam&&!C.cam&&!C.camBusy&&!C.camAsk){ C.camAsk=1; hpVidPreview(C).catch(()=>{}); }
+  }catch(e){} },f,{__f303:1}); } }catch(e){}
+
+try{ if(typeof hpVidCam==='function'&&!hpVidCam.__f303){ const f=hpVidCam; hpVidCam=Object.assign(async function(C,on){ const v=await f.apply(this,arguments); try{ if(C){ C.camSent=!!(C.cam&&on!==false&&v); if(on===false) C.wantCam=0; } }catch(e){} return v; },f,{__f303:1}); } }catch(e){}
+try{ if(typeof hpVidStop==='function'&&!hpVidStop.__f303){ const f=hpVidStop; hpVidStop=Object.assign(function(C){ const r=f.apply(this,arguments); try{ if(C) C.camSent=false; }catch(e){} return r; },f,{__f303:1}); } }catch(e){}
+
+function hpVidBtn(){ try{ const h=document.getElementById('chat-head'), cb=document.getElementById('btn-conv-call'); if(!h||!cb) return; let b=document.getElementById('btn-conv-vcall');
+    if(!b){ b=document.createElement('button'); b.id='btn-conv-vcall'; b.type='button'; b.className=cb.className||''; try{ b.appendChild(hpVidIcon(18)); }catch(e){ b.textContent='\u{1F4F9}'; } b.setAttribute('aria-label',T('btn_vcall')); b.title=T('btn_vcall');
+      b.onclick=()=>{ if(typeof CURPEER!=='undefined'&&CURPEER) hpVidCallStart(CURPEER); }; if(cb.nextSibling) h.insertBefore(b,cb.nextSibling); else h.appendChild(b); }
+    b.style.display=cb.style.display; b.disabled=!!cb.disabled; if(document.head&&!document.getElementById('hp-vid-css2')){ const s=document.createElement('style'); s.id='hp-vid-css2'; s.textContent=HP_VID_CSS2; document.head.appendChild(s); } }catch(e){} }
+try{ if(typeof hpCallBtn==='function'&&!hpCallBtn.__f303){ const f=hpCallBtn; hpCallBtn=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpVidBtn(); }catch(e){} return r; },f,{__f303:1}); } }catch(e){}
+try{ setTimeout(()=>{ try{ hpVidBtn(); }catch(e){} },0); }catch(e){}
+
