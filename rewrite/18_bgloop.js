@@ -1728,3 +1728,33 @@ function hpWaitVisFix(why){ try{ if(typeof POST==='undefined'||!POST||!POST.wait
 try{ if(typeof hpConnect==='function'&&!hpConnect.__f268){ const f=hpConnect; hpConnect=Object.assign(async function(){ try{ return await f.apply(this,arguments); } finally{ try{ hpWaitVisFix('つなぎの終わり'); }catch(e){} } },f,{__f268:1});
     if(typeof setInterval==='function'){ const t=setInterval(()=>{ try{ hpWaitVisFix('見回り'); }catch(e){} },5000); try{ if(t&&t.unref) t.unref(); }catch(e){} } } }catch(e){}
 
+var HP_SS_KEY='p2p_sess_ok', HP_SS_ACK=8000, HP_DK_PUB='';
+function hpSsLoad(){ try{ const o=JSON.parse(localStorage.getItem(HP_SS_KEY)||'{}'); return (o&&typeof o==='object'&&!Array.isArray(o))?o:{}; }catch(e){ return {}; } }
+function hpSsSet(url,v){ try{ const o=hpSsLoad(), u=String(url||''); if(!u) return; if(v) o[u]=Date.now(); else delete o[u]; localStorage.setItem(HP_SS_KEY,JSON.stringify(o)); }catch(e){} }
+function hpSsCan(url){ return !!hpSsLoad()[String(url||'')]; }
+function hpSsHost(url){ return String(url||'').replace(/^wss?:\/\//,''); }
+function hpSsNote(url,o){ try{ if(!url||!o||typeof o!=='object') return false; if((o.ok==='claim'||o.ok==='ver')&&o.ss===1&&!hpSsCan(url)){ hpSsSet(url,1); hpLog('郵便受け（'+hpSsHost(url)+'）は使い捨ての鍵で名乗れる。次から、つなぐたびに新しい鍵でつなぐ'); return true; } }catch(e){} return false; }
+function hpSsSig(dk,ek){ const s=hp5S(); return hpHex(s.crypto_sign_detached(s.from_string('handpost-sess:v1:'+hpHex(ek.publicKey)),dk.privateKey.slice(1))); }
+
+function hpSsWrapOn(c,url){ if(!c||c.__ssOn||typeof c.on!=='function') return c; c.__ssOn=1; const on0=c.on.bind(c), EV=(typeof HotPocket!=='undefined'&&HotPocket&&HotPocket.events)||{}, E_OUT=EV.contractOutput||'contract_output';
+  c.on=function(ev,fn){ if(ev!==E_OUT||typeof fn!=='function') return on0.apply(this,arguments);
+    return on0(ev,function(r){ try{ if(r&&Array.isArray(r.outputs)){ const keep=[]; for(const out of r.outputs){ let o=null; try{ o=JSON.parse(hpText(out)); }catch(e){}
+          if(o&&o.ok==='sess'){ if(!c.__ssAck){ c.__ssAck=1; } continue; }
+          if(o&&o.err==='bad sess'){ c.__ssBad=1; hpSsSet(url,0); hpLog('郵便受け（'+hpSsHost(url)+'）が使い捨ての鍵の名乗りを断った。次から端末鍵でつなぐ'); continue; }
+          hpSsNote(url,o); keep.push(out); }
+        if(keep.length!==r.outputs.length){ if(!keep.length) return; r=Object.assign({},r,{outputs:keep}); } } }catch(e){} return fn.call(this,r); }); };
+  return c; }
+try{ if(typeof hpDevKey==='function'&&!hpDevKey.__f321){ const f=hpDevKey; hpDevKey=Object.assign(async function(){ const kp=await f.apply(this,arguments); try{ if(kp&&kp.publicKey) HP_DK_PUB=hpHex(kp.publicKey); }catch(e){} return kp; },f,{__f321:1}); } }catch(e){}
+try{ if(typeof HotPocket==='object'&&HotPocket&&typeof HotPocket.createClient==='function'&&!HotPocket.createClient.__f321){ const f=HotPocket.createClient;
+    HotPocket.createClient=Object.assign(async function(urls,kp){ let dk=false; try{ dk=!!(HP_DK_PUB&&kp&&kp.publicKey&&Array.isArray(urls)&&urls.length===1&&hpHex(kp.publicKey)===HP_DK_PUB); }catch(e){}
+      if(!dk) return f.apply(this,arguments); const url=String(urls[0]);
+      if(!hpSsCan(url)){ const c=await f.apply(this,arguments); return hpSsWrapOn(c,url); }
+      const ek=await HotPocket.generateKeys(), a=Array.prototype.slice.call(arguments); a[1]=ek; const c=await f.apply(this,a); if(!c) return c; hpSsWrapOn(c,url); c.__ssEph=hpHex(ek.publicKey);
+      const oc=(typeof c.connect==='function')?c.connect.bind(c):null; if(!oc) return c;
+      c.connect=async function(){ const up=await oc.apply(this,arguments); if(!up) return up;
+        try{ await hpWithin(c.submitContractInput(JSON.stringify({op:'sess',dev:hpHex(kp.publicKey),sig:hpSsSig(kp,ek)})),HP_SEND_WAIT,'使い捨ての鍵の名乗り');
+          setTimeout(()=>{ try{ if(!c.__ssAck&&!c.__ssBad&&hpSsCan(url)){ hpSsSet(url,0); hpLog('郵便受け（'+hpSsHost(url)+'）から使い捨ての鍵の名乗りの返事が無い（前の本体に戻ったらしい）。次から端末鍵でつなぐ'); } }catch(e){} },HP_SS_ACK);
+        }catch(e){ hpLog('使い捨ての鍵で名乗れない（'+String((e&&e.message)||e).slice(0,80)+'）'); }
+        return up; };
+      return c; },f,{__f321:1}); } }catch(e){}
+

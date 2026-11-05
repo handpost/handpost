@@ -31,7 +31,7 @@ async function hpTurnEnsure(force){
   }catch(e){ return 'err'; } }
 const HP_TURN_DEADGAP=10*60e3;
 async function hpTurnCreds(){
-  if(!POST||!POST.up||POST.notOwner||!POST.url) throw new Error(T('cl_noturn')); const u=String(POST.url); let c=HP_TURN[u];
+  if(!POST||!POST.up||!POST.url) throw new Error(T('cl_nopost')); if(POST.notOwner) throw new Error(T('cl_noturn'));   const u=String(POST.url); let c=HP_TURN[u];
   if((c&&!c.alive&&Date.now()-Number(c.at||0)<HP_TURN_DEADGAP)||(!c&&Date.now()-Number(HP_TURN_NONE[u]||0)<HP_TURN_DEADGAP)){ throw new Error(T('cl_noturn')); }
   if(!c||Date.now()-c.at>60e3||!c.alive){ let g=null; try{ g=await hpPmReq({op:'turnget'}); }catch(e){ g=null; } if(g&&g.ok==='turnget') hpTurnCache(u,g); else HP_TURN_NONE[u]=Date.now()-HP_TURN_DEADGAP+120e3;   c=HP_TURN[u]; }
   if(!c||!c.alive||!c.host||!c.port||!c.user||!c.pass){ if(!c) hpTurnEnsure(true).catch(()=>{}); throw new Error(T('cl_noturn')); } return c; }
@@ -1984,4 +1984,15 @@ try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f318){ const f=hpCallUi; hpCal
 
 try{ if(typeof hpCl3Hold==='function'&&!hpCl3Hold.__f320){ const f=hpCl3Hold; hpCl3Hold=Object.assign(function(C){ const h=f.apply(this,arguments); try{ if(h==='ok'&&C&&(C.vid||C.cam||C.wantCam)){ if(!C.f320L){ C.f320L=1; hpLog('通話：ビデオ通話なので、つながった直後の 4 秒の画面は出さない（つながるまで '+Math.floor(((C.talkAt||Date.now())-(C.at||C.talkAt||Date.now()))/1000)+' 秒）'); } return ''; } }catch(e){} return h; },f,{__f320:1}); } }catch(e){}
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f320){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=(typeof document!=='undefined')?document.getElementById('hp-call'):null; if(d&&d.__st&&d.__st.style){ const hold=!!(C&&C.st==='talking'&&typeof hpCl3Hold==='function'&&hpCl3Hold(C)==='ok'); d.__st.style.display=hold?'none':''; } }catch(e){} return r; },f,{__f320:1}); } }catch(e){}
+
+try{ if(typeof hpTurnCredsAny==='function'&&!hpTurnCredsAny.__f321){ const f=hpTurnCredsAny; hpTurnCredsAny=Object.assign(async function(){ try{ return await f.apply(this,arguments); }catch(e0){
+      try{ const C=HP_CALL, peer=(C&&C.dir==='out'&&C.peer)?C.peer:''; const L=(peer&&typeof hpTurnPeerOf==='function')?hpTurnPeerOf(peer):[]; if(L.length){ hpLog('通話：自分の交換手が無いので、相手の交換手（'+L[0].host+':'+L[0].port+'）で呼ぶ'); return Object.assign({},L[0],{via:'peer'}); } }catch(e){}
+      throw e0; } },f,{__f321:1}); } }catch(e){}
+var HP_V321_CSS='#hp-call.pre::before{flex:0 0 0!important}#hp-call.pre{padding-top:calc(28px + env(safe-area-inset-top,0px))!important}'
+ +'#hp-call.pre .lvbox{position:fixed!important;inset:0!important;left:0!important;top:0!important;right:0!important;bottom:0!important;width:100%!important;height:100%!important;border-radius:0!important;border:0!important;z-index:-1!important;display:block!important}'
+ +'#hp-call.pre .lvbox #hp-call-lv{left:0!important;top:0!important;width:100%!important;height:100%!important;transform:none!important;object-fit:cover!important}#hp-call.pre .lvbox #hp-call-lv.me{transform:scaleX(-1)!important}'
+ +'#hp-call.pre .lvbox::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,0) 28%,rgba(0,0,0,0) 62%,rgba(0,0,0,.6))}'
+ +'#hp-call.pre .st{max-width:92%;margin-left:auto;margin-right:auto;text-align:center;text-shadow:0 1px 6px rgba(0,0,0,.85)}#hp-call.pre .who{text-shadow:0 1px 6px rgba(0,0,0,.85)}';
+function hpV321Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-v321-css')) return false; const s=document.createElement('style'); s.id='hp-v321-css'; s.textContent=HP_V321_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f321){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpV321Css(); }catch(e){} return r; },f,{__f321:1}); } }catch(e){}
 
