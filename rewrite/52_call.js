@@ -2049,3 +2049,23 @@ function hpConnDingCheck(C,now){ try{ if(!C||C.f328D||C.st!=='talking'||!C.talkA
     const ok=hpConnDing(); hpLog('通話：つながったので音で知らせた'+(ok?'':'（音を切っている設定・または鳴らせない）')); return ok; }catch(e){ return false; } }
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f328){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpConnDingCheck(HP_CALL); }catch(e){} return r; },f,{__f328:1}); } }catch(e){}
 
+var HP_V329_CSS='#hp-call.pre>#hp-call-pv,#hp-call.pre>#hp-call-pvs{display:block!important}';
+function hpV329Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-v329-css')) return false; const s=document.createElement('style'); s.id='hp-v329-css'; s.textContent=HP_V329_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
+function hpV329Drop(d){ try{ const pv=d&&d.__pv; if(pv){ try{ pv.srcObject=null; }catch(e){} try{ pv.remove(); }catch(e){} d.__pv=null; } const sh=d&&d.__pvs; if(sh){ try{ sh.remove(); }catch(e){} d.__pvs=null; } const box=d&&d.__lvbox; if(box&&box.style&&box.style.getPropertyPriority('visibility')==='important') box.style.removeProperty('visibility'); return !!pv; }catch(e){ return false; } }
+function hpV329Sync(d,C){ try{ if(!d||!d.classList) return false; const pre=d.classList.contains('pre')&&!!(C&&C.cam);
+    if(!pre){ if(d.__pv||d.__pvs) hpV329Drop(d); return false; }
+    hpV329Css(); let pv=d.__pv;
+    if(!pv||pv.__t!==C.cam){ hpV329Drop(d);
+      pv=document.createElement('video'); pv.id='hp-call-pv'; pv.muted=true; pv.autoplay=true; pv.setAttribute('playsinline',''); pv.playsInline=true;
+      pv.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;width:100%;height:100%;object-fit:cover;z-index:-1;background:#000;border:0;border-radius:0';
+      pv.__t=C.cam; pv.srcObject=new MediaStream([C.cam]);
+      const sh=document.createElement('div'); sh.id='hp-call-pvs'; sh.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:-1;background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,0) 28%,rgba(0,0,0,0) 62%,rgba(0,0,0,.6))';
+      d.insertBefore(sh,d.firstChild||null); d.insertBefore(pv,sh); d.__pv=pv; d.__pvs=sh;
+      try{ const p=pv.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
+      if(!C.f329L){ C.f329L=1; setTimeout(()=>{ try{ if(d.__pv!==pv) return; const r=pv.getBoundingClientRect(); hpLog('通話：呼び出し中の自分の映像を新しい枠で画面いっぱいに（'+Math.round(r.width)+'×'+Math.round(r.height)+'・映像 '+(pv.videoWidth||0)+'×'+(pv.videoHeight||0)+'）'); }catch(e){} },1200); } }
+    pv.style.transform=(C.face==='environment')?'':'scaleX(-1)';
+    const box=d.__lvbox; if(box&&box.style) box.style.setProperty('visibility','hidden','important');
+    return true; }catch(e){ return false; } }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f329){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const d=(typeof document!=='undefined')?document.getElementById('hp-call'):null; if(d) hpV329Sync(d,HP_CALL); }catch(e){} return r; },f,{__f329:1}); } }catch(e){}
+try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f329){ const f=hpCallEnd; hpCallEnd=Object.assign(function(){ const r=f.apply(this,arguments); try{ const d=(typeof document!=='undefined')?document.getElementById('hp-call'):null; if(d) hpV329Drop(d); }catch(e){} return r; },f,{__f329:1}); } }catch(e){}
+
