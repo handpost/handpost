@@ -1951,3 +1951,28 @@ try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f316){ const f=hpCallUi; hpCal
       if(d.classList.contains('pre')||!d.classList.contains('cam')){ if(box.__pipOn){ box.__pipOn=0; hpPipClear(box); } }
       else if(!box.__pipOn){ box.__pipOn=1; hpPipPlace(box,hpPipLoad()); try{ hpLvFit(d); }catch(x){} } }catch(e){} return r; },f,{__f316:1}); } }catch(e){}
 
+var HP_PIP_DEF=120;
+hpPipMax=function(){ try{ return Math.max(HP_PIP_MIN,Math.floor((window.innerWidth||390)*0.7)); }catch(e){ return 273; } }
+hpPipPlace=function(box,o){ try{ const W=window.innerWidth||390, H=window.innerHeight||844, w=Math.max(HP_PIP_MIN,Math.min(hpPipMax(),Number(o.w)||HP_PIP_DEF)), h=Math.round(w*4/3), m=8;
+    let fx=Number(o.x), fy=Number(o.y); if(!(fx>=0&&fx<=1)) fx=(o.c&&o.c.indexOf('l')>=0)?0:1; if(!(fy>=0&&fy<=1)) fy=(o.c&&o.c.indexOf('b')>=0)?0.75:0.05;
+    const x=Math.round(m+fx*Math.max(0,W-w-2*m)), y=Math.round(m+fy*Math.max(0,H-h-2*m));
+    box.style.width=w+'px'; box.style.height=h+'px'; box.style.left=x+'px'; box.style.top=y+'px'; box.style.right='auto'; box.style.bottom='auto'; return {w:w,h:h,x:x,y:y}; }catch(e){ return null; } }
+function hpPipFrac(r){ const W=window.innerWidth||390, H=window.innerHeight||844, m=8, fw=Math.max(1,W-r.width-2*m), fh=Math.max(1,H-r.height-2*m); const cl=v=>Math.max(0,Math.min(1,v));
+  return {x:Math.round(cl((r.left-m)/fw)*1000)/1000,y:Math.round(cl((r.top-m)/fh)*1000)/1000,w:Math.round(r.width)}; }
+hpPipArm=function(d){ try{ const box=d&&d.__lvbox; if(!box||box.__pip2) return false; box.__pip2=1; box.style.touchAction='none';
+    const on=()=>!!(d.classList.contains('cam')&&!d.classList.contains('pre')&&box.__pipOn);
+    const save=()=>{ const o=hpPipFrac(box.getBoundingClientRect()); hpPipSave(o); hpPipPlace(box,o); try{ hpLvFit(d); }catch(x){} };
+    let drag=null, lastTap=0;
+    box.addEventListener('pointerdown',e=>{ try{ if(!on()||!e.isPrimary) return; e.preventDefault(); e.stopPropagation(); try{ box.setPointerCapture(e.pointerId); }catch(x){} const r=box.getBoundingClientRect(); drag={id:e.pointerId,x0:e.clientX,y0:e.clientY,l:r.left,t:r.top,moved:false}; }catch(x){} },{passive:false});
+    box.addEventListener('pointermove',e=>{ try{ if(!drag||e.pointerId!==drag.id||pinch) return; e.preventDefault(); const dx=e.clientX-drag.x0, dy=e.clientY-drag.y0; if(Math.abs(dx)+Math.abs(dy)>6) drag.moved=true; box.style.left=(drag.l+dx)+'px'; box.style.top=(drag.t+dy)+'px'; box.style.right='auto'; box.style.bottom='auto'; }catch(x){} },{passive:false});
+    const up=e=>{ try{ if(!drag||e.pointerId!==drag.id) return; const mv=drag.moved; drag=null; if(pinch) return;
+        if(!mv){ const now=Date.now(); if(now-lastTap<350){ lastTap=0; const r=box.getBoundingClientRect(), big=r.width<hpPipMax()*0.8; const o=hpPipFrac(r); o.w=big?hpPipMax():HP_PIP_DEF; hpPipSave(o); hpPipPlace(box,o); try{ hpLvFit(d); }catch(x){} return; } lastTap=now; return; }
+        save(); }catch(x){} };
+    box.addEventListener('pointerup',up); box.addEventListener('pointercancel',up);
+    let pinch=null; const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY)||1;
+    d.addEventListener('touchstart',e=>{ try{ if(!on()||!e.touches||e.touches.length!==2) return; const r=box.getBoundingClientRect(); pinch={d0:dist(e.touches),w:r.width,cx:r.left+r.width/2,cy:r.top+r.height/2}; drag=null; e.preventDefault(); }catch(x){} },{passive:false,capture:true});
+    d.addEventListener('touchmove',e=>{ try{ if(!pinch||!e.touches||e.touches.length<2) return; e.preventDefault(); const w=Math.max(HP_PIP_MIN,Math.min(hpPipMax(),Math.round(pinch.w*dist(e.touches)/pinch.d0))), h=Math.round(w*4/3);
+        box.style.width=w+'px'; box.style.height=h+'px'; box.style.left=Math.round(pinch.cx-w/2)+'px'; box.style.top=Math.round(pinch.cy-h/2)+'px'; box.style.right='auto'; box.style.bottom='auto'; try{ hpLvFit(d); }catch(x){} }catch(x){} },{passive:false,capture:true});
+    const pend=e=>{ try{ if(!pinch) return; if(e.touches&&e.touches.length>=2) return; pinch=null; save(); }catch(x){} };
+    d.addEventListener('touchend',pend,{capture:true}); d.addEventListener('touchcancel',pend,{capture:true}); return true; }catch(e){ return false; } }
+
