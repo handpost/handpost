@@ -1749,11 +1749,11 @@ try{ if(typeof HotPocket==='object'&&HotPocket&&typeof HotPocket.createClient===
     HotPocket.createClient=Object.assign(async function(urls,kp){ let dk=false; try{ dk=!!(HP_DK_PUB&&kp&&kp.publicKey&&Array.isArray(urls)&&urls.length===1&&hpHex(kp.publicKey)===HP_DK_PUB); }catch(e){}
       if(!dk) return f.apply(this,arguments); const url=String(urls[0]);
       if(!hpSsCan(url)){ const c=await f.apply(this,arguments); return hpSsWrapOn(c,url); }
-      const ek=await HotPocket.generateKeys(), a=Array.prototype.slice.call(arguments); a[1]=ek; const c=await f.apply(this,a); if(!c) return c; hpSsWrapOn(c,url); c.__ssEph=hpHex(ek.publicKey);
+      const ek=await HotPocket.generateKeys(), a=Array.prototype.slice.call(arguments); a[1]=ek; const c=await f.apply(this,a); if(!c) return c; hpSsWrapOn(c,url); c.__ssEph=hpHex(ek.publicKey); { const ocl=(typeof c.close==='function')?c.close.bind(c):null; if(ocl) c.close=function(){ c.__ssGone=1; return ocl.apply(this,arguments); }; }
       const oc=(typeof c.connect==='function')?c.connect.bind(c):null; if(!oc) return c;
       c.connect=async function(){ const up=await oc.apply(this,arguments); if(!up) return up;
         try{ await hpWithin(c.submitContractInput(JSON.stringify({op:'sess',dev:hpHex(kp.publicKey),sig:hpSsSig(kp,ek)})),HP_SEND_WAIT,'使い捨ての鍵の名乗り');
-          setTimeout(()=>{ try{ if(!c.__ssAck&&!c.__ssBad&&hpSsCan(url)){ hpSsSet(url,0); hpLog('郵便受け（'+hpSsHost(url)+'）から使い捨ての鍵の名乗りの返事が無い（前の本体に戻ったらしい）。次から端末鍵でつなぐ'); } }catch(e){} },HP_SS_ACK);
+          setTimeout(()=>{ try{ if(!c.__ssAck&&!c.__ssBad&&!c.__ssGone&&hpSsCan(url)){ hpSsSet(url,0); hpLog('郵便受け（'+hpSsHost(url)+'）から使い捨ての鍵の名乗りの返事が無い（前の本体に戻ったらしい）。次から端末鍵でつなぐ'); } }catch(e){} },HP_SS_ACK);
         }catch(e){ hpLog('使い捨ての鍵で名乗れない（'+String((e&&e.message)||e).slice(0,80)+'）'); }
         return up; };
       return c; },f,{__f321:1}); } }catch(e){}

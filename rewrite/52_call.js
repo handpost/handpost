@@ -1996,3 +1996,11 @@ var HP_V321_CSS='#hp-call.pre::before{flex:0 0 0!important}#hp-call.pre{padding-
 function hpV321Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-v321-css')) return false; const s=document.createElement('style'); s.id='hp-v321-css'; s.textContent=HP_V321_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f321){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpV321Css(); }catch(e){} return r; },f,{__f321:1}); } }catch(e){}
 
+function hpV322Clear(el){ try{ if(!el||!el.style) return; for(const k of ['left','top','right','bottom','width','height','transform','object-fit']) if(el.style.getPropertyPriority(k)==='important') el.style.removeProperty(k); }catch(e){} }
+try{ if(typeof hpLvFit==='function'&&!hpLvFit.__f322){ const f=hpLvFit; hpLvFit=Object.assign(function(d){ try{ const v=d&&d.__lv, box=d&&d.__lvbox;
+      if(v&&box&&d.classList&&d.classList.contains('pre')){ for(const [k,x] of [['left','0'],['top','0'],['right','0'],['bottom','0'],['width','100%'],['height','100%']]){ box.style.setProperty(k,x,'important'); }
+        for(const [k,x] of [['left','0'],['top','0'],['width','100%'],['height','100%'],['object-fit','cover'],['transform',v.classList.contains('me')?'scaleX(-1)':'none']]) v.style.setProperty(k,x,'important');
+        const C=(typeof HP_CALL!=='undefined')?HP_CALL:null; if(C&&!C.f322L&&v.videoWidth&&typeof v.getBoundingClientRect==='function'){ C.f322L=1; const r=v.getBoundingClientRect(); hpLog('通話：呼び出し中の自分の映像を画面いっぱいに（'+Math.round(r.width)+'×'+Math.round(r.height)+'・画面 '+((typeof window!=='undefined'&&window.innerWidth)||0)+'×'+((typeof window!=='undefined'&&window.innerHeight)||0)+'）'); }
+        return; }
+      hpV322Clear(v); hpV322Clear(box); }catch(e){} return f.apply(this,arguments); },f,{__f322:1}); } }catch(e){}
+
