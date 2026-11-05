@@ -31,6 +31,13 @@ function hpSwSigText(k, nm, hx, ja) {
   if (k === 'callend') { if (hx === 't') return ja ? '通話にはほかの端末で出ました' : 'The call was answered on another device'; return ja ? (nm ? nm + ' との通話が終わりました' : '通話が終わりました') : (nm ? 'The call with ' + nm + ' ended' : 'The call ended'); }
   return ja ? '通話の合図' : 'Call signal';
 }
+
+function hpSwLetterWait(cs) {
+  if (typeof MessageChannel !== 'function' || !Array.isArray(cs) || !cs.length) return Promise.resolve(null);
+  return new Promise((res) => { let done = false, t2 = null; const fin = (v) => { if (done) return; done = true; clearTimeout(t1); if (t2) clearTimeout(t2); res(v); };
+    const t1 = setTimeout(() => fin(null), 1500);
+    for (const c of cs) { try { const ch = new MessageChannel(); ch.port1.onmessage = (m) => { const d = (m && m.data) || {}; if (d.t === 'alive') { clearTimeout(t1); if (!t2) t2 = setTimeout(() => fin({ peer: '', n: 0 }), 8000); } else if (d.t === 'ready') fin({ peer: String(d.peer || ''), n: Number(d.n) || 0 }); }; c.postMessage({ t: 'hp-letter-push' }, [ch.port2]); } catch (x) { } } }); }
+function hpSwLetterText(n, ja) { return n > 1 ? (ja ? '手紙が ' + n + ' 通届きました' : n + ' letters have arrived') : (ja ? '手紙が届きました' : 'A letter has arrived'); }
 self.addEventListener('push', (e) => {
   let ja = true; try { ja = /^ja/i.test(String((self.navigator && self.navigator.language) || 'ja')); } catch (x) { }
   let ls = null; try { const d = e.data ? e.data.json() : null; if (d && d.x !== undefined) ls = hpSwLease(d, ja); } catch (x) { ls = null; }
@@ -80,7 +87,7 @@ self.addEventListener('push', (e) => {
   let lw = null; try { lw = self.clients.matchAll({ type: 'window', includeUncontrolled: true }); } catch (x) { lw = null; }
   e.waitUntil(Promise.resolve(lw || []).catch(() => []).then((cs) => {
     let front = false; try { front = Array.isArray(cs) && cs.some((c) => c.visibilityState === 'visible'); } catch (x) { front = false; }
-    if (!front) return self.registration.showNotification('Handpost', { body: body, tag: 'hp-letter', renotify: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' });
+    if (!front) return hpSwLetterWait(cs).then((r) => self.registration.showNotification('Handpost', Object.assign({ body: r ? hpSwLetterText(r.n, ja) : body, tag: 'hp-letter', renotify: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' }, r ? { data: { letter: 1, peer: r.peer } } : {})));
     return self.registration.showNotification('Handpost', { body: body, tag: 'hp-letter', silent: true, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })
       .then(() => self.registration.getNotifications({ tag: 'hp-letter' })).then((l) => { for (const n of (l || [])) n.close(); }).catch(() => { });
   }));
@@ -89,8 +96,10 @@ self.addEventListener('push', (e) => {
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   let call = false; try { call = e.notification.tag === 'hp-call'; } catch (x) { call = false; }
+  let lt = null; try { if (e.notification.tag === 'hp-letter') lt = e.notification.data || {}; } catch (x) { lt = null; }
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
-    for (const c of cs) { if ('focus' in c) { if (call) { try { c.postMessage({ t: 'hp-call-open' }); } catch (x) { } } return c.focus(); } }
+    for (const c of cs) { if ('focus' in c) { if (call) { try { c.postMessage({ t: 'hp-call-open' }); } catch (x) { } } if (lt) { try { c.postMessage({ t: 'hp-letter-open', peer: String(lt.peer || '') }); } catch (x) { } } return c.focus(); } }
+    if (lt) return self.clients.openWindow('/#hpletter');
     return self.clients.openWindow(call ? '/#hpcall' : '/');
   }));
 });
