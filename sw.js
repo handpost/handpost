@@ -26,6 +26,7 @@ function hpSwCapRec(d, k) { return { key: k + ':' + String(d.call || ''), k: k, 
 function hpSwCapGet(key) { try { return hpSwCapDb().then((db) => new Promise((res) => { try { const rq = db.transaction('cap', 'readonly').objectStore('cap').get(key); rq.onsuccess = () => { try { db.close(); } catch (x) { } res(rq.result || null); }; rq.onerror = () => { try { db.close(); } catch (x) { } res(null); }; } catch (x) { try { db.close(); } catch (y) { } res(null); } })).catch(() => null); } catch (x) { return Promise.resolve(null); } }
 function hpSwCapName(call) { return hpSwCapGet('nm:' + String(call || '')).then((o) => (o && typeof o.nm === 'string' && o.nm && Date.now() - Number(o.at || 0) < 600000) ? o.nm : '').catch(() => ''); }
 function hpSwSigText(k, nm, hx, ja) {
+  if (k === 'callans' && hx === 'v') return ja ? (nm ? nm + ' が出ました。つながるまでお待ちください' : '通話の答えが届きました。つながるまでお待ちください') : (nm ? nm + ' answered. Please wait while connecting' : 'Call answered. Please wait while connecting');
   if (k === 'callans') return ja ? (nm ? nm + ' が出ました。押すと話せます' : '通話の答えが届きました。押すと話せます') : (nm ? nm + ' answered. Tap to talk' : 'Call answered. Tap to talk');
   if (k === 'callgo') return ja ? (nm ? nm + ' と通話を始めます' : '通話を始めます') : (nm ? 'Starting the call with ' + nm : 'Starting the call');
   if (k === 'callend') { if (hx === 't') return ja ? '通話にはほかの端末で出ました' : 'The call was answered on another device'; return ja ? (nm ? nm + ' との通話が終わりました' : '通話が終わりました') : (nm ? 'The call with ' + nm + ' ended' : 'The call ended'); }
@@ -75,7 +76,7 @@ self.addEventListener('push', (e) => {
           return self.registration.showNotification('Handpost', { body: ja ? '通話の着信がありました。Handpost からかけ直せます' : 'You missed a call. You can call back from Handpost.', tag: 'hp-call', renotify: false, data: { call: rec.call, ended: 1 }, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' });
         }
         const loud = sg.k === 'callans' && !live;
-        return self.registration.showNotification('Handpost', { body: hpSwSigText(sg.k, nm, hx, ja), tag: 'hp-sig', silent: !loud, data: { call: rec.call, k: sg.k }, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })
+        return self.registration.showNotification('Handpost', { body: hpSwSigText(sg.k, nm, (live && sg.k === 'callans') ? 'v' : hx, ja), tag: 'hp-sig', silent: !loud, data: { call: rec.call, k: sg.k }, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })
           .then(() => { if (!live) return null; return hpSwHideLater('hp-sig'); }).catch(() => { });
       });
     }));
