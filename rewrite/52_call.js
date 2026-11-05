@@ -2069,3 +2069,20 @@ function hpV329Sync(d,C){ try{ if(!d||!d.classList) return false; const pre=d.cl
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f329){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const d=(typeof document!=='undefined')?document.getElementById('hp-call'):null; if(d) hpV329Sync(d,HP_CALL); }catch(e){} return r; },f,{__f329:1}); } }catch(e){}
 try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f329){ const f=hpCallEnd; hpCallEnd=Object.assign(function(){ const r=f.apply(this,arguments); try{ const d=(typeof document!=='undefined')?document.getElementById('hp-call'):null; if(d) hpV329Drop(d); }catch(e){} return r; },f,{__f329:1}); } }catch(e){}
 
+function hpV330Fresh(d,C){ try{ const old=d&&d.__lv, box=d&&d.__lvbox; if(!old||!box||!C||!C.cam) return false;
+    const v=document.createElement('video'); v.id=old.id||'hp-call-lv'; v.className=old.className||''; v.muted=true; v.autoplay=true; v.setAttribute('playsinline',''); v.playsInline=true;
+    try{ old.srcObject=null; }catch(e){} try{ if(old.parentNode) old.parentNode.replaceChild(v,old); else box.appendChild(v); }catch(e){ box.appendChild(v); }
+    d.__lv=v; v.addEventListener('resize',()=>hpLvFit(d)); v.addEventListener('loadedmetadata',()=>hpLvFit(d));
+    v.__f330t=C.cam; v.srcObject=new MediaStream([C.cam]); try{ const p=v.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} try{ hpLvFit(d); }catch(e){}
+    if(!C.f330L){ C.f330L=1; setTimeout(()=>{ try{ if(d.__lv!==v) return; const r=v.getBoundingClientRect(), b=box.getBoundingClientRect(); hpLog('通話：小窓の自分の映像を新しい枠で描いた（枠 '+Math.round(b.width)+'×'+Math.round(b.height)+'・映像 '+Math.round(r.width)+'×'+Math.round(r.height)+'・カメラ '+(v.videoWidth||0)+'×'+(v.videoHeight||0)+'）'); }catch(e){} },1200); }
+    return true; }catch(e){ return false; } }
+function hpV330Sync(d,C){ try{ const v=d&&d.__lv; if(!v||!d.classList) return false; const pre=d.classList.contains('pre');
+    if(pre){ if(v.srcObject){ try{ v.srcObject=null; }catch(e){} v.__f330t=null; } return false; }
+    if(C&&C.cam&&d.classList.contains('cam')&&v.__f330t!==C.cam) return hpV330Fresh(d,C);
+    return false; }catch(e){ return false; } }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f330){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const d=(typeof document!=='undefined')?document.getElementById('hp-call'):null; if(d) hpV330Sync(d,HP_CALL); }catch(e){} return r; },f,{__f330:1}); } }catch(e){}
+hpConnDing=function(){ try{ if(typeof soundOn==='function'&&soundOn()==='off') return false; const A=(typeof window!=='undefined')&&(window.AudioContext||window.webkitAudioContext); if(!A) return false;
+    if(!HP_CALL_AC) HP_CALL_AC=new A(); const a=HP_CALL_AC; try{ if(a.state==='suspended') a.resume(); }catch(e){}
+    const one=(f,at,dur)=>{ const t0=a.currentTime+at, o=a.createOscillator(), g=a.createGain(); o.type='sine'; o.frequency.value=f; g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(0.3,t0+0.02); g.gain.setValueAtTime(0.3,t0+Math.max(0.03,dur-0.08)); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur); o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0+dur+0.02); };
+    one(784,0.02,0.22); one(1175,0.24,0.4); return true; }catch(e){ return false; } };
+
