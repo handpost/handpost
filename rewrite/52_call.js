@@ -2116,3 +2116,26 @@ function hpSndCard(){ try{ if(typeof document==='undefined') return false; hpV33
 try{ if(typeof hpRingCard==='function'&&!hpRingCard.__f336){ const f=hpRingCard; hpRingCard=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpSndCard(); }catch(e){} return r; },f,{__f336:1}); } }catch(e){}
 try{ if(typeof document!=='undefined'&&document.addEventListener){ const go=()=>{ try{ hpSndCard(); }catch(e){} }; if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else setTimeout(go,0); setTimeout(go,1600); setTimeout(go,4000); } }catch(e){}
 
+var HP_V337_CSS='#hp-call-min{position:fixed;left:12px;top:calc(12px + env(safe-area-inset-top,0px));z-index:3;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.35);border-radius:18px;color:#fff;padding:6px 12px;font-size:13px;display:none;cursor:pointer}#hp-call.hp-can-min #hp-call-min{display:inline-flex;align-items:center;gap:6px}'
+ +'#hp-callbar{position:fixed;left:0;right:0;top:0;z-index:8990;display:none;align-items:center;gap:8px;padding:calc(6px + env(safe-area-inset-top,0px)) 10px 6px;background:#1f8f6a;color:#fff;font-size:14px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.35)}body.hp-callmin #hp-callbar{display:flex}body.hp-callmin{padding-top:calc(40px + env(safe-area-inset-top,0px))}'
+ +'#hp-callbar .t{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#hp-callbar button{flex:0 0 auto;border:1px solid rgba(255,255,255,.6);background:rgba(0,0,0,.18);color:#fff;border-radius:14px;padding:4px 10px;font-size:13px;font-weight:700}#hp-callbar button.hang{background:#d9534f;border-color:#d9534f}'
+ +'#hp-call-mv{position:fixed;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:120px;height:160px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.5);background:#000;z-index:8980;display:none;cursor:pointer}body.hp-callmin #hp-call-mv{display:block}';
+function hpV337Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-v337-css')) return false; const s=document.createElement('style'); s.id='hp-v337-css'; s.textContent=HP_V337_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
+function hpCallMinCan(C){ return !!(C&&(C.st==='talking'||C.st==='connecting'||C.st==='calling')); }
+function hpCallMin(on){ try{ const C=HP_CALL; if(on&&!hpCallMinCan(C)) return false; if(C) C.min=!!on; const b=document.body; if(b&&b.classList) b.classList.toggle('hp-callmin',!!on&&!!C);
+    if(on) hpLog('通話：画面を縮めて Handpost に戻った'); else if(C&&C.min===false&&arguments.length) {} hpCallUi(); return true; }catch(e){ return false; } }
+function hpCallMinBar(){ try{ let bar=document.getElementById('hp-callbar'); if(bar) return bar; bar=document.createElement('div'); bar.id='hp-callbar'; const t=document.createElement('span'); t.className='t'; bar.appendChild(t); bar.__t=t;
+    const bk=document.createElement('button'); bk.type='button'; bk.textContent=T('cl_mb_back'); bk.setAttribute('data-i18n','cl_mb_back'); bk.onclick=()=>hpCallMin(false); bar.appendChild(bk);
+    const hg=document.createElement('button'); hg.type='button'; hg.className='hang'; hg.textContent=T('btn_hangup'); hg.setAttribute('data-i18n','btn_hangup'); hg.onclick=()=>{ try{ hpCallHangup(); }catch(e){} }; bar.appendChild(hg);
+    (document.body||document.documentElement).appendChild(bar); return bar; }catch(e){ return null; } }
+function hpCallMinBtn(d){ try{ if(!d||d.__min) return d&&d.__min; const b=document.createElement('button'); b.type='button'; b.id='hp-call-min'; b.textContent='‹ '+T('cl_min'); b.onclick=()=>hpCallMin(true); d.appendChild(b); d.__min=b; return b; }catch(e){ return null; } }
+function hpCallMv(d,C,on){ try{ let mv=document.getElementById('hp-call-mv'); if(!on){ if(mv){ try{ mv.srcObject=null; }catch(e){} mv.remove(); } return false; }
+    const rv=d&&d.__rv; const src=rv&&rv.srcObject; if(!src) { if(mv){ try{ mv.srcObject=null; }catch(e){} mv.remove(); } return false; }
+    if(!mv){ mv=document.createElement('video'); mv.id='hp-call-mv'; mv.muted=true; mv.autoplay=true; mv.setAttribute('playsinline',''); mv.playsInline=true; mv.onclick=()=>hpCallMin(false); (document.body||document.documentElement).appendChild(mv); }
+    if(mv.srcObject!==src){ mv.srcObject=src; try{ const p=mv.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} } return true; }catch(e){ return false; } }
+function hpV337Sync(){ try{ const C=HP_CALL; const d=document.getElementById('hp-call'); if(!d) return false; hpV337Css(); hpCallMinBtn(d);
+    d.classList.toggle('hp-can-min',hpCallMinCan(C)); const on=!!(C&&C.min&&hpCallMinCan(C)); const b=document.body; if(b&&b.classList) b.classList.toggle('hp-callmin',on); if(C&&C.min&&!on) C.min=false;
+    if(on){ d.style.display='none'; const bar=hpCallMinBar(); if(bar&&bar.__t) bar.__t.textContent=(C.st==='talking')?TF('cl_mb',{who:nickOf(C.peer),t:hpCallFmt(Date.now()-(C.talkAt||Date.now()))}):TF('cl_mb_wait',{who:nickOf(C.peer)}); hpCallMv(d,C,true); }
+    else { hpCallMv(d,C,false); } return on; }catch(e){ return false; } }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f337){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpV337Sync(); }catch(e){} return r; },f,{__f337:1}); } }catch(e){}
+
