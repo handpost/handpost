@@ -1,7 +1,11 @@
 'use strict';
 function hpWkKey(raw){ return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']); }
 function hpWkHead(frame, len){ return Math.min(len, frame && frame.type === 'key' ? 10 : 3); }
-function hpWkSetup(readable, writable, o){
+
+function hpWkBad(t, o){ try{ if(!o || o.kind !== 'video' || o.op === 'enc') return; const now = Date.now();
+    if(t && typeof t.sendKeyFrameRequest === 'function' && now - (t.__kf || 0) > 1000){ t.__kf = now; t.__kfn = (t.__kfn || 0) + 1; t.sendKeyFrameRequest().catch(() => {}); }
+    t && (t.__bad = (t.__bad || 0) + 1); if(now - ((t && t.__said) || 0) > 10000){ if(t) t.__said = now; self.postMessage({ t: 'wkbad', kind: o.kind, bad: t ? t.__bad : 1, kf: t ? (t.__kfn || 0) : 0 }); } }catch(e){} }
+function hpWkSetup(readable, writable, o, t){
   const kp = hpWkKey(o.key), salt = new Uint8Array(o.salt), enc = (o.op === 'enc'), vid = (o.kind === 'video'); let n = 0, bad = 0;
   const tf = new TransformStream({ async transform(frame, ctl){
     try{
@@ -14,7 +18,7 @@ function hpWkSetup(readable, writable, o){
         const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, data));
         const out = new Uint8Array(4 + ct.length); out.set(iv.subarray(8), 0); out.set(ct, 4); frame.data = out.buffer;
       } else {
-        if(vid){ const h = hpWkHead(frame, data.length); if(data.length < h + 4 + 16){ bad++; return; }
+        if(vid){ const h = hpWkHead(frame, data.length); if(data.length < h + 4 + 16){ bad++; hpWkBad(t, o); return; }
           const iv = new Uint8Array(12); iv.set(salt, 0); iv.set(data.subarray(h, h + 4), 8);
           const pt = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv, additionalData: data.subarray(0, h) }, key, data.subarray(h + 4)));
           const out = new Uint8Array(h + pt.length); out.set(data.subarray(0, h), 0); out.set(pt, h); frame.data = out.buffer; ctl.enqueue(frame); return; }
@@ -23,9 +27,9 @@ function hpWkSetup(readable, writable, o){
         frame.data = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, data.subarray(4));
       }
       ctl.enqueue(frame);
-    }catch(e){ bad++; }
+    }catch(e){ bad++; hpWkBad(t, o); }
   } });
   readable.pipeThrough(tf).pipeTo(writable).catch(() => {});
 }
-if('onrtctransform' in self){ self.onrtctransform = (e) => { try{ const t = e.transformer; hpWkSetup(t.readable, t.writable, t.options || {}); }catch(x){} }; }
+if('onrtctransform' in self){ self.onrtctransform = (e) => { try{ const t = e.transformer; hpWkSetup(t.readable, t.writable, t.options || {}, t); }catch(x){} }; }
 self.onmessage = (e) => { try{ const o = e.data || {}; if(o && o.readable && o.writable) hpWkSetup(o.readable, o.writable, o); }catch(x){} };
