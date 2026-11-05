@@ -2094,8 +2094,9 @@ function hpConnOnce(kind){ try{ if(kind==='off') return 0; const a=hpRingAc(); i
     if(kind==='tick'){ n(1400,0,0.06,0.3,'square'); n(1400,0.12,0.06,0.3,'square'); return 300; }
     n(784,0,0.22,0.3); n(1175,0.22,0.4,0.3); return 700; }catch(e){ return 0; } }
 hpConnDing=function(){ try{ if(typeof soundOn==='function'&&soundOn()==='off') return false; const kind=hpRingGet('p2p_conn',HP_CONN_KINDS); if(kind==='off') return false; return hpConnOnce(kind)>0; }catch(e){ return false; } };
-function hpConnRow(c){ try{ if(!c||typeof document==='undefined') return false; if(document.getElementById('set-conn')) return false;
-    const r=document.createElement('div'); r.className='kv'; r.id='set-conn'; r.style.marginTop='8px'; const b=document.createElement('b'); b.textContent=T('cl_conn_l'); b.setAttribute('data-i18n','cl_conn_l'); r.appendChild(b);
+
+function hpConnRow(c){ try{ if(!c||typeof document==='undefined') return false; if(document.getElementById('set-connsnd')) return false;
+    const r=document.createElement('div'); r.className='kv'; r.id='set-connsnd'; r.style.marginTop='8px'; const b=document.createElement('b'); b.textContent=T('cl_conn_l'); b.setAttribute('data-i18n','cl_conn_l'); r.appendChild(b);
     const s=document.createElement('select'); s.style.cssText='background:#1b2740;border:none;border-radius:6px;color:inherit;padding:4px 6px'; for(const v of HP_CONN_KINDS){ const o=document.createElement('option'); o.value=v; o.textContent=T('cl_conn_'+v); o.setAttribute('data-i18n','cl_conn_'+v); s.appendChild(o); } s.value=hpRingGet('p2p_conn',HP_CONN_KINDS); s.onchange=()=>{ hpRingSet('p2p_conn',HP_CONN_KINDS,s.value); hpConnOnce(s.value); };
     const t=document.createElement('button'); t.className='b'; t.type='button'; t.textContent=T('btn_snd_try'); t.setAttribute('data-i18n','btn_snd_try'); t.style.cssText='margin-left:8px;padding:4px 10px;font-size:12px'; t.onclick=()=>hpConnOnce(s.value); r.appendChild(s); r.appendChild(t); c.appendChild(r); return true; }catch(e){ return false; } }
 try{ if(typeof hpRingCard==='function'&&!hpRingCard.__f331){ const f=hpRingCard; hpRingCard=Object.assign(function(){ const r=f.apply(this,arguments); try{ const c=document.getElementById('set-call'); if(c) hpConnRow(c); }catch(e){} return r; },f,{__f331:1}); } }catch(e){}
