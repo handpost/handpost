@@ -1896,3 +1896,26 @@ try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f312){ const f=hpCallUi; hpCal
       if(C.vid&&C.dir==='in'&&C.st==='ringing'&&d.__st){ const t=TF('cl_incoming_v',{who:nickOf(C.peer)}); if(d.__st.textContent!==t) d.__st.textContent=t; }
       if(C.dir==='in'&&C.vid&&C.st!=='talking'&&C.st!=='ended'&&d.__vb) d.__vb.style.display='none'; }catch(e){} return r; },f,{__f312:1}); } }catch(e){}
 
+var HP_V315_CSS='#hp-call .lvbox #hp-call-lv{object-fit:cover!important}';
+function hpV315Css(){ try{ if(document.head&&!document.getElementById('hp-v315-css')){ const s=document.createElement('style'); s.id='hp-v315-css'; s.textContent=HP_V315_CSS; document.head.appendChild(s); } }catch(e){} }
+try{ hpV315Css(); }catch(e){}
+
+var HP_HB2_KEY='hp_hb2', HP_V315_UIN=0, HP_V315_UIS=0, HP_V315_UIW=0;
+function hpV315Shown(){ try{ const d=document.getElementById('hp-call'); return !!((typeof HP_CALL!=='undefined'&&HP_CALL)||(typeof HP_CL3_SNAPEL!=='undefined'&&HP_CL3_SNAPEL)||(d&&d.style.display&&d.style.display!=='none')); }catch(e){ return false; } }
+function hpV315Beat(){ try{ if(!hpV315Shown()){ localStorage.removeItem(HP_HB2_KEY); return false; } const C=(typeof HP_CALL!=='undefined')?HP_CALL:null, d=document.getElementById('hp-call');
+    localStorage.setItem(HP_HB2_KEY,JSON.stringify({t:Date.now(),at:hpBcNow(),st:C?C.st:'なし',snap:!!(typeof HP_CL3_SNAPEL!=='undefined'&&HP_CL3_SNAPEL),cls:d?String(d.className||''):'',vis:(document.visibilityState||'')})); return true; }catch(e){ return false; } }
+function hpV315Boot(){ try{ const hb=JSON.parse(localStorage.getItem(HP_HB2_KEY)||'null'); localStorage.removeItem(HP_HB2_KEY); if(!hb||!(Number(hb.t)>0)||Date.now()-Number(hb.t)>864e5) return 0;
+    let a=[]; try{ a=JSON.parse(localStorage.getItem(HP_BC_KEY)||'[]'); }catch(e){ a=[]; } let ui=''; try{ ui=String(localStorage.getItem(HP_UI_KEY)||''); }catch(e){}
+    hpLog('通話：前回は通話の画面のまま止まった（最後の脈 '+hb.at+'・'+hb.st+(hb.snap?'・結果の画面':'')+'・'+(hb.cls||'-')+'・画面 '+hb.vis+'・描き直し '+(ui||'?')+'）');
+    const last=(Array.isArray(a)?a:[]).slice(-10); for(const x of last) hpLog('通話：　前回の足跡 '+x); return last.length+1; }catch(e){ return 0; } }
+function hpV315Mark(name,f){ if(typeof f!=='function'||f.__f315) return f; return Object.assign(function(){ hpBc('→ '+name); return f.apply(this,arguments); },f,{__f315:1}); }
+try{ hpCresShow=hpV315Mark('hpCresShow',hpCresShow); }catch(e){}
+try{ hpCl3SnapShow=hpV315Mark('hpCl3SnapShow',hpCl3SnapShow); }catch(e){}
+try{ hpCl3SnapHide=hpV315Mark('hpCl3SnapHide',hpCl3SnapHide); }catch(e){}
+try{ hpCallStart=hpV315Mark('hpCallStart',hpCallStart); }catch(e){}
+try{ hpCallEnd=hpV315Mark('hpCallEnd',hpCallEnd); }catch(e){}
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f315){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const now=Date.now(); try{ if(now-HP_V315_UIS>=1000){ if(HP_V315_UIN>30&&HP_V315_UIW<10){ HP_V315_UIW++; hpBc('描き直しが 1 秒に '+HP_V315_UIN+' 回'); } HP_V315_UIS=now; HP_V315_UIN=0; } HP_V315_UIN++; localStorage.setItem(HP_UI_KEY,'→ '+hpBcNow()); }catch(e){}
+    const r=f.apply(this,arguments); try{ localStorage.setItem(HP_UI_KEY,'← '+hpBcNow()); }catch(e){} return r; },f,{__f315:1}); } }catch(e){}
+try{ if(typeof window!=='undefined'&&window.addEventListener&&!window.__hpV315){ window.__hpV315=1; window.addEventListener('pagehide',()=>{ try{ localStorage.removeItem(HP_HB2_KEY); }catch(e){} }); if(typeof setInterval==='function') setInterval(hpV315Beat,1000); } }catch(e){}
+try{ const said=(typeof HP_LOG_LINES!=='undefined'&&Array.isArray(HP_LOG_LINES))&&HP_LOG_LINES.slice(-20).some(x=>String(x).indexOf('前回は通話の途中で止まった')>=0); if(!said) hpV315Boot(); else localStorage.removeItem(HP_HB2_KEY); }catch(e){}
+
