@@ -2235,3 +2235,27 @@ try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f352){ const f=hpCallEnd; hp
 
 try{ if(typeof hpCallAutoGo==='function'&&!hpCallAutoGo.__f352){ const f=hpCallAutoGo; hpCallAutoGo=Object.assign(function(C){ try{ if(HP_CALL===C&&C&&C.dir==='in'&&C.st==='ringing'&&!C.__f352told){ C.__f352told=1; hpLog('通話：通知から開いた（鳴っている画面を出す。自動では出ない）'); } }catch(e){} return false; },f,{__f352:1}); } }catch(e){}
 
+function hpIsAndroidUa(){ try{ return /Android/i.test(String(navigator.userAgent||'')); }catch(e){ return false; } }
+function hpEndTonePlay(vol){ try{ hpCallBeep(620,0.16,vol,0); hpCallBeep(440,0.22,vol,0.22); return true; }catch(e){ return false; } }
+try{ if(typeof hpCallEndTone==='function'&&!hpCallEndTone.__f353){ const f=hpCallEndTone; hpCallEndTone=Object.assign(function(){ try{ if(typeof soundOn==='function'&&soundOn()==='off') return; }catch(e){} const and=hpIsAndroidUa(); const vol=and?0.22:0.07, wait=and?350:0;
+    const go=()=>{ try{ const a=(typeof hpRingAc==='function')?hpRingAc():null; const p=(a&&a.state==='suspended'&&a.resume)?a.resume():null; const play=()=>{ hpEndTonePlay(vol); try{ hpLog('通話：切った音を鳴らした（'+(and?'Android・'+wait+' ms 後・':'')+'音量 '+vol+'）'); }catch(e){} }; if(p&&p.then) p.then(play,play); else play(); }catch(e){} };
+    if(wait) setTimeout(go,wait); else go(); },f,{__f353:1}); } }catch(e){}
+
+var HP_DNDM_CSS='#hp-dndp{position:fixed;inset:0;z-index:9400;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}#hp-dndp .card{max-width:380px;width:100%;margin:0}#hp-dndp .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}#hp-dndp .row button{flex:1 1 auto}#hp-dndp .nt{font-size:13px;color:var(--dim,#8aa0c0);margin-top:8px;line-height:1.6}nav #t-dnd.on{color:var(--amber,#f5b85c)}';
+function hpDndMenuCss(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-dndm-css')) return false; const s=document.createElement('style'); s.id='hp-dndm-css'; s.textContent=HP_DNDM_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
+function hpDndMenuLabel(){ try{ const b=document.getElementById('t-dnd'); if(!b) return false; const cur=(typeof hpDndGet==='function')?hpDndGet():null; const t=cur?TF('cl_dnd_chip',{t:hpDndHm(cur.until)}):T('cl_dnd_l'); if(b.textContent!==t) b.textContent=t; if(b.classList) b.classList.toggle('on',!!cur); return !!cur; }catch(e){ return false; } }
+function hpDndSheetClose(){ try{ const p=document.getElementById('hp-dndp'); if(p&&p.parentNode) p.parentNode.removeChild(p); }catch(e){} return true; }
+function hpDndSheet(){ try{ if(typeof document==='undefined'||typeof hpDndGet!=='function') return false; hpDndMenuCss(); hpDndSheetClose(); const cur=hpDndGet();
+    const el=(tag,cls,txt)=>{ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; };
+    const box=el('div'); box.id='hp-dndp'; const card=el('div','card'); box.appendChild(card); card.appendChild(el('h2',null,T('cl_dnd_l')));
+    const msg=(typeof hpDndMsgText==='function')?hpDndMsgText():'';
+    if(cur){ card.appendChild(el('div',null,TF('cl_dnd_bar',{t:hpDndHm(cur.until),m:cur.msg||msg}))); const r=el('div','row'); const off=el('button','b pri',T('btn_dnd_off')); off.type='button'; off.onclick=()=>{ hpDndSet(0,null); hpDndSheetClose(); hpDndMenuLabel(); }; r.appendChild(off); card.appendChild(r); }
+    else { card.appendChild(el('div',null,T('cl_dnd_sheet'))); const r=el('div','row'); for(const h of HP_DND_HOURS){ const b=el('button','b pri',T('cl_dnd_'+h)); b.type='button'; b.onclick=()=>{ hpDndSet(h,null); hpDndSheetClose(); hpDndMenuLabel(); try{ hpToast(TF('cl_dnd_chip',{t:hpDndHm(hpDndGet().until)}),3000); }catch(e){} }; r.appendChild(b); } card.appendChild(r); card.appendChild(el('div','nt',TF('cl_dnd_sheet_msg',{m:msg}))); }
+    const r2=el('div','row'); const x=el('button','b',T('vc_cancel')); x.type='button'; x.onclick=hpDndSheetClose; r2.appendChild(x); card.appendChild(r2);
+    box.onclick=ev=>{ if(ev&&ev.target===box) hpDndSheetClose(); }; (document.body||document.documentElement).appendChild(box); return true; }catch(e){ return false; } }
+function hpDndMenuMount(){ try{ if(typeof document==='undefined'||!document.querySelector||document.getElementById('t-dnd')) return 'have'; const nav=document.querySelector('nav'), set=document.getElementById('t-set'); if(!nav||!set) return '';
+    const b=document.createElement('button'); b.id='t-dnd'; b.type='button'; b.textContent=T('cl_dnd_l'); b.onclick=()=>{ try{ if(typeof menuClose==='function') menuClose(); }catch(e){} hpDndSheet(); }; nav.insertBefore(b,set.nextSibling); hpDndMenuLabel(); return 'made'; }catch(e){ return ''; } }
+try{ if(typeof document!=='undefined'&&document&&document.getElementById){ if(document.readyState==='loading'&&document.addEventListener) document.addEventListener('DOMContentLoaded',()=>{ hpDndMenuMount(); }); else hpDndMenuMount(); } }catch(e){}
+try{ if(typeof hpDndUi==='function'&&!hpDndUi.__f353){ const f=hpDndUi; hpDndUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpDndMenuLabel(); }catch(e){} return r; },f,{__f353:1}); } }catch(e){}
+try{ if(typeof applyLang==='function'&&!applyLang.__f353){ const f=applyLang; applyLang=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpDndMenuLabel(); }catch(e){} return r; },f,{__f353:1}); } }catch(e){}
+
