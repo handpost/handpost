@@ -915,14 +915,18 @@ hpVmUi=function(){ try{ const R=HP_VMR; let d=document.getElementById('hp-vm'); 
 
 function hpVmSayMax(t){ return Math.max(HP_VM_SAY_MAX,3000+String(t||'').length*220); }
 hpVmSay=function(text,lang){ return new Promise(res=>{ let done=false, started=false, tries=0, why='', nv=0; const bc=HP_VM_LANG[lang]||'en-US';
-    const end=v=>{ if(done) return; done=true; try{ hpLog('通話：音声メッセージの読み上げ '+(v?'できた':'できない')+'（'+bc+'・声 '+nv+'・'+(tries)+' 回'+(why?'・'+why:'')+'）'); }catch(e){} res(v); };
+    const end=v=>{ if(done) return; done=true; try{ hpLog('通話：音声メッセージの読み上げ '+(v===true?'できた':v?'やめた':'できない')+'（'+bc+'・声 '+nv+'・'+(tries)+' 回'+(why?'・'+why:'')+'）'); }catch(e){} res(v); };
     try{ const ss=(typeof speechSynthesis!=='undefined')?speechSynthesis:null; if(!ss||typeof SpeechSynthesisUtterance==='undefined'){ why='読み上げの仕組みが無い'; return end(false); }
-      const go=()=>{ if(done) return; tries++; const u=new SpeechSynthesisUtterance(text); u.lang=bc; u.volume=1; u.rate=1;
+      const go=()=>{ if(done) return; tries++; const u=new SpeechSynthesisUtterance(text); u.lang=bc; u.volume=1; u.rate=1; u.__live=1;
         try{ const vs=ss.getVoices()||[]; nv=vs.length; const v=((typeof hpVmVoice==='function')?hpVmVoice(vs,bc):null)||vs.find(x=>x&&x.lang===bc)||vs.find(x=>x&&String(x.lang||'').replace('_','-').slice(0,2)===bc.slice(0,2)); if(v) u.voice=v; }catch(e){}
-        u.onstart=()=>{ started=true; }; u.onend=()=>end(true); u.onerror=e=>{ why=String((e&&e.error)||'error'); if(started||(why!=='interrupted'&&why!=='canceled')) end(false); };
+        u.onstart=()=>{ started=true; u.__started=1; }; u.onend=()=>{ u.__live=0; end(true); };
+        u.onerror=e=>{ why=String((e&&e.error)||'error'); if(u.__next){ u.__live=0; why='新しい読み上げに譲った'; return end('next'); }
+          if(started&&why==='canceled'&&tries<2){ u.__live=0; u.__hold=1; started=false; why='止めた直後に消された（読み直す）'; setTimeout(go,500); return; }
+          if(started||(why!=='interrupted'&&why!=='canceled')){ u.__live=0; end(false); } };
         HP_VM_U=u; try{ if(ss.paused) ss.resume(); }catch(e){} ss.speak(u);
         setTimeout(()=>{ if(done||started) return; let busy=false; try{ busy=!!ss.speaking; }catch(e){} if(busy) return; if(tries<2){ why='始まらない'; try{ ss.cancel(); }catch(e){} setTimeout(go,200); } },HP_VM_RETRY_MS); };
-      let wait=0; try{ if(ss.speaking||ss.pending){ ss.cancel(); wait=250; } }catch(e){} setTimeout(go,wait); setTimeout(()=>{ if(!why) why='時間切れ'; end(false); },hpVmSayMax(text)); }catch(e){ why=String((e&&e.message)||e); end(false); } }); };
+
+      let wait=0; try{ if(HP_VM_U){ if(HP_VM_U.__live) HP_VM_U.__next=1; HP_VM_U.__hold=1; } if(ss.speaking||ss.pending||(HP_VM_U&&HP_VM_U.__next)){ ss.cancel(); wait=600; } }catch(e){} setTimeout(go,wait); setTimeout(()=>{ if(!why) why='時間切れ'; end(false); },hpVmSayMax(text)); }catch(e){ why=String((e&&e.message)||e); end(false); } }); };
 
 const HP_VMR_CSS='#hp-vm .vmb.rev{background:rgba(53,209,183,.10);border:2px solid #35d1b7;animation:none}#hp-vm .vmb.rev .vc-h{color:#35d1b7}'
  +'#hp-vm .vmb .vc-wv{display:flex;align-items:center;gap:2px;height:30px;flex:1;min-width:0}#hp-vm .vmb .vc-wv i{display:block;flex:1;max-width:6px;min-width:2px;border-radius:2px;background:#5f7896}#hp-vm .vmb .vc-wv i.on{background:#35d1b7}'
@@ -1740,7 +1744,7 @@ var HP_VM_SAY_DELAY=0, HP_VM_SAY_GEN=0;
 try{ if(typeof hpVmSay==='function'&&!hpVmSay.__f302){ const f=hpVmSay; hpVmSay=Object.assign(function(text,lang){ const self=this, gen=++HP_VM_SAY_GEN, wait=HP_VM_SAY_DELAY|0; HP_VM_SAY_DELAY=0;
     return new Promise(res=>{ let tries=0, fin=false; const done=v=>{ if(fin) return; fin=true; res(v); };
       const run=()=>{ if(fin||gen!==HP_VM_SAY_GEN) return done(false); tries++; const my=tries; let spoke=false, cut=false;
-        const t=setInterval(()=>{ try{ if(fin||my!==tries){ clearInterval(t); return; } const sp=!!(typeof speechSynthesis!=='undefined'&&speechSynthesis.speaking); if(sp){ spoke=true; return; }
+        const t=setInterval(()=>{ try{ if(fin||my!==tries){ clearInterval(t); return; } if(typeof HP_VM_U!=='undefined'&&HP_VM_U&&HP_VM_U.__hold){ spoke=false; return; }   const sp=!!(typeof speechSynthesis!=='undefined'&&speechSynthesis.speaking); if(sp){ spoke=true; return; }
             if(spoke&&tries<2){ cut=true; clearInterval(t); hpLog('通話：読み上げが途中で切れた。最初から読み直す'); try{ speechSynthesis.cancel(); }catch(e){} setTimeout(run,350); } }catch(e){ clearInterval(t); } },250);
         Promise.resolve(f.call(self,text,lang)).then(v=>{ clearInterval(t); if(cut||my!==tries) return; done(v); },()=>{ clearInterval(t); if(!cut&&my===tries) done(false); }); };
       if(wait>0) setTimeout(run,wait); else run(); }); },{__f302:1}); } }catch(e){}
@@ -2215,7 +2219,10 @@ try{ if(typeof document!=='undefined'&&document&&document.addEventListener){ if(
 try{ if(typeof hpChText==='function'&&!hpChText.__f350){ const f=hpChText; hpChText=Object.assign(function(m){ try{ if(m&&m.cl&&m.cl.r==='dnd') return T('ch_dnd'); }catch(e){} return f.apply(this,arguments); },f,{__f350:1}); } }catch(e){}
 try{ if(typeof hpChbText==='function'&&!hpChbText.__f350){ const f=hpChbText; hpChbText=Object.assign(function(m){ try{ if(m&&m.cl&&m.cl.r==='dnd') return T('chb_dnd'); }catch(e){} return f.apply(this,arguments); },f,{__f350:1}); } }catch(e){}
 
-try{ if(typeof hpConnOnce==='function'&&!hpConnOnce.__f350){ const f=hpConnOnce; hpConnOnce=Object.assign(function(kind){ if(kind==='say'){ try{ const lang=(typeof curLang==='function')?curLang():'ja'; const p=hpVmSay(T('cl_conn_said'),lang); Promise.resolve(p).then(ok=>{ if(ok) return; try{ hpLog('通話：「つながりました」を読み上げられなかったので、代わりにチャイムを鳴らした'); }catch(e){} try{ f.call(this,'chime'); }catch(e){} }).catch(()=>{}); }catch(e){} return 1200; } return f.apply(this,arguments); },f,{__f350:1}); } }catch(e){}
+var HP_SAY_WAIT_MS=2500;
+try{ if(typeof hpConnOnce==='function'&&!hpConnOnce.__f350){ const f=hpConnOnce; hpConnOnce=Object.assign(function(kind){ if(kind==='say'){ try{ const lang=(typeof curLang==='function')?curLang():'ja'; const p=hpVmSay(T('cl_conn_said'),lang);
+        const tm=new Promise(r=>setTimeout(()=>{ let st=false; try{ st=!!(typeof HP_VM_U!=='undefined'&&HP_VM_U&&HP_VM_U.__started); }catch(e){} if(!st){ try{ if(typeof HP_VM_U!=='undefined'&&HP_VM_U){ HP_VM_U.__next=1; HP_VM_U.__hold=1; } speechSynthesis.cancel(); }catch(e){} } r(st?'wait':false); },HP_SAY_WAIT_MS));
+        Promise.race([p,tm]).then(ok=>{ if(ok) return; try{ hpLog('通話：「つながりました」を読み上げられなかったので、代わりにチャイムを鳴らした'); }catch(e){} try{ f.call(this,'chime'); }catch(e){} }).catch(()=>{}); }catch(e){} return 1200; } return f.apply(this,arguments); },f,{__f350:1}); } }catch(e){}
 
 const HP_DM2_CSS='#hp-call.hp-dm .st{display:inline-block;max-width:min(86vw,440px);margin:6px auto 0;padding:14px 18px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:1.15em;line-height:1.55;opacity:1;text-align:left;white-space:pre-line;overflow-wrap:anywhere}'
  +'#hp-call.hp-dm .st::before{content:attr(data-lbl);display:block;font-size:.72em;letter-spacing:.08em;opacity:.6;margin-bottom:6px;text-align:left}';
