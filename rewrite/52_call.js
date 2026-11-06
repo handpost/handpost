@@ -2406,3 +2406,14 @@ function hpCp2Css(){ try{ if(typeof document==='undefined'||!document.head||docu
 try{ if(typeof hpCpCss==='function'&&!hpCpCss.__f359){ const f=hpCpCss; hpCpCss=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpCp2Css(); }catch(e){} return r; },f,{__f359:1}); } }catch(e){}
 try{ if(typeof hpDevLabelOf==='function'&&!hpDevLabelOf.__f359){ const f=hpDevLabelOf; hpDevLabelOf=Object.assign(function(){ const s=f.apply(this,arguments); try{ return (typeof hpCpPlain==='function')?hpCpPlain(s):s; }catch(e){ return s; } },f,{__f359:1}); } }catch(e){}
 
+var HP_NODM_CSS='#hp-call .dm{display:none!important}';
+function hpNoDmCss(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-nodm-css')) return false; const s=document.createElement('style'); s.id='hp-nodm-css'; s.textContent=HP_NODM_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
+try{ if(typeof hpDmEl==='function'&&!hpDmEl.__f360){ const f=hpDmEl; hpDmEl=Object.assign(function(d){ try{ hpNoDmCss(); if(d&&d.__dm&&d.__dm.style) d.__dm.style.display='none'; }catch(e){} return d; },f,{__f360:1}); } }catch(e){}
+try{ if(typeof hpDndTake==='function'&&!hpDndTake.__f360){ const f=hpDndTake; hpDndTake=Object.assign(function(r,o,locked){ try{ const from=r.from, C={id:o.call,peer:from,dir:'in',at:Date.now(),why:'dnd'}; try{ hpCallGone(o.call); }catch(e){}
+      const send=(locked&&typeof hpCk2Ring==='function')?hpCk2Ring:hpCallSig; try{ Promise.resolve(send(from,{v:1,type:'callend',call:o.call,why:'decline'},r.fromDev?[r.fromDev]:null)).catch(()=>{}); }catch(e){}
+      try{ hpCallSibTell(C); }catch(e){} try{ if(typeof hpCallSibTellBox==='function') hpCallSibTellBox(C); }catch(e){}
+      try{ hpChSave(from,{d:'c',t:'',ts:C.at,cl:{r:'dnd'}}); }catch(e){}
+      hpLog('通話：取り込み中なので、鳴らさずに出なかった（'+nickOf(from)+(locked?'・ロックを解除する前':'')+'。一言は送らない）'); return true; }catch(e){ try{ hpLog('通話：取り込み中の返事を出せない（'+((e&&e.message)||e)+'）'); }catch(x){} return false; } },f,{__f360:1}); } }catch(e){}
+try{ if(typeof hpCpSettingsInto==='function'&&!hpCpSettingsInto.__f360){ const f=hpCpSettingsInto; hpCpSettingsInto=Object.assign(function(card){ const r=f.apply(this,arguments); try{ const ch=card.children; let i=-1; for(let k=0;k<ch.length;k++){ if(ch[k].textContent===T('cl_dnd_msg_l')&&String(ch[k].tagName||ch[k].tag||'').toLowerCase()==='h3'){ i=k; break; } }
+      if(i>=0){ const rm=[ch[i]]; for(let k=i+1;k<ch.length;k++){ const tg=String(ch[k].tagName||ch[k].tag||'').toLowerCase(); if(tg==='select'||tg==='input') rm.push(ch[k]); else break; } for(const e of rm) card.removeChild(e); } }catch(e){} return r; },f,{__f360:1}); } }catch(e){}
+
