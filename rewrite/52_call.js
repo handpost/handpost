@@ -2828,3 +2828,14 @@ function hpF378WrapLng(){ try{ if(typeof hpLngIs!=='function'||hpLngIs.__f378) r
 try{ hpF378WrapLng(); if(typeof setTimeout==='function'){ setTimeout(hpF378WrapLng,0); setTimeout(hpF378WrapLng,800); setTimeout(hpF378WrapLng,3000); } if(typeof document!=='undefined'&&document.addEventListener) document.addEventListener('DOMContentLoaded',hpF378WrapLng); }catch(e){}
 try{ if(typeof hpSegSync==='function'&&!hpSegSync.__f378){ const f=hpSegSync; hpSegSync=Object.assign(function(){ try{ hpF378WrapLng(); }catch(e){} return f.apply(this,arguments); },f,{__f378:1}); } }catch(e){}
 
+var HP_F379_CSS='html body #p-call.cp-fit>*{max-width:560px!important;width:100%;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box}'
+ +'#p-call.cp-fit .cp-ch{flex:0 1 auto!important}#p-call.cp-fit .cp-ch .box{flex:0 1 auto!important;max-height:min(240px,40vh)!important}'
+ +'#p-call.cp-vhon .cp-ch{display:none!important}#p-call .cp-vm.on .ctx.has{max-height:none;font-size:15px;line-height:1.6;margin:10px 0 0;padding:6px 0 6px 10px}#p-call .cp-vm .ctx .cw{display:block;font-size:12px;color:var(--dim,#8aa0c0);margin-bottom:2px}#p-call .cp-vm .ctx .nx{color:var(--dim,#8aa0c0)}';
+function hpF379Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-f379-css')) return false; const st=document.createElement('style'); st.id='hp-f379-css'; st.textContent=HP_F379_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
+try{ if(typeof hpVhUi==='function'&&!hpVhUi.__f379){ const f=hpVhUi; hpVhUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpF379Css(); const R=(typeof HP_VH_P!=='undefined')?HP_VH_P:null; const pc=document.getElementById('p-call'); const m=R?R.list[R.i]:null;
+      const on=!!(pc&&R&&m&&typeof HP_CP!=='undefined'&&HP_CP&&HP_CP.peer===R.peer); if(pc&&pc.classList) pc.classList.toggle('cp-vhon',on);
+      for(const c of Array.from(document.querySelectorAll('#p-call .cp-vm'))){ const cx=c.querySelector('.ctx'); if(!cx) continue; const mine=!!(on&&c.getAttribute&&c.getAttribute('data-peer')===R.peer);
+        if(!mine){ cx.textContent=''; cx.classList.toggle('has',false); continue; } let tx=''; try{ tx=hpVhTx((typeof histLoad==='function')?histLoad(R.peer):[],m); }catch(e){ tx=''; }
+        cx.textContent=''; const w=document.createElement('span'); w.className='cw'; w.textContent=(typeof hpCdWhen==='function')?hpCdWhen(Number(m.ts)||0):''; cx.appendChild(w); const t=document.createElement('span'); t.className=tx?'tx':'nx'; t.textContent=tx||T('cl_vh_notx'); cx.appendChild(t); cx.classList.toggle('has',true); } }catch(e){} return r; },f,{__f379:1}); } }catch(e){}
+try{ if(typeof hpCallUiRender==='function'&&!hpCallUiRender.__f379){ const f=hpCallUiRender; hpCallUiRender=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpF379Css(); hpVhUi(); }catch(e){} return r; },f,{__f379:1}); } }catch(e){}
+
