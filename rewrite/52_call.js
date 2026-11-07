@@ -2861,3 +2861,30 @@ try{ if(typeof hpVhUi==='function'&&!hpVhUi.__f380){ const f=hpVhUi; hpVhUi=Obje
 
 try{ if(typeof hpCallUiList==='function'&&!hpCallUiList.__f380){ const f=hpCallUiList; hpCallUiList=Object.assign(function(s){ try{ hpF380Css(); }catch(e){} const r=f.apply(this,arguments); try{ for(const c of Array.from((s&&s.children)||[])){ const sub=c&&c.querySelector?c.querySelector('.cp-sub'):null; if(!sub||sub.__f380) continue; sub.__f380=1; const parts=String(sub.textContent||'').split(' · '); if(parts.length<2) continue; sub.textContent=''; parts.forEach((t,i)=>{ if(i) sub.appendChild(document.createTextNode(' \u00b7 ')); const sp=document.createElement('span'); sp.className='cpn'; sp.textContent=t; sub.appendChild(sp); }); } }catch(e){} return r; },f,{__f380:1}); } }catch(e){}
 
+const HP_OUT_DONE=new Map(), HP_OUT_DONE_MS=600e3, HP_OUT_TOLD=new Set(), HP_LATE_RING_MS=30000;
+function hpOutDoneAdd(C){ try{ if(!C||C.dir!=='out'||!C.id) return false; const now=Date.now(); for(const [k,v] of HP_OUT_DONE) if(now-v.at>HP_OUT_DONE_MS) HP_OUT_DONE.delete(k); HP_OUT_DONE.set(C.id,{peer:C.peer,at:now}); return true; }catch(e){ return false; } }
+try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f381){ const f=hpCallEnd; hpCallEnd=Object.assign(function(why,text){ try{ const C=HP_CALL; if(C&&C.st!=='ended') hpOutDoneAdd(C); }catch(e){} return f.apply(this,arguments); },f,{__f381:1}); } }catch(e){}
+function hpOutOver(r,o){ try{ if(!r||!o||o.v!==1||typeof o.call!=='string'||(o.type!=='callring'&&o.type!=='callans'&&o.type!=='callpo')) return false; const d=HP_OUT_DONE.get(o.call); if(!d||d.peer!==r.from) return false;
+    const C=HP_CALL; if(C&&C.id===o.call&&C.st!=='ended') return false; const key=o.call+':'+String(r.fromDev||''); if(HP_OUT_TOLD.has(key)) return true; HP_OUT_TOLD.add(key);
+    const ago=Math.round((Date.now()-d.at)/1000); hpLog('通話：'+nickOf(r.from)+' の端末が、もう終わった呼び出し（'+ago+' 秒前に終わった）に'+(o.type==='callans'?'応答した':'応じた')+'ので、終わっていると知らせた');
+    try{ Promise.resolve(hpCallSig(r.from,{v:1,type:'callend',call:o.call,why:'over'},r.fromDev?[r.fromDev]:null)).catch(()=>{}); }catch(e){} return true; }catch(e){ return false; } }
+try{ if(typeof hpCallOnSig==='function'&&!hpCallOnSig.__f381){ const f=hpCallOnSig; hpCallOnSig=Object.assign(async function(r,o){
+    let age=0; try{ age=Date.now()-Number(r&&r.sentAt); }catch(e){ age=0; }
+    try{ if(hpOutOver(r,o)) return; }catch(e){}
+    try{ const C=HP_CALL; if(r&&o&&o.v===1&&o.type==='callend'&&o.why==='over'&&C&&C.id===o.call&&C.peer===r.from&&C.dir==='in'&&C.st!=='ended'){ C.byeSent=true; hpLog('通話：かけた人はもう切っていた（遅れて届いた呼び出し）'); hpCallEnd('peer:over',T('cl_over_late')); return; } }catch(e){}
+    const res=await f.apply(this,arguments);
+    try{ const C=HP_CALL; if(r&&o&&o.type==='call'&&C&&C.dir==='in'&&C.id===o.call&&C.st==='ringing'&&age>HP_LATE_RING_MS&&!C.lateS){ C.lateS=Math.round(age/1000); hpLog('通話：'+C.lateS+' 秒前の呼び出しを鳴らす（もう切れているかもしれない）'); hpCallUi(); } }catch(e){}
+    return res; },f,{__f381:1}); } }catch(e){}
+
+try{ if(typeof hpLkOnSig==='function'&&!hpLkOnSig.__f381){ const f=hpLkOnSig; hpLkOnSig=Object.assign(async function(r,o){
+    let age=0; try{ age=Date.now()-Number(r&&r.sentAt); }catch(e){ age=0; }
+    try{ const C=HP_CALL; if(r&&o&&o.v===1&&o.type==='callend'&&o.why==='over'&&C&&C.id===o.call&&C.peer===r.from&&C.dir==='in'&&C.st!=='ended'){ try{ hpCallGone(o.call); }catch(e){} C.byeSent=true; hpLog('通話：かけた人はもう切っていた（遅れて届いた呼び出し）'); hpCallEnd('peer:over',T('cl_over_late')); return; } }catch(e){}
+    const res=await f.apply(this,arguments);
+    try{ const C=HP_CALL; if(r&&o&&o.type==='call'&&C&&C.dir==='in'&&C.id===o.call&&C.st==='ringing'&&age>HP_LATE_RING_MS&&!C.lateS){ C.lateS=Math.round(age/1000); hpLog('通話：'+C.lateS+' 秒前の呼び出しを鳴らす（もう切れているかもしれない）'); hpCallUi(); } }catch(e){}
+    return res; },f,{__f381:1}); } }catch(e){}
+var HP_F381_CSS='#hp-call .hp-late{font-size:13px;color:#f0b35a;margin:6px 16px 0;text-align:center;line-height:1.4}';
+function hpF381Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-f381-css')) return false; const st=document.createElement('style'); st.id='hp-f381-css'; st.textContent=HP_F381_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f381){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=HP_CALL, d=document.getElementById('hp-call'); if(!d) return r; let el=d.querySelector?d.querySelector('.hp-late'):null;
+      const want=!!(C&&C.dir==='in'&&C.st==='ringing'&&C.lateS); if(!want){ if(el&&el.parentNode) el.parentNode.removeChild(el); return r; } hpF381Css();
+      if(!el){ el=document.createElement('div'); el.className='hp-late'; const st=d.querySelector('.st'); if(st&&st.parentNode) st.parentNode.insertBefore(el,st.nextSibling); else d.appendChild(el); } el.textContent=TF('cl_late_ring',{s:C.lateS}); }catch(e){} return r; },f,{__f381:1}); } }catch(e){}
+
