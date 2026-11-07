@@ -2917,3 +2917,26 @@ hpVhInto=function(s,peer){ try{ const el=hpCpEl; hpF375Css(); hpF378Css(); hpF38
 try{ if(typeof hpVhUi==='function'&&!hpVhUi.__f383){ const f=hpVhUi; hpVhUi=Object.assign(function(){ try{ hpF383Css(); }catch(e){} const r=f.apply(this,arguments);
     try{ const R=(typeof HP_VH_P!=='undefined')?HP_VH_P:null; for(const c of Array.from(document.querySelectorAll('#p-call .cp-vm.v2'))){ const pp=c.querySelector('button.pp'); if(!pp) continue; const mine=!!(R&&c.getAttribute('data-peer')===R.peer); const ic=(mine&&!R.paused)?'pause':'play'; if(pp.__ic!==ic||!pp.querySelector||!pp.querySelector('svg')){ pp.innerHTML=HP_VH_IC[ic]; pp.__ic=ic; } } }catch(e){} return r; },f,{__f383:1}); } }catch(e){}
 
+var HP_F384_CSS='#p-call.cp-vhon .cp-cd,#p-call.cp-vhon details.cp-why{display:none!important}'
+ +'#p-call.cp-fit.cp-vhon .cp-vm.v2 .ctx.has{font-size:16px!important;line-height:1.75!important;padding:12px 14px 8px!important}'
+ +'#p-call.cp-fit.cp-vhon .cp-vm.v2 .ctx .tx{white-space:pre-wrap!important;word-break:normal;overflow-wrap:anywhere;letter-spacing:.02em;max-height:50%!important;overflow:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-right:4px}'
+ +'#p-call.cp-fit.cp-vhon .cp-vm.v2.vmore:not(.xp) .ctx .tx{-webkit-mask-image:linear-gradient(#000 78%,transparent);mask-image:linear-gradient(#000 78%,transparent)}'
+ +'#p-call .cp-vm.v2 .ctx .xb{display:none}#p-call.cp-fit.cp-vhon .cp-vm.v2.vmore .ctx .xb,#p-call.cp-fit.cp-vhon .cp-vm.v2.xp .ctx .xb{display:inline-flex!important;align-self:flex-end;flex:0 0 auto;margin:6px 0 0;padding:3px 12px!important;font-size:12px!important;line-height:1.5;border-radius:999px!important;border:1px solid rgba(45,212,191,.45)!important;background:transparent!important;color:var(--teal)!important;height:auto!important;min-width:0!important;cursor:pointer}'
+ +'#p-call.cp-fit.cp-vhon .cp-vm.v2.xp .ctx .tx{flex:1 1 auto!important;max-height:none!important;min-height:0}#p-call.cp-fit.cp-vhon .cp-vm.v2.xp .ctx .q{display:none!important}';
+function hpF384Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-f384-css')) return false; const st=document.createElement('style'); st.id='hp-f384-css'; st.textContent=HP_F384_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
+
+function hpVhParas(t){ try{ let s=String(t==null?'':t).replace(/\r\n?/g,'\n').replace(/[ \t　]+/g,' ').trim(); if(!s) return '';
+    s=s.replace(/([。！？])\s*(?=[^\s。！？」』）)])/g,'$1\n').replace(/([!?]|[a-zÀ-ɏ)][.])\s+(?=\S)/g,'$1\n'); return s.replace(/\n\s+/g,'\n').replace(/\n{2,}/g,'\n'); }catch(e){ return String(t||''); } }
+try{ if(typeof hpVhUi==='function'&&!hpVhUi.__f384){ const f=hpVhUi; hpVhUi=Object.assign(function(){ try{ hpF384Css(); }catch(e){} const r=f.apply(this,arguments);
+    try{ const R=(typeof HP_VH_P!=='undefined')?HP_VH_P:null;
+      for(const c of Array.from(document.querySelectorAll('#p-call .cp-vm.v2'))){ const mine=!!(R&&c.getAttribute&&c.getAttribute('data-peer')===R.peer); const cx=c.querySelector('.ctx');
+        if(!mine||!cx||!cx.classList.contains('has')){ c.classList.toggle('xp',false); c.classList.toggle('vmore',false); continue; }
+        c.classList.toggle('xp',!!R.xp); const tx=cx.querySelector('.tx'); if(tx){ const p=hpVhParas(tx.textContent); if(p!==tx.textContent) tx.textContent=p; }
+        const q=cx.querySelector('.q'); let nx=null; if(q){ const cur=q.querySelector('.qi.cur'); if(cur){ nx=cur.nextSibling||null; try{ q.removeChild(cur); }catch(e){} } }
+        if(tx){ const b=document.createElement('button'); b.type='button'; b.className='xb'; b.textContent=T(R.xp?'cl_vh_less':'cl_vh_more'); try{ b.setAttribute('aria-expanded',R.xp?'true':'false'); }catch(e){}
+          b.onclick=ev=>{ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){} const P=(typeof HP_VH_P!=='undefined')?HP_VH_P:null; if(!P) return; P.xp=!P.xp; hpVhUi(); };
+          if(q&&q.parentNode===cx) cx.insertBefore(b,q); else cx.appendChild(b); }
+        const chk=()=>{ try{ const more=!!(tx&&Number(tx.scrollHeight)>Number(tx.clientHeight)+2); c.classList.toggle('vmore',more); }catch(e){} };
+        chk(); try{ if(typeof setTimeout==='function') setTimeout(chk,0); }catch(e){}
+        try{ if(q&&typeof q.scrollTop==='number'){ q.scrollTop=(nx&&typeof nx.offsetTop==='number')?Math.max(0,nx.offsetTop-(q.offsetTop||0)):0; } }catch(e){} } }catch(e){} return r; },f,{__f384:1}); } }catch(e){}
+
