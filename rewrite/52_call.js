@@ -2888,3 +2888,7 @@ try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f381){ const f=hpCallUi; hpCal
       const want=!!(C&&C.dir==='in'&&C.st==='ringing'&&C.lateS); if(!want){ if(el&&el.parentNode) el.parentNode.removeChild(el); return r; } hpF381Css();
       if(!el){ el=document.createElement('div'); el.className='hp-late'; const st=d.querySelector('.st'); if(st&&st.parentNode) st.parentNode.insertBefore(el,st.nextSibling); else d.appendChild(el); } el.textContent=TF('cl_late_ring',{s:C.lateS}); }catch(e){} return r; },f,{__f381:1}); } }catch(e){}
 
+var HP_F382_CSS='#p-call .cp-set .cp-kv{flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:8px!important}#p-call .cp-set .cp-kv .kl{white-space:normal!important}#p-call .cp-set .cp-kv select{width:100%!important;max-width:none!important;flex:0 0 auto!important;text-overflow:clip}';
+function hpF382Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-f382-css')) return false; const st=document.createElement('style'); st.id='hp-f382-css'; st.textContent=HP_F382_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
+try{ if(typeof hpCallUiList==='function'&&!hpCallUiList.__f382){ const f=hpCallUiList; hpCallUiList=Object.assign(function(){ try{ hpF382Css(); }catch(e){} return f.apply(this,arguments); },f,{__f382:1}); } }catch(e){}
+
