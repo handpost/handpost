@@ -2534,3 +2534,5 @@ try{ if(typeof hpSegSync==='function'&&!hpSegSync.__f367){ const f=hpSegSync; hp
 try{ if(typeof applyLang==='function'&&!applyLang.__f367){ const f=applyLang; applyLang=Object.assign(function(){ const r=f.apply(this,arguments); try{ const bc=document.getElementById('hp-seg2-chat'), bl=document.getElementById('hp-seg2-call'); if(bc) bc.textContent=T('tab_chat'); if(bl) bl.textContent=T('cl_menu_l'); }catch(e){} return r; },f,{__f367:1}); } }catch(e){}
 try{ hpSegSync(); }catch(e){}
 
+try{ if(typeof hpCallUiList==='function'&&!hpCallUiList.__f368){ const f=hpCallUiList; hpCallUiList=Object.assign(function(s){ const r=f.apply(this,arguments); try{ for(const e of Array.from(s.children||[])){ if(e.className==='cp-h'){ s.removeChild(e); break; } } }catch(e){} return r; },f,{__f368:1}); } }catch(e){}
+
