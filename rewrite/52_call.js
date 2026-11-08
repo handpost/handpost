@@ -3259,3 +3259,23 @@ try{ if(typeof hpCallTone==='function'&&!hpCallTone.__f404){ const f=hpCallTone;
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f404){ const f=hpCallUi; hpCallUi=Object.assign(function(){ try{ const C=(typeof HP_CALL!=='undefined')?HP_CALL:null; const off=(typeof HP_CLOCK_OFF!=='undefined')?HP_CLOCK_OFF:null;
       if(C&&C.dir==='in'&&C.lateS&&off!=null&&Math.abs(off)>5){ const real=C.lateS-off; if(real<30){ hpLog('通話：「'+C.lateS+' 秒前の呼び出し」は端末の時計のずれ（約 '+off+' 秒）のため。注は出さない'); C.lateS=0; } else C.lateS=Math.round(real); } }catch(e){} return f.apply(this,arguments); },f,{__f404:1}); } }catch(e){}
 
+hpFwdWav=function(){ try{ if(HP_FWD_URL) return HP_FWD_URL; const sr=22050, sec=3, n=sr*sec, pcm=new Int16Array(n);
+    for(let i=0;i<n;i++){ const t=i/sr; let v=0; if(t<1.0){ const env=t<0.02?t/0.02:(t>0.95?Math.max(0,(1.0-t)/0.05):1); v=0.07*env*(0.5+0.5*Math.sin(2*Math.PI*16*t))*Math.sin(2*Math.PI*400*t); } pcm[i]=Math.round(v*32767); }
+    const buf=new ArrayBuffer(44+n*2), dv=new DataView(buf); const ws=(o,s)=>{ for(let i=0;i<s.length;i++) dv.setUint8(o+i,s.charCodeAt(i)); };
+    ws(0,'RIFF'); dv.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true); dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true); ws(36,'data'); dv.setUint32(40,n*2,true);
+    for(let i=0;i<n;i++) dv.setInt16(44+i*2,pcm[i],true); HP_FWD_URL=URL.createObjectURL(new Blob([buf],{type:'audio/wav'})); return HP_FWD_URL; }catch(e){ return ''; } };
+hpFwdChime=function(){ try{ hpCallBeep(400,1.0,0.07,0,16); }catch(e){} };
+
+const HP_STG_KEY='hp_stage_hist', HP_STG_MAX=20;
+function hpStgLoad(){ try{ const o=JSON.parse(localStorage.getItem(HP_STG_KEY)||'null'); if(o&&Array.isArray(o.tie)&&Array.isArray(o.run)) return o; }catch(e){} return {tie:[],run:[]}; }
+function hpStgAdd(k,ms){ try{ if(!(ms>=0)||ms>600000) return false; const o=hpStgLoad(); o[k].push(Math.round(ms)); if(o[k].length>HP_STG_MAX) o[k]=o[k].slice(-HP_STG_MAX); localStorage.setItem(HP_STG_KEY,JSON.stringify(o)); return true; }catch(e){ return false; } }
+function hpStgAvg(a){ try{ const v=(a||[]).filter(x=>x>=0).slice().sort((x,y)=>x-y); if(v.length<3) return null; let w=v; if(v.length>=4){ const q=p=>{ const i=(v.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i); return v[lo]+(v[hi]-v[lo])*(i-lo); }; const q1=q(0.25), q3=q(0.75), r=q3-q1; w=v.filter(x=>x>=q1-1.5*r&&x<=q3+1.5*r); if(!w.length) w=v; } return w.reduce((s,x)=>s+x,0)/w.length; }catch(e){ return null; } }
+function hpStgFmt(ms){ const v=Math.max(0,ms)/1000; return v<1?v.toFixed(1):(v<10?v.toFixed(1):String(Math.round(v))); }
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f404b){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=(typeof HP_CALL!=='undefined')?HP_CALL:null, d=document.getElementById('hp-call'); if(!C||!d||C.dir!=='out') return r;
+      if(C.gathered&&C.at&&!C.stgT){ C.stgT=1; hpStgAdd('tie',C.gathered-C.at); } if(C.sent&&C.gathered&&!C.stgR){ C.stgR=1; hpStgAdd('run',C.sent-C.gathered); }
+      const on=(typeof hpCl3On==='function')?hpCl3On(C):(C.st==='calling'||C.st==='connecting'); if(!on) return r;
+      if(d.__wt&&C.at){ const t=TF('cl_wait',{n:Math.max(0,Math.floor((Date.now()-C.at)/1000))}); if(d.__wt.textContent!==t) d.__wt.textContent=t; }
+      if(d.__stp&&d.__stp.children){ const ss=Array.from(d.__stp.children).filter(x=>String(x.className||'').split(' ').indexOf('s')>=0); const h=hpStgLoad();
+        [['tie',0],['run',1]].forEach(([k,i])=>{ const w=ss[i]; if(!w) return; const av=hpStgAvg(h[k]); let el=null; for(const c of Array.from(w.children||[])) if(c.className==='avg') el=c; if(av==null){ if(el&&el.parentNode) el.parentNode.removeChild(el); return; } if(!el){ el=document.createElement('small'); el.className='avg'; w.appendChild(el); } el.textContent=TF('cl_avg',{n:hpStgFmt(av)}); }); } }catch(e){} return r; },f,{__f404b:1}); } }catch(e){}
+try{ if(document.head&&!document.getElementById('hp-f404-css')){ const s=document.createElement('style'); s.id='hp-f404-css'; s.textContent='#hp-call .stp .s small.avg{font-size:.72em;opacity:.55;margin-top:0;min-height:0}'; document.head.appendChild(s); } }catch(e){}
+
