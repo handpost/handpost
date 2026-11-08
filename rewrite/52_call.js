@@ -3130,3 +3130,8 @@ function hpF395Css(){ try{ if(typeof document==='undefined'||!document.head||doc
 try{ hpF395Css(); }catch(e){}
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f395){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=(typeof HP_CALL!=='undefined')?HP_CALL:null, d=document.getElementById('hp-call'); if(C&&C.vmTold&&C.dir==='out'&&!C.talkAt&&d&&d.__wt&&d.classList&&d.classList.contains('cl3')){ const E=C.cl3EndAt||Date.now(); d.__wt.textContent=TF('cl_hd_rang',{n:Math.max(0,Math.floor((E-(C.at||E))/1000))}); } }catch(e){} return r; },f,{__f395:1}); } }catch(e){}
 
+var HP_F396_CSS='#p-call .cp-act button:disabled .ring,#p-call .cp-act button.off .ring{position:relative;overflow:hidden}'
+ +'#p-call .cp-act button:disabled .ring::after,#p-call .cp-act button.off .ring::after{content:"";position:absolute;left:50%;top:8%;width:3px;height:84%;margin-left:-1.5px;border-radius:2px;background:#ff6b6b;transform:rotate(45deg);pointer-events:none}';
+function hpF396Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-f396-css')) return false; const st=document.createElement('style'); st.id='hp-f396-css'; st.textContent=HP_F396_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
+try{ hpF396Css(); }catch(e){}
+
