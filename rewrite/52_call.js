@@ -3118,3 +3118,8 @@ function hpF392Css(){ try{ if(typeof document==='undefined'||!document.head) ret
 try{ hpF392Css(); }catch(e){}
 try{ if(typeof hpCallUiPerson==='function'&&!hpCallUiPerson.__f392){ const f=hpCallUiPerson; hpCallUiPerson=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpF392Css(); }catch(e){} return r; },f,{__f392:1}); } }catch(e){}
 
+var HP_VM_DEF2='60';
+try{ if(typeof hpVmSec==='function'&&!hpVmSec.__f393){ hpVmSec=Object.assign(function(){ try{ const v=String(localStorage.getItem(HP_VM_KEY)||''); return Number(HP_VM_SECS.indexOf(v)>=0?v:HP_VM_DEF2); }catch(e){ return Number(HP_VM_DEF2); } },{__f393:1}); } }catch(e){}
+function hpVmMig393(){ try{ if(localStorage.getItem('p2p_vmsec_f393')) return false; localStorage.setItem('p2p_vmsec_f393','1'); if(String(localStorage.getItem(HP_VM_KEY)||'')==='30'){ localStorage.setItem(HP_VM_KEY,'60'); try{ hpLog('設定：出ないとき、呼び出しをやめるまで 30 秒 → 60 秒（第 353 版のはじめの値）'); }catch(e){} return true; } return false; }catch(e){ return false; } }
+try{ hpVmMig393(); }catch(e){}
+
