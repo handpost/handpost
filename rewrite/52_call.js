@@ -3100,3 +3100,8 @@ try{ if(typeof hpCallUiPerson==='function'&&!hpCallUiPerson.__f389){ const f=hpC
 function hpCpFoldOut(){ try{ const s=document.getElementById('p-call'); if(!s||!s.classList||!s.classList.contains('cp-vhon')) return false; const det=Array.from(s.children||[]).find(x=>x&&String(x.className||'')==='cp-fold'); if(!det) return false; const vmc=Array.from(det.children||[]).find(x=>x&&String(x.className||'').split(' ').includes('cp-vm')); if(!vmc) return false; s.insertBefore(vmc,det); try{ if(typeof hpCpFit==='function') hpCpFit(); }catch(e){} return true; }catch(e){ return false; } }
 try{ if(typeof hpVhUi==='function'&&!hpVhUi.__f389){ const f=hpVhUi; hpVhUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpCpFoldOut(); }catch(e){} return r; },f,{__f389:1}); } }catch(e){}
 
+var HP_F390_CSS='html body #p-call .cp-row .cdv{display:none!important}';
+function hpF390Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-f390-css')) return false; const st=document.createElement('style'); st.id='hp-f390-css'; st.textContent=HP_F390_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
+try{ hpF390Css(); }catch(e){}
+try{ if(typeof hpCallUiList==='function'&&!hpCallUiList.__f390){ const f=hpCallUiList; hpCallUiList=Object.assign(function(s){ const r=f.apply(this,arguments); try{ hpF390Css(); for(const c of Array.from(s.children||[])){ if(!c||c.className!=='cp-row') continue; const dv=c.querySelector?c.querySelector('.cdv'):null; if(dv&&dv.parentNode) dv.parentNode.removeChild(dv); } }catch(e){} return r; },f,{__f390:1}); } }catch(e){}
+
