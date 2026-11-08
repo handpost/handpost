@@ -3135,3 +3135,7 @@ var HP_F396_CSS='#p-call .cp-act button:disabled .ring,#p-call .cp-act button.of
 function hpF396Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-f396-css')) return false; const st=document.createElement('style'); st.id='hp-f396-css'; st.textContent=HP_F396_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
 try{ hpF396Css(); }catch(e){}
 
+var HP_F397_CSS='html body #p-call:not(.on){display:none!important}';
+function hpF397Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-f397-css')) return false; const st=document.createElement('style'); st.id='hp-f397-css'; st.textContent=HP_F397_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
+try{ hpF397Css(); }catch(e){}
+
