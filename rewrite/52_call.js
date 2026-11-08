@@ -3200,3 +3200,11 @@ function hpLeaseHold(){ try{ if(typeof document==='undefined'||!document.getElem
     if(ch){ try{ localStorage.setItem(HP_LH_KEY,JSON.stringify(m)); }catch(e){} } return n; }catch(e){ return 0; } }
 try{ hpLeaseHold(); let k=0; const t=setInterval(()=>{ try{ hpLeaseHold(); if(++k>=40){ clearInterval(t); setInterval(hpLeaseHold,5000); } }catch(e){} },500); if(typeof window!=='undefined'&&window.addEventListener) window.addEventListener('resize',()=>{ try{ hpLeaseHold(); }catch(e){} }); }catch(e){}
 
+try{ if(typeof hpFwdHold==='function'&&!hpFwdHold.__f402){ const f=hpFwdHold; hpFwdHold=Object.assign(function(r,o,go){ let had=true; try{ had=!!(o&&HP_FWD_HOLD[o.call]); }catch(e){} const res=f.apply(this,arguments);
+    try{ if(!had&&res){ const h=HP_FWD_HOLD[o.call]; if(h&&h.at){ clearTimeout(h.timer); const left=Math.max(0,HP_FWD_MS-(Date.now()-h.at)); h.timer=setTimeout(()=>hpFwdRingNow(o.call,h),left); hpLog('通話：30 秒は届いた時から数える（端末の時計がずれていることがあるため）'); } } }catch(e){}
+    return res; },f,{__f402:1}); } }catch(e){}
+let HP_CLOCK_OFF=null;
+async function hpClockCheck(){ try{ if(typeof fetch!=='function'||typeof location==='undefined') return null; const t0=Date.now(); const r=await fetch(location.origin+'/?clock='+t0,{method:'HEAD',cache:'no-store'}); const t1=Date.now(); const d=r&&r.headers&&r.headers.get('date'); const s=Date.parse(d||''); if(!(s>0)) return null;
+    const off=Math.round(((t0+t1)/2-s-500)/1000); HP_CLOCK_OFF=off; if(Math.abs(off)>5) hpLog('この端末の時計は handpost.page より約 '+Math.abs(off)+' 秒'+(off>0?'進んで':'遅れて')+'いる（通話の合図を古いとみて捨てることがある。端末の設定で時刻を合わせてください）'); return off; }catch(e){ return null; } }
+try{ setTimeout(()=>{ hpClockCheck(); },5000); setInterval(()=>{ hpClockCheck(); },1800000); }catch(e){}
+
