@@ -3251,7 +3251,7 @@ try{ if(typeof hpCallTone==='function'&&!hpCallTone.__f404){ const f=hpCallTone;
       if(k==='fwd'&&C&&C.dir==='out'){ if(HP_CALL_TONE==='fwd') return; const a=hpFwdAu(); if(!a) return f.apply(this,arguments);
         try{ hpBeepKill(); }catch(e){} if(HP_CALL_TONE_T){ clearInterval(HP_CALL_TONE_T); HP_CALL_TONE_T=null; } HP_CALL_TONE='fwd'; if(typeof soundOn==='function'&&soundOn()==='off') return;
         try{ a.muted=false; a.currentTime=0; const p=a.play(); const bad=e=>{ try{ hpLog('通話：待ち受け音を音の部品で鳴らせない（'+((e&&e.name)||e)+'）。音の入れ物で鳴らす'); }catch(x){} try{ hpFwdChime(); HP_CALL_TONE_T=setInterval(hpFwdChime,3000); }catch(x){} };
-          if(p&&p.then) p.then(()=>{ try{ hpLog('通話：待ち受け音（転送の和音）を音の部品で鳴らした'); }catch(e){} },bad); }catch(e){ try{ hpFwdChime(); HP_CALL_TONE_T=setInterval(hpFwdChime,3000); }catch(x){} }
+          if(p&&p.then) p.then(()=>{ try{ hpLog('通話：待ち受け音を音の部品で鳴らした（転送のあと）'); }catch(e){} },bad); }catch(e){ try{ hpFwdChime(); HP_CALL_TONE_T=setInterval(hpFwdChime,3000); }catch(x){} }
         try{ if(C.fwdTold) setTimeout(()=>{ try{ if(HP_CALL!==C||C.st==='ended'||!C.stream) return; const bad=C.stream.getAudioTracks().some(t=>t.muted||t.readyState==='ended'); if(bad&&typeof hpCallMicRedo==='function'){ hpLog('通話：読み上げのあとマイクが止まっているので取り直す'); hpCallMicRedo(C).catch(()=>{}); } }catch(e){} },500); }catch(e){}
         return; }
       hpFwdAuStop(); }catch(e){} return f.apply(this,arguments); },f,{__f404:1}); } }catch(e){}
@@ -3297,4 +3297,14 @@ try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f407){ const f=hpCallUi; hpCal
       if(!any){ if(lb&&lb.parentNode) lb.parentNode.removeChild(lb); return r; }
       if(!lb){ lb=document.createElement('span'); lb.className='s lbl'; const i=document.createElement('i'); i.textContent=T('cl_lbl_now'); const a=document.createElement('small'); a.textContent=T('cl_lbl_now'); const b=document.createElement('small'); b.className='avg'; b.textContent=T('cl_lbl_avg'); lb.appendChild(i); lb.appendChild(a); lb.appendChild(b); d.__stp.insertBefore(lb,d.__stp.children[0]||null); } }catch(e){} return r; },f,{__f407:1}); } }catch(e){}
 try{ if(document.head&&!document.getElementById('hp-f407-css')){ const s=document.createElement('style'); s.id='hp-f407-css'; s.textContent='#hp-call .stp .s>i{order:0}#hp-call .stp .s>small{order:2}#hp-call .stp .s>small.avg{order:1}#hp-call .stp .s.lbl i{visibility:hidden}#hp-call .stp .s.lbl small{opacity:.55}#hp-call .stp .s small.avg{min-height:1.1em}'; document.head.appendChild(s); } }catch(e){}
+
+try{ if(typeof hpVmRing==='function'&&!hpVmRing.__f408){ const f=hpVmRing; hpVmRing=Object.assign(function(C,dev){ try{ if(C&&C.fwdTold&&C.vmRing){ C.vmRingDevs=C.vmRingDevs||{}; if(dev&&!C.vmRingDevs[dev]){ C.vmRingDevs[dev]=1; hpLog('通話：転送でほかの端末も鳴り始めたが、音声メッセージまでは最初に鳴り始めてから数えたまま（数え直さない）'); } return false; } }catch(e){} return f.apply(this,arguments); },f,{__f408:1}); } }catch(e){}
+hpStgFmt=function(ms){ return (Math.max(0,Number(ms)||0)/1000).toFixed(1); };
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f408b){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=(typeof HP_CALL!=='undefined')?HP_CALL:null, d=document.getElementById('hp-call'); if(!C||!d||!d.__stp||C.dir!=='out') return r;
+      const on=(typeof hpCl3On==='function')?hpCl3On(C):(C.st==='calling'||C.st==='connecting'); if(!on) return r;
+      const k=(typeof hpCallStage==='function')?hpCallStage(C):2, now=Date.now(), at=C.at||now, g=C.gathered||0, sn=C.sent||0, pl=C.cl3Pull||0;
+      const dur=[g?g-at:now-at, g?(sn?sn-g:now-g):null, sn?(pl?pl-sn:now-sn):null, pl?now-pl:null];
+      const ss=Array.from(d.__stp.children||[]).filter(x=>String(x.className||'').split(' ').indexOf('s')>=0&&String(x.className||'').indexOf('lbl')<0);
+      ss.forEach((w,i)=>{ const sm=Array.from(w.children||[]).find(c=>String(c.tagName||'').toLowerCase()==='small'&&c.className!=='avg'); if(!sm) return; sm.textContent=(i<=k&&dur[i]!=null)?TF('cl_wait',{n:hpStgFmt(dur[i])}):''; }); }catch(e){} return r; },f,{__f408b:1}); } }catch(e){}
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f408){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const d=document.getElementById('hp-call'); if(d&&d.__stp&&d.__stp.children){ for(const w of Array.from(d.__stp.children)){ for(const c of Array.from(w.children||[])){ if(c.className==='avg'&&c.textContent==='') c.textContent=' '; } } } }catch(e){} return r; },f,{__f408:1}); } }catch(e){}
 
