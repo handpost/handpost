@@ -2408,7 +2408,7 @@ try{ if(typeof hpDevLabelOf==='function'&&!hpDevLabelOf.__f359){ const f=hpDevLa
 
 var HP_NODM_CSS='#hp-call .dm{display:none!important}';
 function hpNoDmCss(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-nodm-css')) return false; const s=document.createElement('style'); s.id='hp-nodm-css'; s.textContent=HP_NODM_CSS; document.head.appendChild(s); return true; }catch(e){ return false; } }
-try{ if(typeof hpDmEl==='function'&&!hpDmEl.__f360){ const f=hpDmEl; hpDmEl=Object.assign(function(d){ try{ hpNoDmCss(); if(d&&d.__dm&&d.__dm.style) d.__dm.style.display='none'; }catch(e){} return d; },f,{__f360:1}); } }catch(e){}
+try{ if(false&&typeof hpDmEl==='function'&&!hpDmEl.__f360){   const f=hpDmEl; hpDmEl=Object.assign(function(d){ try{ hpNoDmCss(); if(d&&d.__dm&&d.__dm.style) d.__dm.style.display='none'; }catch(e){} return d; },f,{__f360:1}); } }catch(e){}
 try{ if(typeof hpDndTake==='function'&&!hpDndTake.__f360){ const f=hpDndTake; hpDndTake=Object.assign(function(r,o,locked){ try{ const from=r.from, C={id:o.call,peer:from,dir:'in',at:Date.now(),why:'dnd'}; try{ hpCallGone(o.call); }catch(e){}
       const send=(locked&&typeof hpCk2Ring==='function')?hpCk2Ring:hpCallSig; try{ Promise.resolve(send(from,{v:1,type:'callend',call:o.call,why:'decline'},r.fromDev?[r.fromDev]:null)).catch(()=>{}); }catch(e){}
       try{ hpCallSibTell(C); }catch(e){} try{ if(typeof hpCallSibTellBox==='function') hpCallSibTellBox(C); }catch(e){}
@@ -2642,7 +2642,7 @@ try{ if(typeof document!=='undefined'&&document.head&&!document.getElementById('
 try{ if(typeof hpSegSync==='function'&&!hpSegSync.__f373){ const f=hpSegSync; hpSegSync=Object.assign(function(){ let show=false; try{ const pc=document.getElementById('p-call'), ch=document.getElementById('p-chat'); show=!!(pc&&pc.classList&&pc.classList.contains('on'))||!!(ch&&ch.classList&&ch.classList.contains('on')&&ch.classList.contains('list-mode')); }catch(e){} if(show) HP_SEG_NOHOME=true; const r=f.apply(this,arguments); if(show) HP_SEG_NOHOME=true;
     try{ if(show&&document.body&&document.body.classList&&document.body.classList.contains('hp-home')){ hpV334Mark(false); if(typeof hpCsFit==='function') hpCsFit(); } }catch(e){} return r; },f,{__f373:1}); } }catch(e){}
 
-const HP_FWD_MS=10000; const HP_FWD_PROBE_MS=3000; const HP_FWD_HOLD={}; const HP_FWD_MARK={};
+const HP_FWD_MS=30000  ; const HP_FWD_PROBE_MS=3000; const HP_FWD_HOLD={}; const HP_FWD_MARK={};
 hpRsApply=function(){ try{ if(typeof hpRingOffOn==='function'&&hpRingOffOn()&&typeof hpRingOffSet==='function'){ HP_RS_LOCK++; try{ hpRingOffSet(false); } finally{ HP_RS_LOCK--; } try{ hpLog('通話：「受けない」の控えを解いた（▼ は先に鳴る端末の意味に）'); }catch(e){} return true; } }catch(e){} return false; };
 try{ setTimeout(()=>{ try{ hpRsApply(); }catch(e){} },3000); }catch(e){}
 function hpFwdPri(peer){ try{ const pri=(typeof hpRsPicked==='function')?hpRsPicked():''; if(!pri) return ''; const a=hpCdGet(peer); if(a&&a.indexOf(pri)<0) return ''; return pri; }catch(e){ return ''; } }
