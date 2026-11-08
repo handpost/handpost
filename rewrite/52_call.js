@@ -3143,3 +3143,30 @@ function hpCvSegDrop(){ try{ if(typeof document==='undefined'||!document.getElem
 try{ if(typeof hpCvSegMount==='function'&&!hpCvSegMount.__f399){ hpCvSegMount=Object.assign(function(){ hpCvSegDrop(); return null; },{__f399:1}); } }catch(e){}
 try{ hpCvSegDrop(); setTimeout(hpCvSegDrop,0); }catch(e){}
 
+const HP_FWD_SILENT={}; let HP_FWD_IN=0, HP_FWD_QEND=0;
+function hpFwdQuiet(){ try{ const C=(typeof HP_CALL!=='undefined')?HP_CALL:null; if(!C||C.dir!=='in') return false; if(C.fwdQuiet) return true; if(HP_FWD_SILENT[C.id]&&C.st==='ringing'){ C.fwdQuiet=1; return true; } return false; }catch(e){ return false; } }
+function hpFwdHide(){ try{ const d=document.getElementById('hp-call'); if(d&&d.style) d.style.display='none'; }catch(e){} }
+function hpFwdRingNow(id,h){ try{ if(HP_FWD_HOLD[id]!==h) return false; delete HP_FWD_HOLD[id]; delete HP_FWD_SILENT[id]; const N=HP_CALL;
+    if(!(N&&N.id===id&&N.dir==='in'&&N.st==='ringing')){ try{ hpLog('通話：待っていた呼び出しはもう無いので、この端末は鳴らさない'); }catch(e){} return false; }
+    N.fwdQuiet=0; HP_FWD_MARK[id]=Date.now(); try{ hpLog('通話：先に鳴る端末が出ないので、この端末でも鳴らす（準備は'+(N.ans?'済んでいる':'まだ途中')+'・先に鳴る端末も鳴ったまま）'); }catch(e){}
+    try{ hpCallUi(); }catch(e){} try{ hpCallRing(true); }catch(e){} try{ if(typeof notifySound==='function') notifySound('msg'); }catch(e){} try{ hpCallCard(true); }catch(e){}
+    try{ N.ringSent=Date.now(); Promise.resolve(hpCallSig(N.peer,{v:1,type:'callring',call:id,k:hpCallMyKind()},N.dev?[N.dev]:null)).catch(()=>{}); }catch(e){}
+    try{ if(N.timer) clearTimeout(N.timer); N.timer=setTimeout(()=>{ if(HP_CALL===N&&N.st==='ringing') hpCallEnd('missed',T('cl_missed')); },HP_CALL_RING_MORE); }catch(e){}
+    return true; }catch(e){ return false; } }
+try{ if(typeof hpFwdHold==='function'&&!hpFwdHold.__f400){ hpFwdHold=Object.assign(function(r,o,go){ try{ const id=o.call; if(HP_FWD_HOLD[id]){ HP_FWD_HOLD[id].r=r; HP_FWD_HOLD[id].o=o; return true; }
+    const h={r:r,o:o,at:Date.now(),priSeen:false,quiet:true,probe:0}; HP_FWD_HOLD[id]=h; HP_FWD_SILENT[id]=Date.now(); const s=Math.round(HP_FWD_MS/1000);
+    try{ hpLog('通話：'+nickOf(r.from)+' からの呼び出し。先に鳴る端末が出なければ '+s+' 秒後にこの端末も鳴る（それまでは鳴らさずに、つながる準備だけしておく）'); }catch(e){}
+    h.timer=setTimeout(()=>hpFwdRingNow(id,h),HP_FWD_MS);
+    HP_FWD_IN++; let p; try{ p=Promise.resolve(go(r,o)); }catch(e){ p=Promise.resolve(); }
+    p.catch(()=>{}).then(()=>{ HP_FWD_IN=Math.max(0,HP_FWD_IN-1); try{ const N=HP_CALL; if(N&&N.id===id&&N.dir==='in'&&N.st==='ringing'&&HP_FWD_SILENT[id]){ N.fwdQuiet=1; hpCallRing(false); hpFwdHide(); hpLog('通話：鳴らさずに準備を始めた（'+s+' 秒たっても誰も出なければ鳴らす）'); } }catch(e){} });
+    return true; }catch(e){ return false; } },{__f400:1}); } }catch(e){}
+try{ if(typeof hpCallRing==='function'&&!hpCallRing.__f400){ const f=hpCallRing; hpCallRing=Object.assign(function(on){ try{ if(on&&hpFwdQuiet()) return f.call(this,false); }catch(e){} return f.apply(this,arguments); },f,{__f400:1}); } }catch(e){}
+try{ if(typeof hpCallCard==='function'&&!hpCallCard.__f400){ const f=hpCallCard; hpCallCard=Object.assign(function(on){ try{ if(on&&hpFwdQuiet()) return false; }catch(e){} return f.apply(this,arguments); },f,{__f400:1}); } }catch(e){}
+try{ if(typeof notifySound==='function'&&!notifySound.__f400){ const f=notifySound; notifySound=Object.assign(function(k){ try{ if(k==='msg'&&HP_FWD_IN>0&&hpFwdQuiet()) return; }catch(e){} return f.apply(this,arguments); },f,{__f400:1}); } }catch(e){}
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f400){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ if(hpFwdQuiet()) hpFwdHide(); }catch(e){} return r; },f,{__f400:1}); } }catch(e){}
+try{ if(typeof hpCallSig==='function'&&!hpCallSig.__f400){ const f=hpCallSig; hpCallSig=Object.assign(async function(peer,body,devs){ try{ if(body&&body.type==='callring'&&HP_FWD_SILENT[body.call]){ hpLog('通話：まだ鳴らしていないので「鳴り始めた」は送らない'); return false; } }catch(e){} return f.apply(this,arguments); },f,{__f400:1}); } }catch(e){}
+try{ if(typeof hpCallEnd==='function'&&!hpCallEnd.__f400){ const f=hpCallEnd; hpCallEnd=Object.assign(function(why){ let q=false; try{ const C=HP_CALL; q=!!(C&&C.st!=='ended'&&hpFwdQuiet()); if(q){ HP_FWD_QEND=Date.now(); delete HP_FWD_SILENT[C.id]; const h=HP_FWD_HOLD[C.id]; if(h){ clearTimeout(h.timer); delete HP_FWD_HOLD[C.id]; } } }catch(e){} const r=f.apply(this,arguments); try{ if(q){ hpFwdHide(); hpLog('通話：鳴らす前に呼び出しが終わった（'+String(why||'')+'・この端末は静かなまま）'); } }catch(e){} return r; },f,{__f400:1}); } }catch(e){}
+try{ if(typeof hpCallEndTone==='function'&&!hpCallEndTone.__f400){ const f=hpCallEndTone; hpCallEndTone=Object.assign(function(){ try{ if(hpFwdQuiet()||(HP_FWD_QEND&&Date.now()-HP_FWD_QEND<5000)) return; }catch(e){} return f.apply(this,arguments); },f,{__f400:1}); } }catch(e){}
+try{ if(typeof hpCallMissedBar==='function'&&!hpCallMissedBar.__f400){ const f=hpCallMissedBar; hpCallMissedBar=Object.assign(function(){ try{ if(HP_FWD_QEND&&Date.now()-HP_FWD_QEND<10000) return false; }catch(e){} return f.apply(this,arguments); },f,{__f400:1}); } }catch(e){}
+try{ if(typeof hpCallGone==='function'&&!hpCallGone.__f400){ const f=hpCallGone; hpCallGone=Object.assign(function(id){ try{ delete HP_FWD_SILENT[id]; }catch(e){} return f.apply(this,arguments); },f,{__f400:1}); } }catch(e){}
+
