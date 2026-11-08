@@ -3123,3 +3123,10 @@ try{ if(typeof hpVmSec==='function'&&!hpVmSec.__f393){ hpVmSec=Object.assign(fun
 function hpVmMig393(){ try{ if(localStorage.getItem('p2p_vmsec_f393')) return false; localStorage.setItem('p2p_vmsec_f393','1'); if(String(localStorage.getItem(HP_VM_KEY)||'')==='30'){ localStorage.setItem(HP_VM_KEY,'60'); try{ hpLog('設定：出ないとき、呼び出しをやめるまで 30 秒 → 60 秒（第 353 版のはじめの値）'); }catch(e){} return true; } return false; }catch(e){ return false; } }
 try{ hpVmMig393(); }catch(e){}
 
+var HP_VM_FIX=60;
+try{ if(typeof hpVmSec==='function'&&!hpVmSec.__f395){ hpVmSec=Object.assign(function(){ return HP_VM_FIX; },{__f395:1}); } }catch(e){}
+var HP_F395_CSS='html body #set-vm{display:none!important}';
+function hpF395Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-f395-css')) return false; const st=document.createElement('style'); st.id='hp-f395-css'; st.textContent=HP_F395_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
+try{ hpF395Css(); }catch(e){}
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f395){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=(typeof HP_CALL!=='undefined')?HP_CALL:null, d=document.getElementById('hp-call'); if(C&&C.vmTold&&C.dir==='out'&&!C.talkAt&&d&&d.__wt&&d.classList&&d.classList.contains('cl3')){ const E=C.cl3EndAt||Date.now(); d.__wt.textContent=TF('cl_hd_rang',{n:Math.max(0,Math.floor((E-(C.at||E))/1000))}); } }catch(e){} return r; },f,{__f395:1}); } }catch(e){}
+
