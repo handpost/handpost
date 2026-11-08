@@ -3237,3 +3237,25 @@ try{ if(typeof p2pRenderOrphans==='function'&&!p2pRenderOrphans.__f403){ const f
         for(const row of Array.from(box.children||[])){ const sp=row.children&&row.children[0], kb=row.children&&row.children[1]; if(!sp||!kb||!sp.title||sp.tagName&&String(sp.tagName).toLowerCase()!=='span') continue; sp.style.flex='0 1 auto'; const addr=sp.title;
           kb.onclick=async()=>{ const who=((typeof hpCtrName==='function'&&hpCtrName(addr))||hpIdShort(addr)); const n=prompt(TF('pr_nick_back',{who:who}),who); if(n===null) return; const nn=n.trim(); if(addContact(addr,nn,await hpNickOk(addr,nn))) renderContacts(); }; } }catch(e){} return r; },f,{__f403:1}); } }catch(e){}
 
+let HP_FWD_AU=null, HP_FWD_URL='';
+function hpFwdWav(){ try{ if(HP_FWD_URL) return HP_FWD_URL; const sr=22050, sec=3, n=sr*sec, pcm=new Int16Array(n);
+    const notes=[[784,0,0.30,1.1],[1047,0.16,0.27,1.1],[1319,0.32,0.24,1.4]];
+    for(let i=0;i<n;i++){ const t=i/sr; let v=0; for(const [f,at,vol,dur] of notes){ const u=t-at; if(u<0) continue; for(const [m,w] of [[1,1],[2,0.18],[3,0.06]]){ const d=dur/m; if(u>d) continue; const env=(u<0.012?u/0.012:1)*Math.exp(-5*u/d); v+=vol*w*env*Math.sin(2*Math.PI*f*m*u); } } pcm[i]=Math.max(-32767,Math.min(32767,Math.round(v*32767*0.9))); }
+    const buf=new ArrayBuffer(44+n*2), dv=new DataView(buf); const ws=(o,s)=>{ for(let i=0;i<s.length;i++) dv.setUint8(o+i,s.charCodeAt(i)); };
+    ws(0,'RIFF'); dv.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true); dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true); ws(36,'data'); dv.setUint32(40,n*2,true);
+    for(let i=0;i<n;i++) dv.setInt16(44+i*2,pcm[i],true); HP_FWD_URL=URL.createObjectURL(new Blob([buf],{type:'audio/wav'})); return HP_FWD_URL; }catch(e){ return ''; } }
+function hpFwdAu(){ try{ if(HP_FWD_AU) return HP_FWD_AU; const u=hpFwdWav(); if(!u||typeof Audio!=='function') return null; const a=new Audio(u); a.loop=true; a.preload='auto'; a.setAttribute&&a.setAttribute('playsinline',''); HP_FWD_AU=a; return a; }catch(e){ return null; } }
+function hpFwdAuStop(){ try{ if(HP_FWD_AU&&!HP_FWD_AU.paused){ HP_FWD_AU.pause(); } if(HP_FWD_AU) HP_FWD_AU.currentTime=0; }catch(e){} }
+try{ if(typeof hpCallUnlock==='function'&&!hpCallUnlock.__f404){ const f=hpCallUnlock; hpCallUnlock=Object.assign(function(){ const r=f.apply(this,arguments); try{ const C=(typeof HP_CALL!=='undefined')?HP_CALL:null; if(C&&C.dir==='out'){ const a=hpFwdAu(); if(a&&!a.__open){ a.muted=true; const p=a.play(); const fin=()=>{ try{ a.pause(); a.currentTime=0; a.muted=false; a.__open=1; }catch(e){} }; if(p&&p.then) p.then(fin,()=>{ a.muted=false; }); else fin(); } } }catch(e){} return r; },f,{__f404:1}); } }catch(e){}
+try{ if(typeof hpCallTone==='function'&&!hpCallTone.__f404){ const f=hpCallTone; hpCallTone=Object.assign(function(k){ try{ const C=(typeof HP_CALL!=='undefined')?HP_CALL:null; if(k&&C&&C.fwdSay) return; if(k==='back'&&C&&C.fwdTold) k='fwd';
+      if(k==='fwd'&&C&&C.dir==='out'){ if(HP_CALL_TONE==='fwd') return; const a=hpFwdAu(); if(!a) return f.apply(this,arguments);
+        try{ hpBeepKill(); }catch(e){} if(HP_CALL_TONE_T){ clearInterval(HP_CALL_TONE_T); HP_CALL_TONE_T=null; } HP_CALL_TONE='fwd'; if(typeof soundOn==='function'&&soundOn()==='off') return;
+        try{ a.muted=false; a.currentTime=0; const p=a.play(); const bad=e=>{ try{ hpLog('通話：待ち受け音を音の部品で鳴らせない（'+((e&&e.name)||e)+'）。音の入れ物で鳴らす'); }catch(x){} try{ hpFwdChime(); HP_CALL_TONE_T=setInterval(hpFwdChime,3000); }catch(x){} };
+          if(p&&p.then) p.then(()=>{ try{ hpLog('通話：待ち受け音（転送の和音）を音の部品で鳴らした'); }catch(e){} },bad); }catch(e){ try{ hpFwdChime(); HP_CALL_TONE_T=setInterval(hpFwdChime,3000); }catch(x){} }
+        try{ if(C.fwdTold) setTimeout(()=>{ try{ if(HP_CALL!==C||C.st==='ended'||!C.stream) return; const bad=C.stream.getAudioTracks().some(t=>t.muted||t.readyState==='ended'); if(bad&&typeof hpCallMicRedo==='function'){ hpLog('通話：読み上げのあとマイクが止まっているので取り直す'); hpCallMicRedo(C).catch(()=>{}); } }catch(e){} },500); }catch(e){}
+        return; }
+      hpFwdAuStop(); }catch(e){} return f.apply(this,arguments); },f,{__f404:1}); } }catch(e){}
+
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f404){ const f=hpCallUi; hpCallUi=Object.assign(function(){ try{ const C=(typeof HP_CALL!=='undefined')?HP_CALL:null; const off=(typeof HP_CLOCK_OFF!=='undefined')?HP_CLOCK_OFF:null;
+      if(C&&C.dir==='in'&&C.lateS&&off!=null&&Math.abs(off)>5){ const real=C.lateS-off; if(real<30){ hpLog('通話：「'+C.lateS+' 秒前の呼び出し」は端末の時計のずれ（約 '+off+' 秒）のため。注は出さない'); C.lateS=0; } else C.lateS=Math.round(real); } }catch(e){} return f.apply(this,arguments); },f,{__f404:1}); } }catch(e){}
+
