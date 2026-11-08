@@ -3113,3 +3113,8 @@ function hpCpToLetters(e){ try{ const t=e&&e.target; const id=String((t&&t.id)||
 try{ if(typeof HP_SEG_CLICK==='function'&&!HP_SEG_CLICK.__f391){ const f=HP_SEG_CLICK; HP_SEG_CLICK=Object.assign(function(e){ if(hpCpToLetters(e)) return; return f.apply(this,arguments); },f,{__f391:1}); } }catch(e){}
 try{ if(typeof hpSegSync==='function'&&!hpSegSync.__f391){ const f=hpSegSync; hpSegSync=Object.assign(function(){ const r=f.apply(this,arguments); try{ const bar=document.getElementById('hp-segbar'); if(bar&&bar.onclick&&bar.onclick!==HP_SEG_CLICK) bar.onclick=HP_SEG_CLICK; const hb=document.getElementById('btn-home'); if(hb&&hb.onclick&&hb.onclick!==HP_SEG_CLICK&&hb.getAttribute&&hb.getAttribute('data-seg')==='1') hb.onclick=HP_SEG_CLICK; }catch(e){} return r; },f,{__f391:1}); } }catch(e){}
 
+var HP_F392_CSS='html body #p-call.cp-fit.cp-fit .cp-act.cp-act{margin-left:auto!important;margin-right:auto!important;justify-content:center!important;width:100%}';
+function hpF392Css(){ try{ if(typeof document==='undefined'||!document.head) return false; let st=document.getElementById('hp-f392-css'); if(!st){ st=document.createElement('style'); st.id='hp-f392-css'; st.textContent=HP_F392_CSS; } document.head.appendChild(st); return true; }catch(e){ return false; } }
+try{ hpF392Css(); }catch(e){}
+try{ if(typeof hpCallUiPerson==='function'&&!hpCallUiPerson.__f392){ const f=hpCallUiPerson; hpCallUiPerson=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpF392Css(); }catch(e){} return r; },f,{__f392:1}); } }catch(e){}
+
