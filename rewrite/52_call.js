@@ -3365,3 +3365,19 @@ function hpRvWire(){ try{ if(typeof document==='undefined') return false; const 
 try{ if(typeof window!=='undefined'&&window.addEventListener){ const re=()=>{ try{ const v=document.getElementById('hp-call-rv'); if(v) hpRvFit(v); }catch(e){} }; window.addEventListener('resize',re); window.addEventListener('orientationchange',()=>setTimeout(re,300)); } }catch(e){}
 try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f411){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpRvWire(); }catch(e){} return r; },f,{__f411:1}); } }catch(e){}
 
+function hpF412Stage(C){ try{ if(!C||C.dir!=='out') return false; const e=[C.vmRing,C.ansAt].map(Number).filter(x=>x>0); if(!e.length) return false; const t=Math.min.apply(null,e);
+    if(C.gathered&&(!C.sent||C.sent>t)&&t>=C.gathered){ C.sent=t; if(!C.f412S){ C.f412S=1; hpLog('通話：送信の途中で相手の端末が鳴り始めた（か答えが届いた）ので、段を「呼び出し」に進めた（郵便受けへの送りは続ける）'); } }
+    if(C.ansAt&&!C.cl3Pull) C.cl3Pull=C.ansAt; return true; }catch(e){ return false; } }
+try{ if(typeof hpCallStage==='function'&&!hpCallStage.__f412){ const f=hpCallStage; hpCallStage=Object.assign(function(C){ try{ hpF412Stage(C); }catch(e){} return f.apply(this,arguments); },f,{__f412:1}); } }catch(e){}
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f412){ const f=hpCallUi; hpCallUi=Object.assign(function(){ try{ const C=(typeof HP_CALL!=='undefined')?HP_CALL:null; if(C&&C.dir==='out'){ hpF412Stage(C); if(C.talkAt&&!C.cl3Pull){ C.cl3Pull=C.talkAt; C.stgP=1; } } }catch(e){} return f.apply(this,arguments); },f,{__f412:1}); } }catch(e){}
+try{ if(typeof hpCl3Steps==='function'&&!hpCl3Steps.__f412){ const f=hpCl3Steps; hpCl3Steps=Object.assign(function(d,C,E,kk,all){ const r=f.apply(this,arguments); try{ if(typeof hpStgFmt!=='function'||!d||!d.__stp) return r; const at=C.at||E, g=C.gathered||0, sn=C.sent||0, pl=C.cl3Pull||0;
+      const dur=[g?g-at:E-at, g?(sn?sn-g:E-g):null, sn?(pl?pl-sn:E-sn):null, pl?E-pl:null]; const ss=Array.from(d.__stp.children||[]).filter(x=>String(x.className||'').split(' ').indexOf('s')>=0&&String(x.className||'').indexOf('lbl')<0);
+      ss.forEach((w,i)=>{ const sm=Array.from(w.children||[]).find(c=>String(c.tagName||'').toLowerCase()==='small'&&c.className!=='avg'); if(!sm||!sm.textContent) return; if(dur[i]!=null) sm.textContent=TF('cl_wait',{n:hpStgFmt(dur[i])}); }); }catch(e){} return r; },f,{__f412:1}); } }catch(e){}
+
+var HP_F412_LT=0;
+function hpF412Paste(e){ try{ const t=e&&e.target; if(!t||t.id!=='text') return false; const cd=e.clipboardData; const s=cd&&cd.getData?String(cd.getData('text/plain')||''):''; if(!s) return false; const t0=Date.now(), n0=String(t.value||'').length;
+    const chk=k=>{ try{ const n=String(t.value||'').length; if(n!==n0||k>=60){ const ms=Date.now()-t0; hpLog('手紙の欄に貼った（'+s.length+' 字・欄に入るまで '+(n!==n0?ms+' ms':'60 秒たっても入らない')+(ms>1000?'・遅かった':'')+'）'); return; } setTimeout(()=>chk(k+1),k<10?50:1000); }catch(x){} };
+    setTimeout(()=>chk(0),0); return true; }catch(x){ return false; } }
+try{ if(typeof document!=='undefined'&&document.addEventListener) document.addEventListener('paste',hpF412Paste,true); }catch(e){}
+try{ if(typeof PerformanceObserver!=='undefined'&&PerformanceObserver.supportedEntryTypes&&PerformanceObserver.supportedEntryTypes.indexOf('longtask')>=0){ const po=new PerformanceObserver(L=>{ try{ for(const x of L.getEntries()){ if(x.duration<1000) continue; const now=Date.now(); if(now-HP_F412_LT<10000) continue; HP_F412_LT=now; hpLog('画面が '+(Math.round(x.duration/100)/10)+' 秒固まった（'+(x.name||'self')+'）'); } }catch(e){} }); po.observe({entryTypes:['longtask']}); } }catch(e){}
+
