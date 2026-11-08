@@ -3139,3 +3139,7 @@ var HP_F397_CSS='html body #p-call:not(.on){display:none!important}';
 function hpF397Css(){ try{ if(typeof document==='undefined'||!document.head||document.getElementById('hp-f397-css')) return false; const st=document.createElement('style'); st.id='hp-f397-css'; st.textContent=HP_F397_CSS; document.head.appendChild(st); return true; }catch(e){ return false; } }
 try{ hpF397Css(); }catch(e){}
 
+function hpCvSegDrop(){ try{ if(typeof document==='undefined'||!document.getElementById) return false; const sg=document.getElementById('hp-cvseg'); if(sg&&sg.parentNode) sg.parentNode.removeChild(sg); const hd=document.getElementById('chat-head'); if(hd&&hd.classList) hd.classList.remove('hp-cv'); return !!sg; }catch(e){ return false; } }
+try{ if(typeof hpCvSegMount==='function'&&!hpCvSegMount.__f399){ hpCvSegMount=Object.assign(function(){ hpCvSegDrop(); return null; },{__f399:1}); } }catch(e){}
+try{ hpCvSegDrop(); setTimeout(hpCvSegDrop,0); }catch(e){}
+
