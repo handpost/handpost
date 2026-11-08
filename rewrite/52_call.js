@@ -3358,3 +3358,10 @@ try{ if(typeof hpChaRow==='function'&&!hpChaRow.__f409){ const f=hpChaRow; hpCha
 try{ if(typeof hpVhMerge==='function'&&!hpVhMerge.__f409){ const f=hpVhMerge; hpVhMerge=Object.assign(function(s,peer){ const n=f.apply(this,arguments); try{ hpF409Css(); for(const r of Array.from(s.querySelectorAll?s.querySelectorAll('.r.vh'):[])){ if(r.querySelector('.rd')) continue; r.appendChild(hpVhDelBtn(peer,Number(r.getAttribute('data-ts'))||0)); } }catch(e){} return n; },f,{__f409:1}); } }catch(e){}
 try{ if(typeof hpCpFoldInto==='function'&&!hpCpFoldInto.__f409){ const f=hpCpFoldInto; hpCpFoldInto=Object.assign(function(s,peer){ const r=f.apply(this,arguments); try{ hpVhCnt(peer); }catch(e){} return r; },f,{__f409:1}); } }catch(e){}
 
+function hpRvFit(v){ try{ if(!v||!v.videoWidth||!v.videoHeight) return ''; const W=Number(window.innerWidth)||0, H=Number(window.innerHeight)||0; if(!W||!H) return '';
+    const va=v.videoWidth/v.videoHeight, sa=W/H, k=((va<1)!==(sa<1)||Math.max(va/sa,sa/va)>1.6)?'contain':'cover';
+    if(v.__fit!==k){ v.__fit=k; try{ v.style.setProperty('object-fit',k,'important'); }catch(e){ v.style.objectFit=k; } hpLog('ビデオ：相手の映像 '+v.videoWidth+'×'+v.videoHeight+'・画面 '+W+'×'+H+' → '+(k==='contain'?'全体を見せる（余りは黒い帯）':'画面いっぱい')); } return k; }catch(e){ return ''; } }
+function hpRvWire(){ try{ if(typeof document==='undefined') return false; const v=document.getElementById('hp-call-rv'); if(!v||v.__f411) return false; v.__f411=1; const go=()=>hpRvFit(v); v.addEventListener('loadedmetadata',go); v.addEventListener('resize',go); go(); return true; }catch(e){ return false; } }
+try{ if(typeof window!=='undefined'&&window.addEventListener){ const re=()=>{ try{ const v=document.getElementById('hp-call-rv'); if(v) hpRvFit(v); }catch(e){} }; window.addEventListener('resize',re); window.addEventListener('orientationchange',()=>setTimeout(re,300)); } }catch(e){}
+try{ if(typeof hpCallUi==='function'&&!hpCallUi.__f411){ const f=hpCallUi; hpCallUi=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpRvWire(); }catch(e){} return r; },f,{__f411:1}); } }catch(e){}
+
