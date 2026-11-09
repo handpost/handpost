@@ -3501,3 +3501,13 @@ function hpF431Keep(){ try{ const pc=document.getElementById('p-call'); return !
 try{ if(typeof hpSegSync==='function'&&!hpSegSync.__f431){ const f=hpSegSync; hpSegSync=Object.assign(function(){ let keep=null; try{ if(typeof HP_VH_RUN!=='undefined'&&HP_VH_RUN&&hpF431Keep()){ keep=HP_VH_RUN; HP_VH_RUN=null; } }catch(e){} try{ return f.apply(this,arguments); }finally{ try{ if(keep&&HP_VH_RUN===null&&!keep.dead&&(typeof HP_VH_P==='undefined'||HP_VH_P===keep||HP_VH_P===null)) HP_VH_RUN=keep; }catch(e){} } },f,{__f431:1}); } }catch(e){}
 try{ hpF431Css(); if(typeof setInterval==='function') setInterval(()=>{ try{ hpF431Btns(); }catch(e){} },1000); }catch(e){}
 
+var HP_F433_OBS=null, HP_F433_EL=null;
+function hpF433Fix(){ try{ if(typeof hpF417Role!=='function'||typeof document==='undefined') return false; const el=document.getElementById('hp-verfoot'); if(!el) return false;
+    if(el!==HP_F433_EL&&typeof MutationObserver==='function'){ try{ if(HP_F433_OBS) HP_F433_OBS.disconnect(); }catch(e){} HP_F433_EL=el; HP_F433_OBS=new MutationObserver(()=>{ try{ hpF417Role(); }catch(e){} }); HP_F433_OBS.observe(el,{childList:true}); }
+    return hpF417Role(); }catch(e){ return false; } }
+try{ if(typeof setInterval==='function') setInterval(()=>{ try{ hpF433Fix(); }catch(e){} },1000); }catch(e){}
+
+var HP_F433_FROM='';
+try{ if(typeof hpF419One==='function'&&!hpF419One.__f433){ const f=hpF419One; hpF419One=Object.assign(function(peer){ try{ const ct=document.getElementById('p-contacts'), ls=document.getElementById('contact-list'); HP_F433_FROM=(ct&&ct.classList&&ct.classList.contains('on')&&ls&&ls.classList&&ls.classList.contains('one'))?String(peer||''):''; }catch(e){ HP_F433_FROM=''; } return f.apply(this,arguments); },f,{__f433:1}); } }catch(e){}
+try{ if(typeof hpF419Close==='function'&&!hpF419Close.__f433){ const f=hpF419Close; hpF419Close=Object.assign(function(back){ const fr=HP_F433_FROM; HP_F433_FROM=''; if(back&&fr){ const r=f.call(this,false); try{ const t=document.getElementById('t-contacts'); if(t&&typeof t.click==='function') t.click(); if(typeof hpF416Open==='function') hpF416Open(fr); }catch(e){} return r; } return f.apply(this,arguments); },f,{__f433:1}); } }catch(e){}
+
