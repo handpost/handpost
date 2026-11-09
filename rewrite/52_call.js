@@ -3469,3 +3469,20 @@ function hpF421Fo(){ try{ const s=document.getElementById('p-call'); if(!s||!s.c
 try{ if(typeof hpCallUiRender==='function'&&!hpCallUiRender.__f421){ const f=hpCallUiRender; hpCallUiRender=Object.assign(function(){ const r=f.apply(this,arguments); try{ hpF421Fo(); }catch(e){} return r; },f,{__f421:1}); } }catch(e){}
 try{ if(typeof hpCpFit==='function'&&!hpCpFit.__f421){ const f=hpCpFit; hpCpFit=Object.assign(function(){ const r=f.apply(this,arguments); try{ const s=document.getElementById('p-call'); if(s&&s.classList&&s.classList.contains('f421fo')) hpF421Fo(); }catch(e){} return r; },f,{__f421:1}); } }catch(e){}
 
+var HP_F430_IFMAX=3*60e3, HP_F430_IFBUSY=false;
+function hpF430IfStop(why){ try{ if(HP_F430_IFBUSY||typeof hpIfStop!=='function') return false; HP_F430_IFBUSY=true; Promise.resolve(hpIfStop(why)).catch(()=>{}).then(()=>{ HP_F430_IFBUSY=false; try{ hpInvDraw(); }catch(e){} try{ hpIfText(); }catch(e){} }); return true; }catch(e){ HP_F430_IFBUSY=false; return false; } }
+function hpF430IfBtn(){ try{ const ac=document.getElementById('inv-acts'); if(!ac) return null; let b=document.getElementById('btn-if-close'); const on=(typeof HP_IF_ON!=='undefined')&&!!HP_IF_ON;
+    if(!b){ b=document.createElement('button'); b.className='b'; b.id='btn-if-close'; b.type='button'; b.textContent=T('f430_if_close'); b.addEventListener('click',()=>{ hpF430IfStop('閉じた'); }); const nb=document.getElementById('btn-if-new'); ac.insertBefore(b,nb?nb.nextSibling:ac.firstChild); }
+    b.style.display=on?'':'none'; return b; }catch(e){ return null; } }
+function hpF430IfWatch(){ try{ if(typeof HP_IF_ON==='undefined') return ''; hpF430IfBtn(); if(!HP_IF_ON||HP_F430_IFBUSY) return 'off';
+    const hq=document.getElementById('hq-pop'); if(hq&&hq.classList&&hq.classList.contains('on')) return 'pop';
+    const pg=document.getElementById('p-contacts'); const seen=!(document.visibilityState==='hidden')&&!!(pg&&pg.classList&&pg.classList.contains('on'));
+    if(!seen){ hpF430IfStop('友達の画面を離れた'); return 'leave'; }
+    if(typeof HP_IF_ACT!=='undefined'&&Date.now()-HP_IF_ACT>=HP_F430_IFMAX){ hpF430IfStop('max'); return 'max'; }
+    return 'on'; }catch(e){ return ''; } }
+try{ if(typeof hpIfLine==='function'&&!hpIfLine.__f430){ const f=hpIfLine; hpIfLine=Object.assign(function(){ const t=f.apply(this,arguments); try{ if(t&&t===T('if_stop')) return T('f430_if_stop'); }catch(e){} return t; },f,{__f430:1}); } }catch(e){}
+try{ if(typeof document!=='undefined'&&typeof setInterval==='function'&&document.addEventListener){ setInterval(hpF430IfWatch,1000); document.addEventListener('visibilitychange',()=>{ try{ hpF430IfWatch(); }catch(e){} }); } }catch(e){}
+
+var HP_F430_CPCSS='html body #p-call#p-call.cp-fit.f421fo:not(.cp-vhon) .cp-hero{max-width:560px!important;width:100%!important;margin:0 auto!important;box-sizing:border-box!important}html body #p-call#p-call.cp-fit.f421fo:not(.cp-vhon) .cp-act{right:max(10px,calc(50% - 270px))!important}';
+try{ if(typeof document!=='undefined'&&document.head&&!document.getElementById('hp-f430-cpcss')){ const st=document.createElement('style'); st.id='hp-f430-cpcss'; st.textContent=HP_F430_CPCSS; document.head.appendChild(st); } }catch(e){}
+
