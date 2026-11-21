@@ -263,7 +263,7 @@ function hpPaperFlow(step){
   box.appendChild(card); document.body.appendChild(box);
   const el=(tag,cls,txt,id)=>{ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; if(id) e.id=id; return e; };
   const btn=(txt,pri,id,fn)=>{ const b=el('button','b'+(pri?' pri':''),txt,id); b.onclick=fn; return b; };
-  const close=()=>{ keep=null; box.remove(); hpPaperUi(); try{ hpSafetyNag(); }catch(e){} try{ const f=(typeof HP_PAPER_AFTER==='function')?HP_PAPER_AFTER:null; if(f){ HP_PAPER_AFTER=null; f(); } }catch(e){} };
+  const close=()=>{ keep=null; box.remove(); hpPaperUi(); try{ hpSafetyNag(); }catch(e){} try{ const f=(typeof HP_PAPER_AFTER==='function')?HP_PAPER_AFTER:null; if(f){ if(typeof hpF691Hold==='function'&&hpF691Hold(f)) return; HP_PAPER_AFTER=null; f(); } }catch(e){} };
   let fin=40, more=false, keep=null;     let authed=false; try{ if(typeof HP_PAPER_PREAUTH!=='undefined'&&HP_PAPER_PREAUTH){ authed=true; HP_PAPER_PREAUTH=false; } }catch(e){}
   const see=()=>{ if(!hpPaperShowable()){ try{ hpLog('紙の 14 語は、確かめ済みのあとは画面に出さない'); }catch(e){} show(3); return; }   if(authed||!hpVaultOn()){ authed=true; show(2); return; } hpAsk({text:T('ask_paper'), auth:true, ok:T('btn_ask_paper'), why:'紙を見る'}).then(v=>{ if(v&&document.getElementById('paper-flow')===box){ authed=true; show(2); } }); };
   const show=n=>{
